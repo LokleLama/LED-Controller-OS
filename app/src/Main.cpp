@@ -1,40 +1,25 @@
+#include "Console.h"
 #include "pico/stdlib.h"
 #include "tusb.h"
 #include <iostream>
 
-#include "hardware/clocks.h"
+#include "Commands/version.h"
 
 static void cdc_task(void);
-
-void countdown(uint n) {
-  for (uint i = 0; i < n; i++) {
-    std::cout << n - i << std::endl;
-    sleep_ms(1000);
-  }
-}
 
 int main() {
   stdio_init_all();
 
   tusb_init();
 
-  std::cout << "Clock Rate: " << clock_get_hz(clk_sys) << std::endl;
+  Console console;
+
+  console.registerCommand(std::make_shared<VersionCommand>());
 
   while (true) {
-    tud_task(); // Handle USB tasks
-    cdc_task(); // Handle CDC tasks
-
-    // Example: Send data to the first CDC interface (console)
-    // tud_cdc_n_write_str(0, "Console: Hello, USB!\r\n");
-    // tud_cdc_n_write_flush(0);
-
-    // Example: Send data to the second CDC interface (UART access)
-    // tud_cdc_n_write_str(1, "UART: Hello, USB!\r\n");
-    // tud_cdc_n_write_flush(1);
-
-    // sleep_ms(1000);
+    tud_task();            // Handle USB tasks
+    console.consoleTask(); // Handle console tasks
   }
-  std::cout << "Goodbye, World!" << std::endl;
   return 0;
 }
 
@@ -54,8 +39,11 @@ static void echo_serial_port(uint8_t itf, uint8_t buf[], uint32_t count) {
 
     tud_cdc_n_write_char(itf, buf[i]);
 
-    if (buf[i] == '\r')
+    if (buf[i] == '\r') {
       tud_cdc_n_write_char(itf, '\n');
+
+      std::cout << "Goodbye, World!" << std::endl;
+    }
   }
   tud_cdc_n_write_flush(itf);
 }

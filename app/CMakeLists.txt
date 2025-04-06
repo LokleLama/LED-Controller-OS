@@ -2,7 +2,8 @@
 set(OUTPUT_NAME LEDController)
 
 set (INCLUDE_DIRS "")
-file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "include/*.h*")
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "include/*.h*" "src/Commands/*.h*")
+file(GLOB_RECURSE SRC "src/*.c*" "src/Commands/*.c*")
 file(GLOB_RECURSE SRC "src/*.c*")
 
 

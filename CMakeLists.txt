@@ -10,4 +10,3 @@ pico_sdk_init()
 
 add_subdirectory(app)
 pico_enable_stdio_usb(LEDController 1)
-pico_enable_stdio_uart(LEDController 0)

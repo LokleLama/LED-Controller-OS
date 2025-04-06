@@ -1,0 +1,6 @@
+build/
+github-id
+.cache/
+.pico_env
+.ssh-agent.conf
+.vscode/

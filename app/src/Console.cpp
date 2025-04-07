@@ -4,6 +4,7 @@
 #include "tusb.h"
 #include <cstddef>
 #include <iostream>
+#include <sstream>
 
 bool Console::registerCommand(std::shared_ptr<ICommand> command) {
   if (!command) {
@@ -37,14 +38,21 @@ void Console::consoleTask() {
     for (uint32_t i = 0; i < count; i++) {
       if (buf[i] == '\r' || buf[i] == '\n') {
         // Process the command
-        std::string command(inputBuffer);
+        std::vector<std::string> tokens;
+        std::string token;
+        std::istringstream stream(inputBuffer);
+        while (stream >> token) {
+          tokens.push_back(token);
+        }
+
+        std::string command = tokens.empty() ? "" : tokens[0];
         inputBuffer.clear();
 
         auto cmd = findCommand(command);
 
         std::cout << std::endl;
         if (cmd != nullptr) {
-          cmd->execute({});
+          cmd->execute(tokens);
         } else {
           std::cout << "Unknown command: " << command << std::endl;
         }

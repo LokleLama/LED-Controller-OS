@@ -6,7 +6,7 @@
 class EchoCommand : public ICommand {
 public:
   // Returns the name of the command
-  std::string getName() const override { return "echo"; }
+  const std::string getName() const override { return "echo"; }
 
   // Executes the command
   int execute(std::vector<std::string> args) override {

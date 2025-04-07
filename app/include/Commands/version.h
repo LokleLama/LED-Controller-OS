@@ -6,7 +6,7 @@
 class VersionCommand : public ICommand {
 public:
   // Returns the name of the command
-  std::string getName() const override { return "version"; }
+  const std::string getName() const override { return "version"; }
 
   // Executes the command
   int execute(std::vector<std::string> args) override {

@@ -57,6 +57,10 @@ void Console::consoleTask() {
           std::cout << "Unknown command: " << command << std::endl;
         }
         outputPrompt();
+      } else if (buf[i] == 0x7F) { // Backspace
+        if (!inputBuffer.empty()) {
+          inputBuffer.pop_back();
+        }
       } else {
         inputBuffer += buf[i];
       }

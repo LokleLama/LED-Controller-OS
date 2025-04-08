@@ -12,5 +12,5 @@ public:
   virtual const std::string getName() const = 0;
 
   // Executes the command
-  virtual int execute(std::vector<std::string> args) = 0;
+  virtual int execute(const std::vector<std::string> &args) = 0;
 };

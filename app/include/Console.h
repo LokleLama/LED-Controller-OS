@@ -5,10 +5,13 @@
 #include <vector>
 
 #include "ICommand.h"
+#include "IVariableStore.h"
 
 class Console {
 public:
-  Console() = default;
+  Console(IVariableStore &variableStore) : variableStore(variableStore) {}
+  ~Console(){};
+
   bool registerCommand(std::shared_ptr<ICommand> command);
 
   void consoleTask();
@@ -18,6 +21,7 @@ private:
   std::vector<std::shared_ptr<ICommand>> commandList;
   bool isConnected = false;
   std::string inputBuffer;
+  IVariableStore &variableStore;
 
   void OnNewConnection() const;
   std::shared_ptr<ICommand> findCommand(const std::string &name) const;

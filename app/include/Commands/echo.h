@@ -9,7 +9,7 @@ public:
   const std::string getName() const override { return "echo"; }
 
   // Executes the command
-  int execute(std::vector<std::string> args) override {
+  int execute(const std::vector<std::string> &args) override {
     for (size_t i = 1; i < args.size(); ++i) {
       std::cout << args[i] << " ";
     }

@@ -16,9 +16,12 @@ public:
       std::cout << "Usage: set <key> <value>\n";
       return -1;
     }
-    store.setVariable(args[1], args[2]);
-    std::cout << "Set " << args[1] << " to " << args[2] << std::endl;
-    return 0;
+    if (store.setVariable(args[1], args[2])) {
+      std::cout << "Variable " << args[1] << " set to " << args[2] << std::endl;
+      return 0;
+    }
+    std::cout << "Failed to set variable " << args[1] << std::endl;
+    return -1;
   }
 
 private:

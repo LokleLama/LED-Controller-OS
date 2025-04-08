@@ -8,30 +8,15 @@
 
 class VariableStore : public IVariableStore {
 public:
-  void setVariable(const std::string &key, const std::string &value) override {
-    variables[key] = value;
-    if (callbacks.find(key) != callbacks.end()) {
-      callbacks[key](key, value);
-    }
-  }
+  bool setVariable(const std::string &key, const std::string &value) override;
 
-  std::string getVariable(const std::string &key) const override {
-    auto it = variables.find(key);
-    if (it != variables.end()) {
-      return it->second;
-    }
-    return "";
-  }
+  std::string getVariable(const std::string &key) const override;
 
   void registerCallback(const std::string &key,
-                        IVariableStore::Callback callback) override {
-    callbacks[key] = callback;
-  }
+                        IVariableStore::Callback callback) override;
 
   const std::unordered_map<std::string, std::string> &
-  getAllVariables() const override {
-    return variables;
-  }
+  getAllVariables() const override;
 
 private:
   std::unordered_map<std::string, std::string> variables;

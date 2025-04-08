@@ -7,12 +7,12 @@
 class IVariableStore {
 public:
   using Callback =
-      std::function<void(const std::string &, const std::string &)>;
+      std::function<bool(const std::string &, const std::string &)>;
 
   IVariableStore() = default;
   virtual ~IVariableStore() = default;
 
-  virtual void setVariable(const std::string &key,
+  virtual bool setVariable(const std::string &key,
                            const std::string &value) = 0;
   virtual std::string getVariable(const std::string &key) const = 0;
   virtual void registerCallback(const std::string &key, Callback callback) = 0;

@@ -17,7 +17,6 @@ public:
   void consoleTask();
 
 private:
-  static const int INTERFACE_NUMBER = 0;
   std::vector<std::shared_ptr<ICommand>> commandList;
   bool isConnected = false;
   std::string inputBuffer;

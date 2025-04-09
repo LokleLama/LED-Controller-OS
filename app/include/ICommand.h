@@ -1,4 +1,3 @@
-// filepath: /home/cbach/LEDController/app/include/ICommand.h
 #pragma once
 
 #include <string>

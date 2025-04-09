@@ -1,9 +1,11 @@
+#include "Config.h"
 #include "Console.h"
 #include "hardware/irq.h"
 #include "hardware/uart.h"
 #include "pico/stdlib.h"
 #include "tusb.h"
 #include <iostream>
+#include <memory>
 
 #include "VariableStore.h"
 
@@ -13,9 +15,10 @@
 #include "Commands/set.h"
 #include "Commands/version.h"
 
-static const int UART_INTERFACE_NUMBER = 1;
+#include "HexLogger.h"
 
 static void uart_task(void);
+static std::shared_ptr<IComLogger> logger;
 
 int main() {
   stdio_init_all();
@@ -38,6 +41,7 @@ int main() {
 
   variableStore.setVariable("baud", "115200");
   variableStore.setVariable("format", "8n1");
+  variableStore.setVariable("log", "none");
   variableStore.registerCallback(
       "baud", [](const std::string &key, const std::string &value) {
         int baudRate = std::stoi(value, nullptr, 10);
@@ -68,6 +72,21 @@ int main() {
                   << " (not implemented yet)" << std::endl;
         return false;
       });
+  variableStore.registerCallback(
+      "log", [](const std::string &key, const std::string &value) {
+        if (value == "none") {
+          logger.reset();
+        } else if (value == "bin") {
+        } else if (value == "hex") {
+          logger = std::make_shared<HexLogger>();
+        } else if (value == "base64") {
+        } else {
+          std::cout << "Invalid log value" << std::endl;
+          return false;
+        }
+        std::cout << "Log changed to " << value << std::endl;
+        return true;
+      });
 
   while (true) {
     tud_task();            // Handle USB tasks
@@ -82,6 +101,10 @@ static void uart_task(void) {
     uint8_t buf[64];
 
     uint32_t count = tud_cdc_n_read(UART_INTERFACE_NUMBER, buf, sizeof(buf));
+
+    if (logger) {
+      logger->Transmitting(buf, count);
+    }
 
     uart_write_blocking(uart0, buf, count);
   }

@@ -1,4 +1,5 @@
 #include "Console.h"
+#include "Config.h"
 #include "hardware/clocks.h"
 #include "pico/stdlib.h"
 #include "tusb.h"

@@ -16,19 +16,40 @@
 #include "Commands/version.h"
 
 #include "HexLogger.h"
+#include "IRQFifo.h"
 
 static void uart_task(void);
 static std::shared_ptr<IComLogger> logger;
+static IRQFifo uart_fifo(128);
+
+// UART interrupt handler
+void on_uart_rx() {
+  while (uart_is_readable(uart0)) {
+    uart_fifo.push(uart_getc(uart0));
+  }
+}
 
 int main() {
   stdio_init_all();
 
   tusb_init();
 
+  gpio_init(0);
+  gpio_set_dir(0, GPIO_OUT);
+  gpio_put(0, 1);
+
+  gpio_init(1);
+  gpio_set_dir(1, GPIO_IN);
+  gpio_pull_up(1);
+
   uart_init(uart0, 115000);
   uart_set_hw_flow(uart0, false, false);
   gpio_set_function(0, GPIO_FUNC_UART);
   gpio_set_function(1, GPIO_FUNC_UART);
+  // Enable UART interrupts
+  irq_set_exclusive_handler(UART0_IRQ, on_uart_rx);
+  irq_set_enabled(UART0_IRQ, true);
+  uart_set_irq_enables(uart0, true, false);
 
   VariableStore variableStore;
   Console console(variableStore);
@@ -107,5 +128,16 @@ static void uart_task(void) {
     }
 
     uart_write_blocking(uart0, buf, count);
+  }
+  if (!uart_fifo.isEmpty()) {
+    uint8_t buf[64];
+    int count = uart_fifo.readAvailable(buf, sizeof(buf));
+    if (count > 0) {
+      if (logger) {
+        logger->Receiving(buf, count);
+      }
+      tud_cdc_n_write(UART_INTERFACE_NUMBER, buf, count);
+    }
+    tud_cdc_n_write_flush(UART_INTERFACE_NUMBER);
   }
 }

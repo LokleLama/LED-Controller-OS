@@ -15,6 +15,7 @@
 #include "Commands/set.h"
 #include "Commands/version.h"
 
+#include "HLKLogger.h"
 #include "HexLogger.h"
 #include "IRQFifo.h"
 
@@ -93,21 +94,21 @@ int main() {
                   << " (not implemented yet)" << std::endl;
         return false;
       });
-  variableStore.registerCallback(
-      "log", [](const std::string &key, const std::string &value) {
-        if (value == "none") {
-          logger.reset();
-        } else if (value == "bin") {
-        } else if (value == "hex") {
-          logger = std::make_shared<HexLogger>();
-        } else if (value == "base64") {
-        } else {
-          std::cout << "Invalid log value" << std::endl;
-          return false;
-        }
-        std::cout << "Log changed to " << value << std::endl;
-        return true;
-      });
+  variableStore.registerCallback("log", [](const std::string &key,
+                                           const std::string &value) {
+    if (value == "none") {
+      logger.reset();
+    } else if (value == "hex") {
+      logger = std::make_shared<HexLogger>();
+    } else if (value == "hlk") {
+      logger = std::make_shared<HLKLogger>();
+    } else {
+      std::cout << "Invalid log value, use 'none', 'hex' or 'hlk'" << std::endl;
+      return false;
+    }
+    std::cout << "Log changed to " << value << std::endl;
+    return true;
+  });
 
   while (true) {
     tud_task();            // Handle USB tasks

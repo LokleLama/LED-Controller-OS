@@ -10,6 +10,8 @@ class HLKCommand : public IHLKPackage {
 public:
   HLKCommand(const uint16_t command, const uint8_t *parameter, const int size);
 
+  const Type getType() const override { return IHLKPackage::Type::Command; }
+
   // Override getSize method
   const int getSize() const override;
 

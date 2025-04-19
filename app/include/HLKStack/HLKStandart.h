@@ -10,6 +10,8 @@ class HLKStandart : public IHLKPackage {
 public:
   HLKStandart(const uint8_t type, const uint8_t *data, const int size);
 
+  const Type getType() const override { return IHLKPackage::Type::Standart; }
+
   // Override getSize method
   const int getSize() const override;
 

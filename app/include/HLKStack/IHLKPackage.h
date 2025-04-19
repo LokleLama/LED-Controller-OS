@@ -13,7 +13,11 @@ public:
   static constexpr uint32_t CommandFrameHead = 0xFDFCFBFA;
   static constexpr uint32_t CommandFrameTail = 0x04030201;
 
+  enum class Type { Minimal, Standart, Command };
+
   virtual ~IHLKPackage() = default;
+
+  virtual const Type getType() const = 0;
 
   virtual const int getSize() const = 0;
 

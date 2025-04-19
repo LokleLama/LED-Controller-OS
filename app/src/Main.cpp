@@ -16,11 +16,13 @@
 #include "Commands/version.h"
 
 #include "HLKLogger.h"
+#include "HLKStack/HLKPackageFinder.h"
 #include "HexLogger.h"
 #include "IRQFifo.h"
 
 static void uart_task(void);
 static std::shared_ptr<IComLogger> logger;
+static std::shared_ptr<HLKPackageFinder> output_dispance;
 static IRQFifo uart_fifo(128);
 
 // UART interrupt handler
@@ -64,6 +66,7 @@ int main() {
   variableStore.setVariable("baud", "115200");
   variableStore.setVariable("format", "8n1");
   variableStore.setVariable("log", "none");
+  variableStore.setVariable("distance", "false");
   variableStore.registerCallback(
       "baud", [](const std::string &key, const std::string &value) {
         int baudRate = std::stoi(value, nullptr, 10);
@@ -109,6 +112,17 @@ int main() {
     std::cout << "Log changed to " << value << std::endl;
     return true;
   });
+  variableStore.registerCallback(
+      "distance", [](const std::string &key, const std::string &value) {
+        if (value == "true") {
+          output_dispance = std::make_shared<HLKPackageFinder>();
+          return true;
+        } else if (value == "false") {
+          output_dispance.reset();
+          return true;
+        }
+        return false;
+      });
 
   while (true) {
     tud_task();            // Handle USB tasks
@@ -134,6 +148,12 @@ static void uart_task(void) {
     uint8_t buf[64];
     int count = uart_fifo.readAvailable(buf, sizeof(buf));
     if (count > 0) {
+      if (output_dispance) {
+        auto pack = output_dispance->findPackage(buf, count);
+        if (pack && pack->getType() == IHLKPackage::Type::Minimal) {
+          std::cout << pack->toString() << std::endl;
+        }
+      }
       if (logger) {
         logger->Receiving(buf, count);
       }

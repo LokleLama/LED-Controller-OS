@@ -9,6 +9,8 @@ class HLKDistance : public IHLKPackage {
 public:
   HLKDistance(uint8_t targetState, uint16_t distanceInCm);
 
+  const Type getType() const override { return IHLKPackage::Type::Minimal; }
+
   // Getter for distance in meters
   float getDistance() const;
 

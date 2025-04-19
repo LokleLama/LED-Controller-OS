@@ -54,7 +54,7 @@ const std::string HLKStandart::toString() const {
 // Deserialization method
 std::shared_ptr<HLKStandart> HLKStandart::deserialize(const uint8_t *buffer,
                                                       const int size) {
-  if (size < 11) {
+  if (size < 10) {
     return nullptr;
   }
   if (buffer[0] != static_cast<uint8_t>(Type::Standard)) {
@@ -65,13 +65,13 @@ std::shared_ptr<HLKStandart> HLKStandart::deserialize(const uint8_t *buffer,
   }
   uint16_t length = static_cast<uint16_t>(buffer[4]) |
                     (static_cast<uint16_t>(buffer[5]) << 8);
-  if (length + 11 > size) {
+  if (length + 10 > size) {
     return nullptr;
   }
   uint8_t type = buffer[6];
-  std::vector<uint8_t> data(buffer + 7, buffer + 7 + length);
-  if (buffer[7 + length] != 0xF8 || buffer[8 + length] != 0xF7 ||
-      buffer[9 + length] != 0xF6 || buffer[10 + length] != 0xF5) {
+  std::vector<uint8_t> data(buffer + 7, buffer + 7 + length - 1);
+  if (buffer[7 + length - 1] != 0xF8 || buffer[8 + length - 1] != 0xF7 ||
+      buffer[9 + length - 1] != 0xF6 || buffer[10 + length - 1] != 0xF5) {
     return nullptr;
   }
   return std::make_shared<HLKStandart>(type, data.data(), length);

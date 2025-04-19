@@ -1,5 +1,6 @@
 #pragma once
 
+#include "HLKStack/HLKPackageFinder.h"
 #include "IComLogger.h"
 
 #include <iomanip>
@@ -11,23 +12,19 @@ public:
   HLKLogger() = default;
 
   void Transmitting(const uint8_t *buffer, int count) override {
-    if (count <= 0)
-      return;
-    std::cout << "send(";
-    for (int i = 0; i < count; ++i) {
-      std::cout << std::hex << std::setw(2) << std::setfill('0')
-                << static_cast<int>(buffer[i]) << " ";
+    auto pack = _trasnmitterFinder.findPackage(buffer, count);
+    if (pack) {
+      std::cout << "Transmitting: " << pack->toString() << std::endl;
     }
-    std::cout << ")" << std::dec << std::endl;
   }
   void Receiving(const uint8_t *buffer, int count) override {
-    if (count <= 0)
-      return;
-    std::cout << "recv(";
-    for (int i = 0; i < count; ++i) {
-      std::cout << std::hex << std::setw(2) << std::setfill('0')
-                << static_cast<int>(buffer[i]) << " ";
+    auto pack = _receiverFinder.findPackage(buffer, count);
+    if (pack) {
+      std::cout << "Receiving: " << pack->toString() << std::endl;
     }
-    std::cout << ")" << std::dec << std::endl;
   }
+
+private:
+  HLKPackageFinder _trasnmitterFinder;
+  HLKPackageFinder _receiverFinder;
 };

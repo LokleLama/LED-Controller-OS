@@ -6,9 +6,9 @@
 #include <stdexcept>
 #include <vector>
 
-class HLKFrame : public IHLKPackage {
+class HLKCommand : public IHLKPackage {
 public:
-  HLKFrame(const uint16_t command, const uint8_t *parameter, const int size);
+  HLKCommand(const uint16_t command, const uint8_t *parameter, const int size);
 
   // Override getSize method
   const int getSize() const override;
@@ -19,8 +19,8 @@ public:
   const std::string toString() const override;
 
   // Deserialization method
-  static std::shared_ptr<HLKFrame> deserialize(const uint8_t *buffer,
-                                               const int size);
+  static std::shared_ptr<HLKCommand> deserialize(const uint8_t *buffer,
+                                                 const int size);
 
 private:
   uint16_t _command;

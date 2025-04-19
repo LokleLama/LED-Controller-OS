@@ -1,18 +1,20 @@
-#include "HLKStack/HLKFrame.h"
+#include "HLKStack/HLKCommand.h"
 #include <iomanip>
+#include <iostream>
 #include <memory>
 #include <sstream>
+#include <string>
 #include <vector>
 
-HLKFrame::HLKFrame(const uint16_t command, const uint8_t *parameter,
-                   const int size)
+HLKCommand::HLKCommand(const uint16_t command, const uint8_t *parameter,
+                       const int size)
     : _command(command), _parameter(parameter, parameter + size) {}
 
 // Override getSize method
-const int HLKFrame::getSize() const { return _parameter.size(); }
+const int HLKCommand::getSize() const { return _parameter.size(); }
 
 // Override serialize method
-const int HLKFrame::serialize(uint8_t *buffer, int size) const {
+const int HLKCommand::serialize(uint8_t *buffer, int size) const {
   if (size < getSize() + 2 + 2 + 4 + 4) {
     return -1; // Not enough space in the buffer
   }
@@ -40,7 +42,7 @@ const int HLKFrame::serialize(uint8_t *buffer, int size) const {
   return getSize() + 12; // Return the total size of the serialized data
 }
 
-const std::string HLKFrame::toString() const {
+const std::string HLKCommand::toString() const {
   std::stringstream result; // Create a single stringstream
   result << "{command = " << std::hex << std::uppercase << std::setw(4)
          << std::setfill('0') << static_cast<int>(_command)
@@ -55,8 +57,8 @@ const std::string HLKFrame::toString() const {
 }
 
 // Deserialization method
-std::shared_ptr<HLKFrame> HLKFrame::deserialize(const uint8_t *buffer,
-                                                const int size) {
+std::shared_ptr<HLKCommand> HLKCommand::deserialize(const uint8_t *buffer,
+                                                    const int size) {
   if (size < 12) {
     return nullptr;
   }
@@ -68,15 +70,15 @@ std::shared_ptr<HLKFrame> HLKFrame::deserialize(const uint8_t *buffer,
   }
   uint16_t length = static_cast<uint16_t>(buffer[4]) |
                     (static_cast<uint16_t>(buffer[5]) << 8);
-  if (length + 12 > size) {
+  if (length + 10 > size) {
     return nullptr;
   }
   uint16_t command = static_cast<uint16_t>(buffer[6]) |
                      (static_cast<uint16_t>(buffer[7]) << 8);
-  std::vector<uint8_t> parameter(buffer + 8, buffer + 8 + length);
-  if (buffer[8 + length] != 0x04 || buffer[9 + length] != 0x03 ||
-      buffer[10 + length] != 0x02 || buffer[11 + length] != 0x01) {
+  std::vector<uint8_t> parameter(buffer + 8, buffer + 8 + length - 2);
+  if (buffer[8 + length - 2] != 0x04 || buffer[9 + length - 2] != 0x03 ||
+      buffer[10 + length - 2] != 0x02 || buffer[11 + length - 2] != 0x01) {
     return nullptr;
   }
-  return std::make_shared<HLKFrame>(command, parameter.data(), length);
+  return std::make_shared<HLKCommand>(command, parameter.data(), length);
 }

@@ -18,12 +18,12 @@ const int HLKCommand::serialize(uint8_t *buffer, int size) const {
   if (size < getSize() + 2 + 2 + 4 + 4) {
     return -1; // Not enough space in the buffer
   }
-  buffer[0] = static_cast<uint8_t>(Type::Frame); // Type
+  buffer[0] = 0xFD; // Type
   buffer[1] = 0xFC;
   buffer[2] = 0xFB;
   buffer[3] = 0xFA;
 
-  uint16_t length = getSize();
+  uint16_t length = getSize() + 2;
   buffer[4] = static_cast<uint8_t>(length & 0xFF); // Low byte of length
   buffer[5] = static_cast<uint8_t>(length >> 8);   // High byte of length
 
@@ -62,22 +62,22 @@ std::shared_ptr<HLKCommand> HLKCommand::deserialize(const uint8_t *buffer,
   if (size < 12) {
     return nullptr;
   }
-  if (buffer[0] != static_cast<uint8_t>(Type::Frame)) {
-    return nullptr;
-  }
-  if (buffer[1] != 0xFC || buffer[2] != 0xFB || buffer[3] != 0xFA) {
+  if (buffer[0] != 0xFD || buffer[1] != 0xFC || buffer[2] != 0xFB ||
+      buffer[3] != 0xFA) {
+    std::cout << "Header did not fit" << std::endl;
     return nullptr;
   }
   uint16_t length = static_cast<uint16_t>(buffer[4]) |
                     (static_cast<uint16_t>(buffer[5]) << 8);
-  if (length + 10 > size) {
+  length -= 2;
+  if (length + 12 > size) {
     return nullptr;
   }
   uint16_t command = static_cast<uint16_t>(buffer[6]) |
                      (static_cast<uint16_t>(buffer[7]) << 8);
-  std::vector<uint8_t> parameter(buffer + 8, buffer + 8 + length - 2);
-  if (buffer[8 + length - 2] != 0x04 || buffer[9 + length - 2] != 0x03 ||
-      buffer[10 + length - 2] != 0x02 || buffer[11 + length - 2] != 0x01) {
+  std::vector<uint8_t> parameter(buffer + 8, buffer + 8 + length);
+  if (buffer[8 + length] != 0x04 || buffer[9 + length] != 0x03 ||
+      buffer[10 + length] != 0x02 || buffer[11 + length] != 0x01) {
     return nullptr;
   }
   return std::make_shared<HLKCommand>(command, parameter.data(), length);

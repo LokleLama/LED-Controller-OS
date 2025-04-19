@@ -17,30 +17,36 @@ HLKPackageFinder::findPackage(const uint8_t *buffer, const int size) {
     _pattern = (_pattern << 8) | buffer[i];
     switch (_state) {
     case State::WaitingForStart:
-      if (buffer[i] == static_cast<uint8_t>(IHLKPackage::Type::Minimal)) {
+      if (buffer[i] == IHLKPackage::MinimalFrameHead) {
         _buffer.clear();
         _buffer.push_back(buffer[i]);
         _state = State::WaitingForMinimal;
-      } else if (_pattern == StandartFrameHead) {
+      } else if (_pattern == IHLKPackage::StandartFrameHead) {
         _buffer.clear();
-        _buffer.push_back(static_cast<uint8_t>(StandartFrameHead >> 24));
-        _buffer.push_back(static_cast<uint8_t>(StandartFrameHead >> 16));
-        _buffer.push_back(static_cast<uint8_t>(StandartFrameHead >> 8));
-        _buffer.push_back(static_cast<uint8_t>(StandartFrameHead));
+        _buffer.push_back(
+            static_cast<uint8_t>(IHLKPackage::StandartFrameHead >> 24));
+        _buffer.push_back(
+            static_cast<uint8_t>(IHLKPackage::StandartFrameHead >> 16));
+        _buffer.push_back(
+            static_cast<uint8_t>(IHLKPackage::StandartFrameHead >> 8));
+        _buffer.push_back(static_cast<uint8_t>(IHLKPackage::StandartFrameHead));
         _state = State::WaitingForStandart;
-      } else if (_pattern == CommandFrameHead) {
+      } else if (_pattern == IHLKPackage::CommandFrameHead) {
         _buffer.clear();
-        _buffer.push_back(static_cast<uint8_t>(CommandFrameHead >> 24));
-        _buffer.push_back(static_cast<uint8_t>(CommandFrameHead >> 16));
-        _buffer.push_back(static_cast<uint8_t>(CommandFrameHead >> 8));
-        _buffer.push_back(static_cast<uint8_t>(CommandFrameHead));
+        _buffer.push_back(
+            static_cast<uint8_t>(IHLKPackage::CommandFrameHead >> 24));
+        _buffer.push_back(
+            static_cast<uint8_t>(IHLKPackage::CommandFrameHead >> 16));
+        _buffer.push_back(
+            static_cast<uint8_t>(IHLKPackage::CommandFrameHead >> 8));
+        _buffer.push_back(static_cast<uint8_t>(IHLKPackage::CommandFrameHead));
         _state = State::WaitingForCommand;
       }
       break;
 
     case State::WaitingForMinimal:
       _buffer.push_back(buffer[i]);
-      if (_buffer.size() >= 5 || buffer[i] == 0x62) {
+      if (_buffer.size() >= 5 || buffer[i] == IHLKPackage::MinimalFrameTail) {
         _state = State::WaitingForStart;
         return HLKDistance::deserialize(_buffer.data(), _buffer.size());
       }
@@ -48,7 +54,7 @@ HLKPackageFinder::findPackage(const uint8_t *buffer, const int size) {
 
     case State::WaitingForStandart:
       _buffer.push_back(buffer[i]);
-      if (_pattern == StandartFrameTail || _buffer.size() >= 250) {
+      if (_pattern == IHLKPackage::StandartFrameTail || _buffer.size() >= 250) {
         _state = State::WaitingForStart;
         return HLKStandart::deserialize(_buffer.data(), _buffer.size());
       }
@@ -56,7 +62,7 @@ HLKPackageFinder::findPackage(const uint8_t *buffer, const int size) {
 
     case State::WaitingForCommand:
       _buffer.push_back(buffer[i]);
-      if (_pattern == CommandFrameTail || _buffer.size() >= 250) {
+      if (_pattern == IHLKPackage::CommandFrameTail || _buffer.size() >= 250) {
         _state = State::WaitingForStart;
         return HLKCommand::deserialize(_buffer.data(), _buffer.size());
       }

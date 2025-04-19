@@ -22,11 +22,11 @@ const int HLKDistance::serialize(uint8_t *buffer, int size) const {
     return -1; // Not enough space in the buffer
   }
 
-  buffer[0] = static_cast<uint8_t>(Type::Minimal);       // Type
+  buffer[0] = IHLKPackage::MinimalFrameHead;             // Type
   buffer[1] = targetState;                               // Target state
   buffer[2] = static_cast<uint8_t>(distanceInCm & 0xFF); // Low byte of distance
   buffer[3] = static_cast<uint8_t>(distanceInCm >> 8); // High byte of distance
-  buffer[4] = 0x62;                                    // End byte
+  buffer[4] = IHLKPackage::MinimalFrameTail;           // End byte
 
   return 5;
 }
@@ -43,11 +43,11 @@ std::shared_ptr<HLKDistance> HLKDistance::deserialize(const uint8_t *buffer,
     return nullptr;
   }
 
-  if (buffer[0] != static_cast<uint8_t>(Type::Minimal)) {
+  if (buffer[0] != IHLKPackage::MinimalFrameHead) {
     return nullptr;
   }
 
-  if (buffer[4] != 0x62) {
+  if (buffer[4] != IHLKPackage::MinimalFrameTail) {
     return nullptr;
   }
 

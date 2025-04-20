@@ -4,10 +4,10 @@
 #include "../Utils/base64.h"
 #include <iostream>
 
-class EchoCommand : public ICommand {
+class EvalCommand : public ICommand {
 public:
   // Returns the name of the command
-  const std::string getName() const override { return "echo"; }
+  const std::string getName() const override { return "eval"; }
 
   // Executes the command
   int execute(const std::vector<std::string> &args) override {
@@ -18,9 +18,9 @@ public:
       }
       if (_useBase64) {
         // If Base64 encoding is enabled, encode the argument
-        std::string encoded = Base64::encode(
-            std::vector<uint8_t>(args[i].begin(), args[i].end()));
-        std::cout << encoded << " ";
+        auto decoded = Base64::decode(args[i]);
+        std::string decodedStr(decoded.begin(), decoded.end());
+        std::cout << decodedStr << " ";
         continue;
       }
       std::cout << args[i] << " ";

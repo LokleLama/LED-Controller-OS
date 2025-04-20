@@ -11,6 +11,7 @@
 
 #include "Commands/echo.h"
 #include "Commands/env.h"
+#include "Commands/eval.h"
 #include "Commands/get.h"
 #include "Commands/set.h"
 #include "Commands/version.h"
@@ -59,6 +60,7 @@ int main() {
 
   console.registerCommand(std::make_shared<VersionCommand>());
   console.registerCommand(std::make_shared<EchoCommand>());
+  console.registerCommand(std::make_shared<EvalCommand>());
   console.registerCommand(std::make_shared<SetCommand>(variableStore));
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
   console.registerCommand(std::make_shared<EnvCommand>(variableStore));

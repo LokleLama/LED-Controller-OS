@@ -1,6 +1,8 @@
 #!/bin/bash
 
 ENVFILE='.pico_env'
+BUILD_DIR='build.arm'
+
 
 cat << EOF > $ENVFILE
 
@@ -18,8 +20,8 @@ fi
 
 export PICO_SDK_PATH=~/pico-sdk
 
-mkdir -p build
-cd build
+mkdir -p $BUILD_DIR
+cd $BUILD_DIR
 cmake ..
 
 EOF

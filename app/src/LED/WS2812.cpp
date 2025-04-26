@@ -70,7 +70,13 @@ bool WS2812::setPattern(const std::vector<uint32_t> &pattern) {
   return true;
 }
 
-int WS2812::addPattern(const std::vector<uint32_t> &pattern) { return -1; }
+int WS2812::addPattern(const std::vector<uint32_t> &pattern) {
+  if (pattern.size() < _num_leds) {
+    return -1;
+  }
+  _patterns.push_back(pattern);
+  return _patterns.size() - 1;
+}
 
 bool WS2812::setPattern(int pattern) {
   if (pattern < 0 || pattern >= _patterns.size()) {

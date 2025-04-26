@@ -16,6 +16,7 @@
 #include "Commands/eval.h"
 #include "Commands/get.h"
 #include "Commands/help.h"
+#include "Commands/led.h"
 #include "Commands/set.h"
 #include "Commands/version.h"
 
@@ -31,33 +32,6 @@ static void uart_task(void);
 static std::shared_ptr<IComLogger> logger;
 static std::shared_ptr<HLKPackageFinder> output_dispance;
 static IRQFifo uart_fifo(128);
-
-static WS2812 led(pio0, 16, 1);
-
-static bool changeColor() {
-  static int count = 0;
-
-  std::vector<uint32_t> pattern;
-
-  switch (count) {
-  default:
-  case 0:
-    pattern = {0xFF000000};
-    break;
-  case 1:
-    pattern = {0x00FF0000};
-    break;
-  case 2:
-    pattern = {0x0000FF00};
-    break;
-  }
-  count++;
-  if (count > 3) {
-    count = 0;
-  }
-  led.setPattern(pattern);
-  return true;
-}
 
 // UART interrupt handler
 void on_uart_rx() {
@@ -99,6 +73,10 @@ int main() {
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
   console.registerCommand(std::make_shared<EnvCommand>(variableStore));
   console.registerCommand(std::make_shared<HelpCommand>(console));
+  console.registerCommand(std::make_shared<LedCommand>(pio0, 1));
+  console.registerCommand(std::make_shared<LedCommand>(pio0, 2));
+  console.registerCommand(std::make_shared<LedCommand>(pio0, 3));
+  console.registerCommand(std::make_shared<LedCommand>(pio0, 4));
 
   variableStore.setVariable("baud", "115200");
   variableStore.setVariable("format", "8n1");
@@ -173,8 +151,6 @@ int main() {
     uart_task(); // UART task
     return true;
   });
-
-  mainloop.registerTimedTask([&]() { return changeColor(); }, 1000);
 
   mainloop.start();
 

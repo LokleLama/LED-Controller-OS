@@ -21,6 +21,8 @@
 #include "HexLogger.h"
 #include "IRQFifo.h"
 
+#include "Mainloop.h"
+
 static void uart_task(void);
 static std::shared_ptr<IComLogger> logger;
 static std::shared_ptr<HLKPackageFinder> output_dispance;
@@ -55,6 +57,7 @@ int main() {
   irq_set_enabled(UART0_IRQ, true);
   uart_set_irq_enables(uart0, true, false);
 
+  Mainloop mainloop;
   VariableStore variableStore;
   Console console(variableStore);
 
@@ -126,11 +129,21 @@ int main() {
         return false;
       });
 
-  while (true) {
-    tud_task();            // Handle USB tasks
-    console.consoleTask(); // Handle console tasks
-    uart_task();
-  }
+  mainloop.registerRegularTask([&]() {
+    tud_task(); // TinyUSB task
+    return true;
+  });
+  mainloop.registerRegularTask([&]() {
+    console.consoleTask(); // Console task
+    return true;
+  });
+  mainloop.registerRegularTask([&]() {
+    uart_task(); // UART task
+    return true;
+  });
+
+  mainloop.start();
+
   return 0;
 }
 

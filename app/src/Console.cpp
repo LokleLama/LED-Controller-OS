@@ -51,11 +51,11 @@ void Console::consoleTask() {
 
         auto cmd = findCommand(command);
 
-        std::cout << std::endl;
         if (cmd != nullptr) {
+          std::cout << std::endl;
           cmd->execute(tokens);
         } else {
-          std::cout << "Unknown command: " << command << std::endl;
+          std::cout << std::endl << "Unknown command: " << command << std::endl;
         }
         outputPrompt();
       } else if (buf[i] == 0x7F) { // Backspace

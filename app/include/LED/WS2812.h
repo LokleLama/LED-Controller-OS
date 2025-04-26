@@ -34,12 +34,12 @@ public:
 
 private:
   PIO _pio;
-  uint _pin;
+  uint8_t _pin;
+  uint8_t _bits_per_pixel;
+  uint8_t _sm;
   uint _num_leds;
-  uint _bits_per_pixel;
 
-  uint _sm;
-  uint _dma_channel;
+  int _dma_channel;
 
   std::vector<std::vector<uint32_t>> _patterns;
 

@@ -2,6 +2,7 @@
 #include "hardware/dma.h"
 #include "hardware/irq.h"
 #include <cstring>
+#include <iostream>
 #include <vector>
 
 int WS2812::_program_offset_pio0 = -1;
@@ -10,7 +11,7 @@ int WS2812::_program_offset_pio1 = -1;
 WS2812::WS2812(PIO pio, uint pin, uint num_leds, uint bits_per_pixel,
                float freq)
     : _pio(pio), _pin(pin), _num_leds(num_leds),
-      _bits_per_pixel(bits_per_pixel) {
+      _bits_per_pixel(bits_per_pixel), _dma_channel(-1) {
   // Claim a state machine
   _sm = pio_claim_unused_sm(_pio, true);
 

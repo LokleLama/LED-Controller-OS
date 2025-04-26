@@ -6,6 +6,8 @@
 #include "tusb.h"
 #include <iostream>
 #include <memory>
+#include <sys/types.h>
+#include <vector>
 
 #include "VariableStore.h"
 
@@ -21,12 +23,40 @@
 #include "HexLogger.h"
 #include "IRQFifo.h"
 
+#include "LED/WS2812.h"
 #include "Mainloop.h"
 
 static void uart_task(void);
 static std::shared_ptr<IComLogger> logger;
 static std::shared_ptr<HLKPackageFinder> output_dispance;
 static IRQFifo uart_fifo(128);
+
+static WS2812 led(pio0, 16, 1);
+
+static bool changeColor() {
+  static int count = 0;
+
+  std::vector<uint32_t> pattern;
+
+  switch (count) {
+  default:
+  case 0:
+    pattern = {0xFF000000};
+    break;
+  case 1:
+    pattern = {0x00FF0000};
+    break;
+  case 2:
+    pattern = {0x0000FF00};
+    break;
+  }
+  count++;
+  if (count > 3) {
+    count = 0;
+  }
+  led.setPattern(pattern);
+  return true;
+}
 
 // UART interrupt handler
 void on_uart_rx() {
@@ -141,6 +171,8 @@ int main() {
     uart_task(); // UART task
     return true;
   });
+
+  mainloop.registerTimedTask([&]() { return changeColor(); }, 1000);
 
   mainloop.start();
 

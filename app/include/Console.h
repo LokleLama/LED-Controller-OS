@@ -14,6 +14,8 @@ public:
 
   bool registerCommand(std::shared_ptr<ICommand> command);
 
+  std::vector<std::string> getCommandList() const;
+
   void consoleTask();
 
 private:

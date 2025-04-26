@@ -24,6 +24,14 @@ std::shared_ptr<ICommand> Console::findCommand(const std::string &name) const {
   return nullptr;
 }
 
+std::vector<std::string> Console::getCommandList() const {
+  std::vector<std::string> commandNames;
+  for (const auto &cmd : commandList) {
+    commandNames.push_back(cmd->getName());
+  }
+  return commandNames;
+}
+
 void Console::consoleTask() {
   if (!isConnected && tud_cdc_n_connected(INTERFACE_NUMBER)) {
     isConnected = true;

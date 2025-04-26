@@ -15,6 +15,7 @@
 #include "Commands/env.h"
 #include "Commands/eval.h"
 #include "Commands/get.h"
+#include "Commands/help.h"
 #include "Commands/set.h"
 #include "Commands/version.h"
 
@@ -97,6 +98,7 @@ int main() {
   console.registerCommand(std::make_shared<SetCommand>(variableStore));
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
   console.registerCommand(std::make_shared<EnvCommand>(variableStore));
+  console.registerCommand(std::make_shared<HelpCommand>(console));
 
   variableStore.setVariable("baud", "115200");
   variableStore.setVariable("format", "8n1");

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "HLKDistance.h"
 #include "IHLKPackage.h"
 #include <cstdint>
 #include <memory>
@@ -16,6 +17,9 @@ public:
   // Method to find a package in the buffer
   std::shared_ptr<IHLKPackage> findPackage(const uint8_t *buffer,
                                            const int size);
+
+  std::shared_ptr<HLKDistance> fastDistanceFinder(const uint8_t *buffer,
+                                                  const int size);
 
 private:
   enum class State {

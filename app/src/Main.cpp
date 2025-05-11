@@ -30,7 +30,8 @@
 
 static void uart_task(void);
 static std::shared_ptr<IComLogger> logger;
-static std::shared_ptr<HLKPackageFinder> output_dispance;
+static bool output_dispance;
+static HLKPackageFinder package_finder;
 static IRQFifo uart_fifo(128);
 
 // UART interrupt handler
@@ -82,6 +83,7 @@ int main() {
   variableStore.setVariable("format", "8n1");
   variableStore.setVariable("log", "none");
   variableStore.setVariable("distance", "false");
+  variableStore.setVariable("dist", "0");
   variableStore.registerCallback(
       "baud", [](const std::string &key, const std::string &value) {
         int baudRate = std::stoi(value, nullptr, 10);
@@ -130,10 +132,10 @@ int main() {
   variableStore.registerCallback(
       "distance", [](const std::string &key, const std::string &value) {
         if (value == "true") {
-          output_dispance = std::make_shared<HLKPackageFinder>();
+          output_dispance = true;
           return true;
         } else if (value == "false") {
-          output_dispance.reset();
+          output_dispance = false;
           return true;
         }
         return false;
@@ -173,9 +175,9 @@ static void uart_task(void) {
     uint8_t buf[64];
     int count = uart_fifo.readAvailable(buf, sizeof(buf));
     if (count > 0) {
-      if (output_dispance) {
-        auto pack = output_dispance->findPackage(buf, count);
-        if (pack && pack->getType() == IHLKPackage::Type::Minimal) {
+      auto pack = package_finder.fastDistanceFinder(buf, count);
+      if (pack) {
+        if (output_dispance) {
           std::cout << pack->toString() << std::endl;
         }
       }

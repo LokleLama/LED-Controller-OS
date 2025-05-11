@@ -77,3 +77,37 @@ HLKPackageFinder::findPackage(const uint8_t *buffer, const int size) {
 
   return nullptr;
 }
+
+std::shared_ptr<HLKDistance>
+HLKPackageFinder::fastDistanceFinder(const uint8_t *buffer, const int size) {
+  if (size <= 0)
+    return nullptr;
+
+  for (int i = 0; i < size; ++i) {
+    _pattern = (_pattern << 8) | buffer[i];
+    switch (_state) {
+    case State::WaitingForStart:
+      if (buffer[i] == IHLKPackage::MinimalFrameHead) {
+        _buffer.clear();
+        _buffer.push_back(buffer[i]);
+        _state = State::WaitingForMinimal;
+      }
+      break;
+
+    case State::WaitingForMinimal:
+      _buffer.push_back(buffer[i]);
+      if (_buffer.size() >= 5 || buffer[i] == IHLKPackage::MinimalFrameTail) {
+        _state = State::WaitingForStart;
+        return HLKDistance::deserialize(_buffer.data(), _buffer.size());
+      }
+      break;
+
+    default:
+      std::cerr << "Unknown state: " << static_cast<int>(_state) << std::endl;
+      _state = State::WaitingForStart;
+      break;
+    }
+  }
+
+  return nullptr;
+}

@@ -6,30 +6,24 @@
 
 class IVariable {
 public:
-  // Supported types
-  using VariableType = std::variant<float, bool, int, std::string>;
-
   // Destructor
   virtual ~IVariable() = default;
 
   // Convert to string
-  virtual std::string toString() const = 0;
+  virtual std::string asString() const = 0;
 
   // Convert to float
-  virtual float toFloat() const = 0;
+  virtual float asFloat() const = 0;
 
   // Convert to int
-  virtual int toInt() const = 0;
+  virtual int asInt() const = 0;
 
   // Convert to bool
-  virtual bool toBool() const = 0;
-
-  // Set from string
-  virtual void fromString(const std::string &value) = 0;
-
-  // Get the underlying value
-  virtual const VariableType &getValue() const = 0;
+  virtual bool asBool() const = 0;
 
   // Set the value
-  virtual void setValue(const VariableType &value) = 0;
+  virtual bool set(const std::string &value) = 0;
+  virtual bool set(float value) = 0;
+  virtual bool set(int value) = 0;
+  virtual bool set(bool value) = 0;
 };

@@ -16,12 +16,12 @@ public:
       std::cout << "Usage: get <key>\n";
       return -1;
     }
-    const std::string value = store.getVariable(args[1]);
-    if (value.empty()) {
+    auto value = store.getVariable(args[1]);
+    if (value.get() == nullptr) {
       std::cout << "Variable not found\n";
       return -1;
     }
-    std::cout << args[1] << " = " << value << std::endl;
+    std::cout << args[1] << " = " << value->asString() << std::endl;
     return 0;
   }
 

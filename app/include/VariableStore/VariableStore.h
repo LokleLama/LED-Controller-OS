@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 #include "IVariableStore.h"
+#include "VariableStore/Variable.h"
 
 class VariableStore : public IVariableStore {
 public:
@@ -19,6 +20,6 @@ public:
   getAllVariables() const override;
 
 private:
-  std::unordered_map<std::string, std::string> variables;
+  std::unordered_map<std::string, Variable> variables;
   std::unordered_map<std::string, IVariableStore::Callback> callbacks;
 };

@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <vector>
 
-#include "VariableStore.h"
+#include "VariableStore/VariableStore.h"
 
 #include "Commands/echo.h"
 #include "Commands/env.h"

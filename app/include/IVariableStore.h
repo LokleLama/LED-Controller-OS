@@ -4,12 +4,13 @@
 #include <string>
 #include <unordered_map>
 
+#include "IVariable.h"
+
 class IVariableStore {
 public:
   using Callback =
       std::function<bool(const std::string &, const std::string &)>;
 
-  IVariableStore() = default;
   virtual ~IVariableStore() = default;
 
   virtual bool setVariable(const std::string &key,

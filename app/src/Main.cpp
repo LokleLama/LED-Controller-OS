@@ -30,7 +30,8 @@
 
 static void uart_task(void);
 static std::shared_ptr<IComLogger> logger;
-static bool output_dispance;
+static std::shared_ptr<IVariable> output_distance;
+static std::shared_ptr<IVariable> distance;
 static HLKPackageFinder package_finder;
 static IRQFifo uart_fifo(128);
 
@@ -79,11 +80,12 @@ int main() {
   console.registerCommand(std::make_shared<LedCommand>(pio0, 3));
   console.registerCommand(std::make_shared<LedCommand>(pio0, 4));
 
-  variableStore.setVariable("baud", "115200");
-  variableStore.setVariable("format", "8n1");
-  variableStore.setVariable("log", "none");
-  variableStore.setVariable("distance", "false");
-  variableStore.setVariable("dist", "0");
+  variableStore.addVariable("baud", 115200);
+  variableStore.addVariable("format", "8n1");
+  variableStore.addVariable("log", "none");
+  output_distance = variableStore.addBoolVariable("distance", false);
+  distance = variableStore.addVariable("dist", 0.0f);
+
   variableStore.registerCallback(
       "baud", [](const std::string &key, const std::string &value) {
         int baudRate = std::stoi(value, nullptr, 10);
@@ -129,17 +131,6 @@ int main() {
     std::cout << "Log changed to " << value << std::endl;
     return true;
   });
-  variableStore.registerCallback(
-      "distance", [](const std::string &key, const std::string &value) {
-        if (value == "true") {
-          output_dispance = true;
-          return true;
-        } else if (value == "false") {
-          output_dispance = false;
-          return true;
-        }
-        return false;
-      });
 
   mainloop.registerRegularTask([&]() {
     tud_task(); // TinyUSB task
@@ -177,7 +168,8 @@ static void uart_task(void) {
     if (count > 0) {
       auto pack = package_finder.fastDistanceFinder(buf, count);
       if (pack) {
-        if (output_dispance) {
+        distance->set(pack->getDistance());
+        if (output_distance->asBool()) {
           std::cout << pack->toString() << std::endl;
         }
       }

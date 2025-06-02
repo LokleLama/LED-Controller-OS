@@ -1,19 +1,94 @@
 #include "VariableStore/VariableStore.h"
+#include "VariableStore/BoolVariable.h"
+#include "VariableStore/FloatVariable.h"
+#include "VariableStore/IntVariable.h"
 #include "VariableStore/StringVariable.h"
+#include <cstddef>
 
 bool VariableStore::setVariable(const std::string &key,
                                 const std::string &value) {
+  return addVariable(key, value) != nullptr;
+}
+bool VariableStore::setBoolVariable(const std::string &key, bool value) {
+  return addBoolVariable(key, value) != nullptr;
+}
+bool VariableStore::setVariable(const std::string &key, float value) {
+  return addVariable(key, value) != nullptr;
+}
+bool VariableStore::setVariable(const std::string &key, int value) {
+  return addVariable(key, value) != nullptr;
+}
+
+std::shared_ptr<IVariable>
+VariableStore::addVariable(const std::string &key, const std::string &value) {
   if (callbacks.find(key) != callbacks.end()) {
     if (!callbacks[key](key, value)) {
-      return false;
+      return nullptr;
     }
   }
   if (variables.find(key) == variables.end()) {
-    variables[key] = std::make_shared<StringVariable>(value);
-  } else {
-    variables[key]->set(value);
+    auto ret = std::make_shared<StringVariable>(value);
+    variables[key] = ret;
+    return ret;
   }
-  return true;
+  if (variables[key]->set(value)) {
+    return variables[key];
+  }
+  return nullptr;
+}
+
+std::shared_ptr<IVariable>
+VariableStore::addBoolVariable(const std::string &key, bool value) {
+  if (callbacks.find(key) != callbacks.end()) {
+    if (!callbacks[key](key, value ? "true" : "false")) {
+      return nullptr;
+    }
+  }
+  if (variables.find(key) == variables.end()) {
+    auto ret = std::make_shared<BoolVariable>(value);
+    variables[key] = ret;
+    return ret;
+  }
+  if (variables[key]->set(value)) {
+    return variables[key];
+  }
+  return nullptr;
+}
+
+std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
+                                                      float value) {
+  if (callbacks.find(key) != callbacks.end()) {
+    if (!callbacks[key](key, std::to_string(value))) {
+      return nullptr;
+    }
+  }
+  if (variables.find(key) == variables.end()) {
+    auto ret = std::make_shared<FloatVariable>(value);
+    variables[key] = ret;
+    return ret;
+  }
+  if (variables[key]->set(value)) {
+    return variables[key];
+  }
+  return nullptr;
+}
+
+std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
+                                                      int value) {
+  if (callbacks.find(key) != callbacks.end()) {
+    if (!callbacks[key](key, std::to_string(value))) {
+      return nullptr;
+    }
+  }
+  if (variables.find(key) == variables.end()) {
+    auto ret = std::make_shared<IntVariable>(value);
+    variables[key] = ret;
+    return ret;
+  }
+  if (variables[key]->set(value)) {
+    return variables[key];
+  }
+  return nullptr;
 }
 
 std::shared_ptr<IVariable>

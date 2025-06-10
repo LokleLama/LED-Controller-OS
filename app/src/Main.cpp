@@ -11,6 +11,7 @@
 
 #include "VariableStore/VariableStore.h"
 
+#include "Commands/TimeCommand.h"
 #include "Commands/echo.h"
 #include "Commands/env.h"
 #include "Commands/eval.h"
@@ -25,6 +26,8 @@
 #include "HexLogger.h"
 #include "IRQFifo.h"
 
+#include "RTC/PicoTime.h"
+
 #include "LED/WS2812.h"
 #include "Mainloop.h"
 
@@ -32,6 +35,7 @@ static void uart_task(void);
 static std::shared_ptr<IComLogger> logger;
 static std::shared_ptr<IVariable> output_distance;
 static std::shared_ptr<IVariable> distance;
+static std::shared_ptr<PicoTime> picoTime;
 static HLKPackageFinder package_finder;
 static IRQFifo uart_fifo(128);
 
@@ -68,9 +72,12 @@ int main() {
   VariableStore variableStore;
   Console console(variableStore);
 
+  picoTime = std::make_shared<PicoTime>();
+
   console.registerCommand(std::make_shared<VersionCommand>());
   console.registerCommand(std::make_shared<EchoCommand>());
   console.registerCommand(std::make_shared<EvalCommand>());
+  console.registerCommand(std::make_shared<TimeCommand>(picoTime));
   console.registerCommand(std::make_shared<SetCommand>(variableStore));
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
   console.registerCommand(std::make_shared<EnvCommand>(variableStore));

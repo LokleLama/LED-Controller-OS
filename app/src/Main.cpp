@@ -11,15 +11,15 @@
 
 #include "VariableStore/VariableStore.h"
 
+#include "Commands/EchoCommand.h"
+#include "Commands/EnvCommand.h"
+#include "Commands/EvalCommand.h"
+#include "Commands/GetCommand.h"
+#include "Commands/HelpCommand.h"
+#include "Commands/LedCommand.h"
+#include "Commands/SetCommand.h"
 #include "Commands/TimeCommand.h"
-#include "Commands/echo.h"
-#include "Commands/env.h"
-#include "Commands/eval.h"
-#include "Commands/get.h"
-#include "Commands/help.h"
-#include "Commands/led.h"
-#include "Commands/set.h"
-#include "Commands/version.h"
+#include "Commands/VersionCommand.h"
 
 #include "HLKLogger.h"
 #include "HLKStack/HLKPackageFinder.h"

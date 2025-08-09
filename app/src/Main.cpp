@@ -87,14 +87,14 @@ int main() {
   console.registerCommand(std::make_shared<LedCommand>(pio0, 3));
   console.registerCommand(std::make_shared<LedCommand>(pio0, 4));
 
-  variableStore.addVariable("baud", 115200);
-  variableStore.addVariable("format", "8n1");
-  variableStore.addVariable("log", "none");
+  variableStore.addVariable("uart0.baud", 115200);
+  variableStore.addVariable("uart0.format", "8n1");
+  variableStore.addVariable("uart0.log", "none");
   output_distance = variableStore.addBoolVariable("distance", false);
   distance = variableStore.addVariable("dist", 0.0f);
 
   variableStore.registerCallback(
-      "baud", [](const std::string &key, const std::string &value) {
+      "uart0.baud", [](const std::string &key, const std::string &value) {
         int baudRate = std::stoi(value, nullptr, 10);
         int actual = uart_set_baudrate(uart0, baudRate);
         std::cout << "Baud rate changed to " << actual
@@ -102,7 +102,7 @@ int main() {
         return true;
       });
   variableStore.registerCallback(
-      "format", [](const std::string &key, const std::string &value) {
+      "uart0.format", [](const std::string &key, const std::string &value) {
         if (value.size() < 3) {
           std::cout << "Invalid format value" << std::endl;
           return false;
@@ -123,8 +123,8 @@ int main() {
                   << " (not implemented yet)" << std::endl;
         return false;
       });
-  variableStore.registerCallback("log", [](const std::string &key,
-                                           const std::string &value) {
+  variableStore.registerCallback("uart0.log", [](const std::string &key,
+                                                 const std::string &value) {
     if (value == "none") {
       logger.reset();
     } else if (value == "hex") {
@@ -143,10 +143,7 @@ int main() {
     tud_task(); // TinyUSB task
     return true;
   });
-  mainloop.registerRegularTask([&]() {
-    console.consoleTask(); // Console task
-    return true;
-  });
+  mainloop.registerRegularTask(&console); // Console task
   mainloop.registerRegularTask([&]() {
     uart_task(); // UART task
     return true;

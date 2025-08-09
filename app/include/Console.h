@@ -5,9 +5,10 @@
 #include <vector>
 
 #include "ICommand.h"
+#include "ITask.h"
 #include "IVariableStore.h"
 
-class Console {
+class Console : public ITask {
 public:
   Console(IVariableStore &variableStore) : variableStore(variableStore) {}
   ~Console(){};
@@ -16,7 +17,7 @@ public:
 
   std::vector<std::string> getCommandList() const;
 
-  void consoleTask();
+  bool ExecuteTask() override;
 
 private:
   std::vector<std::shared_ptr<ICommand>> commandList;

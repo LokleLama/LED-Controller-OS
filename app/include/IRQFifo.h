@@ -1,8 +1,9 @@
 #pragma once
 
+#include "IDataStream.h"
 #include <cstdint>
 
-class IRQFifo {
+class IRQFifo : public IDataStream {
 public:
   IRQFifo(uint32_t size) {
     _bufferSize = size;
@@ -39,6 +40,10 @@ public:
       }
     }
     return available;
+  }
+
+  int writeAvailable(const uint8_t *buffer, uint32_t size) override {
+    return -1;
   }
 
   bool isEmpty() const { return count() == 0; }

@@ -5,6 +5,8 @@
 #include <functional>
 #include <vector>
 
+#include "ITask.h"
+
 class Mainloop {
 public:
   using Function = std::function<bool()>;
@@ -13,6 +15,10 @@ public:
 
   // Register a function to be executed in every mainloop iteration
   void registerRegularTask(Function func) { _regularTasks.push_back(func); }
+
+  void registerRegularTask(ITask *task) {
+    _regularTasks.push_back([task]() { return task->ExecuteTask(); });
+  }
 
   // Register a function to be executed every x ms
   void registerTimedTask(Function func, int32_t intervalMs) {

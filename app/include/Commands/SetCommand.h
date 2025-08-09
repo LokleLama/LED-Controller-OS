@@ -13,14 +13,29 @@ public:
 
   int execute(const std::vector<std::string> &args) override {
     if (args.size() < 3) {
-      std::cout << "Usage: set <key> <value>\n";
+      std::cout << "Usage: set [-a] <key> <value>\n";
+      std::cout << "  -a: Set variable and create it if it doesn't exist\n";
+      return -1;
+    }
+    if (args[1] == "-a") {
+      if (args.size() < 4) {
+        std::cout << "Usage: set -a <key> <value>\n";
+        return -1;
+      }
+      if (store.addVariable(args[2], args[3]) != nullptr) {
+        std::cout << "Variable \"" << args[2] << "\" set to \"" << args[3]
+                  << "\"" << std::endl;
+        return 0;
+      }
+      std::cout << "Failed to add variable \"" << args[2] << "\"" << std::endl;
       return -1;
     }
     if (store.setVariable(args[1], args[2])) {
-      std::cout << "Variable " << args[1] << " set to " << args[2] << std::endl;
+      std::cout << "Variable \"" << args[1] << "\" set to \"" << args[2] << "\""
+                << std::endl;
       return 0;
     }
-    std::cout << "Failed to set variable " << args[1] << std::endl;
+    std::cout << "Failed to set variable \"" << args[1] << "\"" << std::endl;
     return -1;
   }
 

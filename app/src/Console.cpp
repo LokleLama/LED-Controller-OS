@@ -32,7 +32,7 @@ std::vector<std::string> Console::getCommandList() const {
   return commandNames;
 }
 
-void Console::consoleTask() {
+bool Console::ExecuteTask() {
   if (!isConnected && tud_cdc_n_connected(INTERFACE_NUMBER)) {
     isConnected = true;
     OnNewConnection();
@@ -76,6 +76,8 @@ void Console::consoleTask() {
     }
     tud_cdc_n_write_flush(INTERFACE_NUMBER);
   }
+
+  return true;
 }
 
 void Console::OnNewConnection() const {

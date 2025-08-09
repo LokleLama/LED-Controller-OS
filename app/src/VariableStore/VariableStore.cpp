@@ -7,16 +7,60 @@
 
 bool VariableStore::setVariable(const std::string &key,
                                 const std::string &value) {
-  return addVariable(key, value) != nullptr;
+  if (callbacks.find(key) != callbacks.end()) {
+    if (!callbacks[key](key, value)) {
+      return false;
+    }
+  }
+  if (variables.find(key) == variables.end()) {
+    return false;
+  }
+  if (variables[key]->set(value)) {
+    return true;
+  }
+  return false;
 }
 bool VariableStore::setBoolVariable(const std::string &key, bool value) {
-  return addBoolVariable(key, value) != nullptr;
+  if (callbacks.find(key) != callbacks.end()) {
+    if (!callbacks[key](key, value ? "true" : "false")) {
+      return false;
+    }
+  }
+  if (variables.find(key) == variables.end()) {
+    return false;
+  }
+  if (variables[key]->set(value)) {
+    return true;
+  }
+  return false;
 }
 bool VariableStore::setVariable(const std::string &key, float value) {
-  return addVariable(key, value) != nullptr;
+  if (callbacks.find(key) != callbacks.end()) {
+    if (!callbacks[key](key, std::to_string(value))) {
+      return false;
+    }
+  }
+  if (variables.find(key) == variables.end()) {
+    return false;
+  }
+  if (variables[key]->set(value)) {
+    return true;
+  }
+  return false;
 }
 bool VariableStore::setVariable(const std::string &key, int value) {
-  return addVariable(key, value) != nullptr;
+  if (callbacks.find(key) != callbacks.end()) {
+    if (!callbacks[key](key, std::to_string(value))) {
+      return false;
+    }
+  }
+  if (variables.find(key) == variables.end()) {
+    return false;
+  }
+  if (variables[key]->set(value)) {
+    return true;
+  }
+  return false;
 }
 
 std::shared_ptr<IVariable>

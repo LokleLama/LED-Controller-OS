@@ -46,7 +46,8 @@ target_link_libraries(${OUTPUT_NAME} pico_stdlib
                                      hardware_uart 
                                      hardware_i2c 
                                      hardware_spi
-                                     hardware_rtc)
+                                     hardware_rtc
+                                     hardware_flash)
 
 target_include_directories(${OUTPUT_NAME} PRIVATE ${INCLUDE_DIRS})
 

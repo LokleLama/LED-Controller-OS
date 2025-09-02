@@ -38,44 +38,45 @@ bool Console::ExecuteTask() {
     OnNewConnection();
   }
 
-  if (tud_cdc_n_available(INTERFACE_NUMBER)) {
-    char buf[64];
-
-    uint32_t count = tud_cdc_n_read(INTERFACE_NUMBER, buf, sizeof(buf));
-    tud_cdc_n_write(INTERFACE_NUMBER, buf, count);
-
-    for (uint32_t i = 0; i < count; i++) {
-      if (buf[i] == '\r' || buf[i] == '\n') {
-        // Process the command
-        std::vector<std::string> tokens;
-        std::string token;
-        std::istringstream stream(inputBuffer);
-        while (stream >> token) {
-          tokens.push_back(token);
-        }
-
-        std::string command = tokens.empty() ? "" : tokens[0];
-        inputBuffer.clear();
-
-        auto cmd = findCommand(command);
-
-        if (cmd != nullptr) {
-          std::cout << std::endl;
-          cmd->execute(tokens);
-        } else {
-          std::cout << std::endl << "Unknown command: " << command << std::endl;
-        }
-        outputPrompt();
-      } else if (buf[i] == 0x7F) { // Backspace
-        if (!inputBuffer.empty()) {
-          inputBuffer.pop_back();
-        }
-      } else {
-        inputBuffer += buf[i];
-      }
-    }
-    tud_cdc_n_write_flush(INTERFACE_NUMBER);
+  if (tud_cdc_n_available(INTERFACE_NUMBER) == 0) {
+    return true;
   }
+
+  char buf[64];
+  uint32_t count = tud_cdc_n_read(INTERFACE_NUMBER, buf, sizeof(buf));
+  tud_cdc_n_write(INTERFACE_NUMBER, buf, count);
+
+  for (uint32_t i = 0; i < count; i++) {
+    if (buf[i] == '\r' || buf[i] == '\n') {
+      // Process the command
+      std::vector<std::string> tokens;
+      std::string token;
+      std::istringstream stream(inputBuffer);
+      while (stream >> token) {
+        tokens.push_back(token);
+      }
+
+      std::string command = tokens.empty() ? "" : tokens[0];
+      inputBuffer.clear();
+
+      auto cmd = findCommand(command);
+
+      if (cmd != nullptr) {
+        std::cout << std::endl;
+        cmd->execute(tokens);
+      } else {
+        std::cout << std::endl << "Unknown command: " << command << std::endl;
+      }
+      outputPrompt();
+    } else if (buf[i] == 0x7F) { // Backspace
+      if (!inputBuffer.empty()) {
+        inputBuffer.pop_back();
+      }
+    } else {
+      inputBuffer += buf[i];
+    }
+  }
+  tud_cdc_n_write_flush(INTERFACE_NUMBER);
 
   return true;
 }

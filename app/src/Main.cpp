@@ -21,7 +21,7 @@
 #include "Commands/TimeCommand.h"
 #include "Commands/VersionCommand.h"
 
-#include "Commands/LoadCommand.h"
+#include "Commands/ReadCommand.h"
 
 #include "HLKLogger.h"
 #include "HLKStack/HLKPackageFinder.h"
@@ -89,7 +89,7 @@ int main() {
   console.registerCommand(std::make_shared<LedCommand>(pio0, 3));
   console.registerCommand(std::make_shared<LedCommand>(pio0, 4));
 
-  console.registerCommand(std::make_shared<LoadCommand>());
+  console.registerCommand(std::make_shared<ReadCommand>());
 
   variableStore.addVariable("uart0.baud", 115200);
   variableStore.addVariable("uart0.format", "8n1");

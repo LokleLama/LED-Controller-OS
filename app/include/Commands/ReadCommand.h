@@ -6,15 +6,15 @@
 #include <iomanip>
 #include <iostream>
 
-class LoadCommand : public ICommand {
+class ReadCommand : public ICommand {
 public:
   // Returns the name of the command
-  const std::string getName() const override { return "load"; }
+  const std::string getName() const override { return "read"; }
 
   // Executes the command
   int execute(const std::vector<std::string> &args) override {
     if (args.size() < 3) {
-      std::cout << "Usage: load <address> <length>" << std::endl;
+      std::cout << "Usage: " << args[0] << " <address> <length>" << std::endl;
       return -1; // Return -1 to indicate an error
     }
     int addr = std::stoi(args[1], nullptr, 0);

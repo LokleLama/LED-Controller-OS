@@ -21,36 +21,27 @@ void Mainloop::start() {
   add_repeating_timer_ms(1, alarm_callback, this, &timer);
 
   while (_running) {
-    {
-      // Execute timed tasks
-      for (auto &task : _timedTasks) {
-        if (task.execute) {
-          task.func();
-          task.execute = false;
-          task.nextExecution = _systickCounter + task.intervalMs;
+    // Execute timed tasks
+    for (auto &task : _timedTasks) {
+      if (task.execute) {
+        if(!task.func()){
+          task.intervalMs = -1; // mark the Task for removal
         }
+        task.execute = false;
+        task.nextExecution = _systickCounter + task.intervalMs;
       }
     }
-    {
-      // Execute regular tasks
-      for (auto &task : _regularTasks) {
-        task();
-      }
+
+    // Execute regular tasks
+    for (auto &task : _regularTasks) {
+      task();
     }
-    {
-      // Execute delayed tasks
-      for (auto &task : _delayedTasks) {
-        if (task.execute) {
-          task.func();
-          task.execute = false;
-          task.executionCounter--;
-        }
-      }
-      for (int n = 0; n < _delayedTasks.size(); n++) {
-        if (_delayedTasks[n].executionCounter == 0) {
-          _delayedTasks.erase(_delayedTasks.begin() + n);
-          n--;
-        }
+
+    // Remove completed timed tasks
+    for (int n = 0; n < _timedTasks.size(); n++) {
+      if (_timedTasks[n].intervalMs == 0) {
+        _timedTasks.erase(_timedTasks.begin() + n);
+        n--;
       }
     }
   }
@@ -63,11 +54,6 @@ void Mainloop::start() {
 void Mainloop::onMillisecond() {
   _systickCounter++;
   for (auto &task : _timedTasks) {
-    if (_systickCounter == task.nextExecution) {
-      task.execute = true;
-    }
-  }
-  for (auto &task : _delayedTasks) {
     if (_systickCounter == task.nextExecution) {
       task.execute = true;
     }

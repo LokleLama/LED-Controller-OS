@@ -28,7 +28,7 @@ public:
 
   // Register a function to be executed once after y ms
   void registerDelayedTask(Function func, int32_t delayMs) {
-    _delayedTasks.push_back({func, false, 1, _systickCounter + delayMs});
+    _timedTasks.push_back({func, false, -1, _systickCounter + delayMs});
   }
 
   // Start the mainloop
@@ -47,16 +47,9 @@ private:
     int32_t intervalMs;
     uint32_t nextExecution;
   };
-  struct DelayedTaskInfo {
-    Function func;
-    bool execute;
-    int executionCounter;
-    uint32_t nextExecution;
-  };
 
   std::vector<Function> _regularTasks;
   std::vector<TimedTaskInfo> _timedTasks;
-  std::vector<DelayedTaskInfo> _delayedTasks;
 
   bool _running;
   uint32_t _systickCounter;

@@ -29,6 +29,12 @@ add_executable(
     ${SRC}
 )
 
+# Post-build: print ELF size
+add_custom_command(TARGET ${OUTPUT_NAME} POST_BUILD
+    COMMAND arm-none-eabi-size $<TARGET_FILE:${OUTPUT_NAME}>
+    COMMENT "Displaying ELF file size after build"
+)
+
 pico_generate_pio_header(LEDController ${CMAKE_CURRENT_LIST_DIR}/include/PIO/led.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/include/PIO)
 
 

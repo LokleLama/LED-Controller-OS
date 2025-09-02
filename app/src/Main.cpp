@@ -13,7 +13,6 @@
 
 #include "Commands/EchoCommand.h"
 #include "Commands/EnvCommand.h"
-#include "Commands/EvalCommand.h"
 #include "Commands/GetCommand.h"
 #include "Commands/HelpCommand.h"
 #include "Commands/LedCommand.h"
@@ -21,7 +20,7 @@
 #include "Commands/TimeCommand.h"
 #include "Commands/VersionCommand.h"
 
-#include "Commands/LoadCommand.h"
+#include "Commands/ReadCommand.h"
 
 #include "HLKLogger.h"
 #include "HLKStack/HLKPackageFinder.h"
@@ -78,7 +77,6 @@ int main() {
 
   console.registerCommand(std::make_shared<VersionCommand>());
   console.registerCommand(std::make_shared<EchoCommand>());
-  console.registerCommand(std::make_shared<EvalCommand>());
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));
   console.registerCommand(std::make_shared<SetCommand>(variableStore));
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
@@ -89,7 +87,7 @@ int main() {
   console.registerCommand(std::make_shared<LedCommand>(pio0, 3));
   console.registerCommand(std::make_shared<LedCommand>(pio0, 4));
 
-  console.registerCommand(std::make_shared<LoadCommand>());
+  console.registerCommand(std::make_shared<ReadCommand>());
 
   variableStore.addVariable("uart0.baud", 115200);
   variableStore.addVariable("uart0.format", "8n1");

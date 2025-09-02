@@ -13,13 +13,13 @@ public:
 
   int execute(const std::vector<std::string> &args) override {
     if (args.size() < 3) {
-      std::cout << "Usage: set [-a] <key> <value>\n";
+      std::cout << "Usage: " << args[0] << " [-a] <key> <value>\n";
       std::cout << "  -a: Set variable and create it if it doesn't exist\n";
       return -1;
     }
     if (args[1] == "-a") {
       if (args.size() < 4) {
-        std::cout << "Usage: set -a <key> <value>\n";
+        std::cout << "Usage: " << args[0] << " -a <key> <value>\n";
         return -1;
       }
       if (store.addVariable(args[2], args[3]) != nullptr) {

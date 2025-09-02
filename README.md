@@ -12,12 +12,22 @@ Install the following packages to cross compile for the RP2040:
 sudo apt install cmake build-essential gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
 ```
 
+### Clone the C/C++ Pico SDK
+
+best to do this in your home directory
+
+```bash
+git clone https://github.com/raspberrypi/pico-sdk.git --recursive
+```
+
 ## Prepare build files (Pico SDK from git)
 
 ```bash
 mkdir build
 cd build
 cmake -DPICO_SDK_FETCH_FROM_GIT=ON ..
+
+make -j4
 ```
 
 ## Prepare build files (local Pico SDK)

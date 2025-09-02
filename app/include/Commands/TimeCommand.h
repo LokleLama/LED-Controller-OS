@@ -36,10 +36,12 @@ public:
       std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeInfo);
       std::cout << "Trying to set Time to: " << buffer << std::endl;
       picoTime->setTime(timeInfo);
-      return execute({});
+      return 0;
     }
 
-    std::cout << "Usage: time get | time set YYYY-MM-DD HH:MM:SS" << std::endl;
+    std::cout << "Usage: " << args[0] << " [get]" << std::endl;
+    std::cout << "       " << args[0] << " set [YYYY-MM-DD] [HH:MM[:SS]]" << std::endl;
+    std::cout << "       " << args[0] << " set [DD.MM.[YY]YY] [HH:MM[:SS]]" << std::endl;
     return -1; // Command not recognized
   }
 

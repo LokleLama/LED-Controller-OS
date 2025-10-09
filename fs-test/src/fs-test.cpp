@@ -1,7 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
+#include <cstdlib>
+#include <cstdint>
+#include <cstring>
+#include <cstdio>
+
+#include "Flash/flashHAL.h"
+#include "Flash/SPFS.h"
 
 struct config_t {
   size_t flash_size;
@@ -18,14 +21,17 @@ struct config_t {
     .fs_size = 1 * 1024 * 1024,
     .sector_size = 4096,
     .page_size = 256,
-    .flash_file = "flash.bin",
+    .flash_file = "flash",
     .flash_data = NULL
 };
 
 #define MAGIC_NUMBER  0xA36CA3FA
+#define SPFS_VERSION  0x01000000
 
 static void OpenOrCreateFlashFile() {
-  FILE* f = fopen(config.flash_file, "r+b");
+  char flash_file_name[256];
+  snprintf(flash_file_name, sizeof(flash_file_name), "%s-in.bin", config.flash_file);
+  FILE* f = fopen(flash_file_name, "r+b");
   if (f != NULL) {
     //find filesize
     fseek(f, 0, SEEK_END);
@@ -33,7 +39,7 @@ static void OpenOrCreateFlashFile() {
     fseek(f, 0, SEEK_SET);
 
     // read it
-    config.flash_data = malloc(config.flash_size);
+    config.flash_data = (uint8_t*)malloc(config.flash_size);
     if (config.flash_data == NULL) {
       perror("Failed to allocate flash data");
       fclose(f);
@@ -51,30 +57,30 @@ static void OpenOrCreateFlashFile() {
     return;
   }
 
-  // file doesn't exist, create it
-  f = fopen(config.flash_file, "w+b");
-  if (f == NULL) {
-    perror("Failed to create flash file");
-    return;
-  }
-
   // allocate flash data
-  config.flash_data = malloc(config.flash_size);
+  config.flash_data = (uint8_t*)malloc(config.flash_size);
   if (config.flash_data == NULL) {
     perror("Failed to allocate flash data");
-    fclose(f);
     return;
   }
 
   memset(config.flash_data, 0xFF, config.flash_size);
 
   // write magic number at fs_offset
-  uint32_t* magic = (uint32_t*)(config.flash_data + config.fs_offset);
-  *magic = MAGIC_NUMBER;
+  uint32_t* fs_header = (uint32_t*)(config.flash_data + config.fs_offset);
+  fs_header[0] = MAGIC_NUMBER;
+  fs_header[1] = SPFS_VERSION; // version 1.0
+  fs_header[2] = config.fs_size; // size of the filesystem
+
+  // file doesn't exist, create it
+  f = fopen(flash_file_name, "w+b");
+  if (f == NULL) {
+    perror("Failed to create flash file");
+    return;
+  }
 
   if (fwrite(config.flash_data, 1, config.flash_size, f) != config.flash_size) {
     perror("Failed to write initial flash data");
-    free(config.flash_data);
     fclose(f);
     return;
   }
@@ -84,7 +90,9 @@ static void OpenOrCreateFlashFile() {
 }
 
 static void SaveFlashStateInFlashFile() {
-  FILE* f = fopen(config.flash_file, "r+b");
+  char flash_file_name[256];
+  snprintf(flash_file_name, sizeof(flash_file_name), "%s-out.bin", config.flash_file);
+  FILE* f = fopen(flash_file_name, "w+b");
   if (f == NULL) {
     perror("Failed to open flash file for writing");
     return;
@@ -116,7 +124,10 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  printf("using flash file %s\n", config.flash_file);
+  FlashHAL::setFlashMemoryOffset(config.flash_data);
+
+  printf("using flash file %s-in.bin\n", config.flash_file);
+  printf("saving result in %s-out.bin\n", config.flash_file);
   printf("using flash offset of %zu\n", config.fs_offset);
   printf("using flash size of %zu\n", config.fs_size);
   printf("using flash sector size of %zu\n", config.sector_size);
@@ -124,6 +135,10 @@ int main(int argc, char **argv) {
   printf("using flash Size of %zu\n", config.flash_size);
 
   //TODO: add tests here
+  SPFS spfs;
+  auto root = spfs.getRootDirectory();
+
+  printf("Directory name: %s\n", root->getName().c_str());
 
   SaveFlashStateInFlashFile();
   free(config.flash_data);

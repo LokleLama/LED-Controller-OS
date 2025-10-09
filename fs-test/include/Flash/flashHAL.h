@@ -1,7 +1,10 @@
-#include "hardware/flash.h"
-#include "pico/stdlib.h"
+#pragma once
+
+#include <cstdlib>
+#include <cstdint>
 #include <cstring>
-#include <stdexcept>
+#include <cstdio>
+
 
 class FlashHAL {
 public:
@@ -13,9 +16,7 @@ public:
    * \param count Number of bytes to be erased. Must be a multiple of 4096 bytes
    * (one sector).
    */
-  static void flash_range_erase(uint32_t flash_offs, size_t count) {
-    ::flash_range_erase(flash_offs, count);
-  }
+  static void flash_range_erase(uint32_t flash_offs, size_t count);
 
   /*! \brief  Program flash
    *  \ingroup hardware_flash
@@ -27,9 +28,7 @@ public:
    * (one page).
    */
   static void flash_range_program(uint32_t flash_offs, const uint8_t *data,
-                                  size_t count) {
-    ::flash_range_program(flash_offs, data, count);
-  }
+                                  size_t count);
 
   /*! \brief Get flash unique 64 bit identifier
    *  \ingroup hardware_flash
@@ -42,17 +41,22 @@ public:
    *  \param id_out Pointer to an 8-byte buffer to which the ID will be written
    */
   static void flash_get_unique_id(uint8_t *id_out) {
-    ::flash_get_unique_id(id_out);
+    std::memset(id_out, 0, 8);
   }
 
   static int calculateSector(int address) {
-    return address / FLASH_SECTOR_SIZE;
+    return address / /*FLASH_SECTOR_SIZE*/4096;
   }
   static int calculateSectorAddress(int sector) {
-    return sector * FLASH_SECTOR_SIZE;
+    return sector * /*FLASH_SECTOR_SIZE*/4096;
   }
-  static int calculatePage(int address) { return address / FLASH_PAGE_SIZE; }
-  static int calculatePageAddress(int page) { return page * FLASH_PAGE_SIZE; }
+  static int calculatePage(int address) { return address / /*FLASH_PAGE_SIZE*/256; }
+  static int calculatePageAddress(int page) { return page * /*FLASH_PAGE_SIZE*/256; }
 
-  static void* getFlashMemoryOffset() { return (void*)XIP_BASE; }
+  static void* getFlashMemoryOffset(){ return flash_memory_pointer; }
+
+  static void setFlashMemoryOffset(void* ptr) { flash_memory_pointer = (uint8_t*)ptr; }
+
+private:
+  static uint8_t* flash_memory_pointer;
 };

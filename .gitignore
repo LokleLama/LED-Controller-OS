@@ -5,3 +5,9 @@ github-id
 .pico_env
 .ssh-agent.conf
 .vscode/
+*.bin
+*.elf
+*.hex
+*.uf2
+*.o
+*.d

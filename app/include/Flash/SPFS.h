@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-//! \brief Simple Flash File System (SPFS) class
+//! \brief Simple Pico File System (SPFS) class
 /*!
  * This class provides a simple interface for managing a flash file system.
  * It allows reading, writing, and erasing data in flash memory.
@@ -16,41 +16,89 @@
  * \ingroup hardware_flash
  */
 class SPFS {
-public:
-  class Directory {
-  protected:
-    Directory(const SPFS &fs, const Directory *parent, const std::string &name)
-        : _fs(fs), _parent(parent), _name(name) {}
-
-  public:
-    //! \brief Get the path of the directory
-    /*!
-     * \return The path of the directory.
-     */
-    virtual std::string getPath() const {
-      return _parent ? _parent->getPath() + "/" + _name : _name;
-    }
-    std::string getName() const { return _name; }
-
-    std::vector<std::string> listFiles();
-    std::vector<std::string> listDirectories();
-
-    std::shared_ptr<Directory> createDirectory(const std::string &name);
-    std::shared_ptr<Directory> openDirectory(const std::string &name) const;
-    int deleteDirectory(const std::string &name);
-    int deleteFile(const std::string &name);
-    int readFile(const std::string &name, std::vector<uint8_t> &buffer) const;
-    int writeFile(const std::string &name,
-                  const std::vector<uint8_t> &buffer) const;
-
-  private:
-    const SPFS &_fs;          //!< Reference to the Flash File System
-    const Directory *_parent; //!< Reference to the parent directory
-    const std::string _name;  //!< Name of the directory
+private:
+  struct FileSystemHeader{
+    uint32_t magic;                        //!< Magic number to identify the file system
+    uint32_t version;                      //!< Version number of the file system
+    uint32_t size;                         //!< Size of the file system
+    uint32_t block_and_page_size;          //!< Block size and page size of the file system (upper 16 bits: block size, lower 16 bits: page size)
+                                           //!< the configuration contains the following fields:
+                                           //!< - uint16_t block_size;   //!< Block size of the file system (mask: 0x0000FFFF) (in bytes)
+                                           //!< - uint16_t page_size;    //!< Page size of the file system (mask: 0xFFFF0000) (in bytes)
+    uint32_t meta_offset;                  //!< Offset to the file system metadata (in bytes from start (must be a multiple of sizeof(uint32_t) = 4)))
+    uint32_t checksum;                     //!< Checksum of the file system header
   };
 
-  SPFS() = default;  //!< Default constructor
-  ~SPFS() = default; //!< Default destructor
+  struct FileSystemMetadata{
+    uint16_t magic;                        //!< Magic number to identify the file system metadata
+    uint16_t root_directory_block;         //!< Block number of the root directory
+    uint16_t name_size;                    //!< Size of the file system name
+                                           //!< the configuration contains the following fields:
+                                           //!< - uint8_t size;        //!< Size of the file system name (mask: 0x00FF) (max: 180 bytes)
+                                           //!< - uint8_t reserved;    //!< Reserved for future use (mask: 0xFF00) (must be 0xFF)
+    uint16_t checksum;                     //!< Checksum of the file system metadata
+                                           //! the name of the file system will follow after this structure
+  };
+
+  struct DirectoryHeader{
+    uint16_t magic;                        //!< Magic number to identify the directory
+    uint16_t name_size_content_offset;     //!< the configuration contains the following fields:
+                                           //!< - uint8_t size;        //!< Size of the directory name (mask: 0x00FF) (max: 200 bytes)
+                                           //!< - uint8_t offset;      //!< Offset within the content block of the directory (mask: 0xFF00) (max: 200 bytes)
+    uint16_t checksum;                     //!< Checksum of the directory header
+    uint16_t next;                         //!< offset of the extension block (in blocks)
+                                           //!< The directory content will follow after the name. any file or directory in the current directory will be listed here as uint16_t block offsets.
+  };
+  struct DirectoryExtensionHeader{
+    uint16_t magic;                        //!< Magic number to identify the directory extension
+    int16_t previous;                      //!< offset of the previous extension block (in blocks)
+    uint16_t checksum;                     //!< Checksum of the directory extension header
+    int16_t next;                          //!< offset of the next extension block (in blocks)
+    uint16_t content[124];                 //!< Content of the directory extension, each entry is a uint16_t block offset
+  };
+
+  struct FileHeader{
+    uint16_t magic;                        //!< Magic number to identify the file
+    uint16_t content_offset;               //!< offset of the file content (in blocks)
+    uint16_t name_offset_size;             //!< the configuration contains the following fields:
+                                           //!< - uint8_t offset;      //!< Offset within the current block of the file name (mask: 0x00FF) (max: 200 bytes)
+                                           //!< - uint8_t size;        //!< Size of the file name (mask: 0xFF00) (max: 200 bytes)
+    uint16_t file_type_flags;              //!< the configuration contains the following fields:
+                                           //!< - uint8_t file_type;   //!< Type of the file (mask: 0x00FF) (e.g., 0 = binary, 1 = text, etc.)
+                                           //!< - uint8_t flags;       //!< Flags for the file (mask: 0xFF00) (e.g., read-only, hidden, executable, etc.)
+    uint16_t checksum;                     //!< Checksum of the file header
+                                           //!< the content of the file will follow after the name
+  };
+
+  struct FileContentHeader{
+    uint16_t magic;                        //!< Magic number to identify the file content
+    uint16_t size;                         //!< Size of the file data (in bytes)
+    uint16_t checksum;                     //!< Checksum of the file data
+    uint16_t next;                         //!< offset of the next file version content block (in blocks)
+  };
+
+public:
+  class File {
+
+  };
+  class Directory{
+    public:
+      Directory(std::shared_ptr<Directory> parent, const DirectoryHeader* header)
+          : _parent(parent), _header(header) { }
+
+      const DirectoryHeader* getHeader() const { return _header; }
+      void setHeader(const DirectoryHeader* header) { _header = header; }
+
+      std::shared_ptr<Directory> getParent() const { return _parent; }
+      const std::string getName() const;
+
+      std::vector<std::shared_ptr<Directory>> getSubdirectories() const;
+      std::vector<std::shared_ptr<File>> getFiles() const;
+
+    protected:
+        std::shared_ptr<Directory> _parent; //!< Reference to the parent directory
+        const DirectoryHeader* _header; //!< Header information for the directory
+  };
 
   //! \brief Initialize the Flash File System
   /*!
@@ -58,23 +106,34 @@ public:
    * and preparing it for use.
    * \return 0 on success, negative error code on failure.
    */
-  std::shared_ptr<Directory>
-  getRootDirectory(int start_address = 0, int end_address = -1, int size = -1);
+  std::shared_ptr<Directory> getRootDirectory(int start_address = 0, int end_address = -1);
 
 private:
-  void *_address = 0; //!< Start address of the flash memory for the file system
-  int _size = -1; //!< Size of the flash memory for the file system, -1 means
-                  //!< use full flash size
+  SPFS::FileSystemHeader *_fs_header = nullptr; //!< Start address of the flash memory for the file system
 
-  static constexpr uint32_t MAGIC_NUMBER =
-      0xA36CA3FA;                           //!< Magic number for SPFS
-  static constexpr int FS_ALIGNMENT = 4096; //!< Alignment for SPFS operations
+  static constexpr uint32_t MAGIC_NUMBER = 0xA36CA3FA;              //!< Magic number for SPFS (SPFSv1)
+  static constexpr uint32_t SPFS_VERSION = 0x01000000;              //!< Version number for SPFS (SPFSv1)
+  static constexpr uint32_t VERSION_MAJOR_MASK = 0xFF000000;        //!< Major version mask
+  static constexpr uint32_t VERSION_MINOR_MASK = 0x00FF0000;        //!< Minor version mask
+  static constexpr uint32_t VERSION_PATCH_MASK = 0x0000FF00;        //!< Patch version mask
+  static constexpr uint32_t VERSION_BUILD_MASK = 0x000000FF;        //!< Build version mask
 
-  struct FileSystemHeader {
-    uint32_t magic; //!< Magic number to identify the file system
-    uint32_t size;  //!< Size of the file system
-  };
+  static constexpr uint16_t MAGIC_FS_METADATA_NUMBER = 0xB50E;      //!< Magic number for SPFS File System Metadata (fsm)
+  static constexpr uint16_t MAGIC_DIR_NUMBER = 0x9314;              //!< Magic number for SPFS Directory (dir)
+  static constexpr uint16_t MAGIC_DIR_EXTENSION_NUMBER = 0x85E5;    //!< Magic number for SPFS Directory Extension (exd)
+  static constexpr uint16_t MAGIC_FILE_NUMBER = 0xB313;             //!< Magic number for SPFS File (fil)
+  static constexpr uint16_t MAGIC_FILE_EXTENSION_NUMBER = 0x70CD;   //!< Magic number for SPFS File Extension (con)
 
-  bool findFileSystemStart(int start_address, int end_address);
-  bool initializeFileSystem(int size);
+  static constexpr int FS_ALIGNMENT = 4096;                         //!< Alignment for SPFS operations
+  static constexpr int FS_BLOCK_SIZE = 256;                         //!< Block size for SPFS operations
+
+  std::shared_ptr<Directory> findFileSystemStart(int start_address, int end_address);
+  std::shared_ptr<Directory> initializeFileSystem(void *address);
+  bool formatDisk(const void *address, size_t size);
+
+  std::shared_ptr<Directory> createNewFileSystem(const void *address, size_t size, const std::string& fs_name, const std::string& root_dir_name);
+  std::shared_ptr<Directory> createDirectory(const void* address, const std::string& dir_name);
+
+  uint32_t calculateCRC32(const void *address, size_t size);
+  uint16_t calculateCRC16(const void *address, size_t size);
 };

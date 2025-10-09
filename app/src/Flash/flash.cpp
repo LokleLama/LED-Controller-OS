@@ -1,53 +1,64 @@
 #include "Flash/flash.h"
 #include "Flash/flashHAL.h"
-#include "pico/stdlib.h"
 #include <cstring>
 #include <stdexcept>
 
-int Flash::read(std::vector<uint8_t> &buffer, int address) {
-  if (address < 0 || buffer.size() == 0 ||
-      address + buffer.size() > (MAX_FLASH_SIZE)) {
-    return -1; // Invalid parameters
-  }
-  memcpy(buffer.data(), (const void *)(readPointer(address)), buffer.size());
-  return 0;
-}
 
-static void *Flash::readPointer(int address) {
-  if (address < 0 || address >= MAX_FLASH_SIZE) {
+void *Flash::readPointer(int offset) {
+  if (offset < 0 || offset >= (int)MAX_FLASH_SIZE) {
     return nullptr;
   }
-  return (void *)(XIP_BASE + address);
+  return (void *)((uint8_t *)FlashHAL::getFlashMemoryOffset() + offset);
 }
 
-int Flash::write(const std::vector<uint8_t> &buffer, int address) {
-  if (address < 0 || buffer.size() == 0 ||
-      address + buffer.size() > (MAX_FLASH_SIZE)) {
+int Flash::read(std::vector<uint8_t> &buffer, int offset) {
+  if (offset < 0 || buffer.size() == 0 ||
+      (offset + buffer.size() > (MAX_FLASH_SIZE))) {
+    return 0; // Invalid parameters
+  }
+  memcpy(buffer.data(), (uint8_t *)FlashHAL::getFlashMemoryOffset() + offset, buffer.size());
+  return buffer.size();
+}
+
+int Flash::read(std::vector<uint8_t> &buffer, const void* address) {
+  if (address == nullptr || buffer.size() == 0 ||
+      ((((uint8_t*)address) - ((uint8_t*)FlashHAL::getFlashMemoryOffset())) + buffer.size()) > (MAX_FLASH_SIZE)) {
+    return 0; // Invalid parameters
+  }
+  memcpy(buffer.data(), address, buffer.size());
+  return buffer.size();
+}
+
+int Flash::write(const std::vector<uint8_t> &buffer, const void* address) {
+  int offset = (((uint8_t*)address) - ((uint8_t*)FlashHAL::getFlashMemoryOffset()));
+  if (address == nullptr || buffer.size() == 0 ||
+      offset + buffer.size() > (MAX_FLASH_SIZE)) {
     return -1; // Invalid parameters
   }
 
-  int start_page = FlashHAL::calculatePage(address);
-  if (FlashHAL::calculatePageAddress(start_page) != address) {
+  int start_page = FlashHAL::calculatePage(offset);
+  if (FlashHAL::calculatePageAddress(start_page) != offset) {
     return -2; // Address not aligned to page start
   }
 
   int page_count = FlashHAL::calculatePage(buffer.size());
-  if (FlashHAL::calculatePageAddress(page_count) != buffer.size()) {
+  if (FlashHAL::calculatePageAddress(page_count) != (int)buffer.size()) {
     return -3; // Buffer size not aligned to page size
   }
 
-  FlashHAL::flash_range_program(address, buffer.data(), buffer.size());
-  return 0;
+  FlashHAL::flash_range_program(offset, buffer.data(), buffer.size());
+  return buffer.size();
 }
 
-int Flash::erase(int address, int length) {
-  if (address < 0 || length <= 0 || address + length > (MAX_FLASH_SIZE)) {
+int Flash::erase(const void* address, int length) {
+  int offset = (((uint8_t*)address) - ((uint8_t*)FlashHAL::getFlashMemoryOffset()));
+  if (address == nullptr || length <= 0 || ((offset + length) > (int)(MAX_FLASH_SIZE))) {
     return -1; // Invalid parameters
   }
-  int start_sector = FlashHAL::calculateSector(address);
+  int start_sector = FlashHAL::calculateSector(offset);
   int sector_count = FlashHAL::calculateSector(length);
 
-  if (FlashHAL::calculateSectorAddress(start_sector) != address) {
+  if (FlashHAL::calculateSectorAddress(start_sector) != offset) {
     return -2; // Address not aligned to sector start
   }
 
@@ -55,7 +66,6 @@ int Flash::erase(int address, int length) {
     return -3; // Erase length not aligned to sector size
   }
 
-  FlashHAL::flash_range_erase(FlashHAL::calculateSectorAddress(start_sector),
-                              FLASH_SECTOR_SIZE);
+  FlashHAL::flash_range_erase(offset, length);
   return 0;
 }

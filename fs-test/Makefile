@@ -15,7 +15,7 @@ OBJ := $(patsubst ./%,obj/%.o,$(basename $(SRC_C))) $(patsubst ./%,obj/%.o,$(bas
 
 # Find all include files
 INCLUDE_FILES := $(shell find . -name '*.h' -o -name '*.hpp')
-INCLUDES := $(patsubst %,-I%,$(sort $(dir $(INCLUDE_FILES))))
+INCLUDES := $(patsubst %,-I%,$(sort $(dir $(INCLUDE_FILES)))) -I./include/
 
 # Output binary
 TARGET := fs-test

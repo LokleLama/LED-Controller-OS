@@ -64,11 +64,42 @@ bool SPFS::formatDisk(const void *address, size_t size) {
   return Flash::erase(address, size) == 0;
 }
 
-std::shared_ptr<SPFS::Directory> SPFS::Directory::createDirectory(const std::string& name) const{
-  return nullptr;
+std::shared_ptr<SPFS::Directory> SPFS::Directory::createDirectory(const std::string& name){
+  auto new_dir = _fs->createDirectory(shared_from_this(), name);
+  if(new_dir == nullptr){
+    return nullptr;
+  }
+
+  std::vector<uint8_t> buffer(FS_BLOCK_SIZE);
+  if(Flash::read(buffer, getHeader()) < (int)buffer.size()) {
+    return nullptr;
+  }
+
+  DirectoryHeader *dirheader = reinterpret_cast<DirectoryHeader *>(buffer.data());
+
+  auto contentHeaders = reinterpret_cast<DirectoryContentHeader *>(reinterpret_cast<uint8_t*>(dirheader) + (dirheader->name_size_content_offset >> 8));
+  auto max_count = (int)(FS_BLOCK_SIZE - (dirheader->name_size_content_offset >> 8)) / sizeof(DirectoryContentHeader);
+
+  int current = 0;
+  while(contentHeaders[current].type != 0xFFFF && current < max_count) {
+    current++;
+  }
+
+  if(current >= max_count) {
+    return nullptr; // No space for new content
+  }
+
+  contentHeaders[current].type = 0xD1FF; // Directory type
+  contentHeaders[current].block_offset = (int16_t)(((uintptr_t)new_dir->getHeader() - (uintptr_t)getHeader()) / FS_BLOCK_SIZE);
+
+  if(Flash::write(buffer, getHeader()) < (int)buffer.size()) {
+    return nullptr;
+  }
+
+  return new_dir;
 }
 
-std::shared_ptr<SPFS::Directory> SPFS::createDirectory(std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {
+std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {
   auto address = findFreeSpaceForDirectory();
   if(address == nullptr) {
     return nullptr;
@@ -76,7 +107,7 @@ std::shared_ptr<SPFS::Directory> SPFS::createDirectory(std::shared_ptr<SPFS::Dir
   return createDirectory(address, parent, dir_name);
 }
 
-std::shared_ptr<SPFS::Directory> SPFS::createDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {
+std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const void* address, const std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {
   if(dir_name.length() >= 200) {
     return nullptr; // Name too long
   }
@@ -89,7 +120,7 @@ std::shared_ptr<SPFS::Directory> SPFS::createDirectory(const void* address, std:
   DirectoryHeader *dirheader = reinterpret_cast<DirectoryHeader *>(buffer.data());
 
   dirheader->magic = MAGIC_DIR_NUMBER;
-  dirheader->name_size_content_offset = (uint16_t)(dir_name.length() & 0xFF) | ((sizeof(DirectoryHeader) + dir_name.length() + 3) & 0xFE);
+  dirheader->name_size_content_offset = (uint16_t)(dir_name.length() & 0xFF) | ((sizeof(DirectoryHeader) + dir_name.length() + 1 + sizeof(DirectoryContentHeader)) & 0xFC) << 8;
   strncpy(reinterpret_cast<char*>(dirheader) + sizeof(DirectoryHeader), dir_name.c_str(), dir_name.length() + 1);
   dirheader->checksum = calculateCRC16(dirheader, sizeof(DirectoryHeader) - sizeof(dirheader->checksum));
 

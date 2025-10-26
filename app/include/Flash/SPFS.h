@@ -58,7 +58,7 @@ private:
 
   struct DirectoryContentHeader{
     uint16_t type;
-    uint16_t block_offset;
+    int16_t block_offset;
   };
 
   struct FileHeader{
@@ -83,12 +83,12 @@ public:
   class File {
 
   };
-  class Directory{
+  class Directory : public std::enable_shared_from_this<Directory> {
     public:
       Directory(std::shared_ptr<Directory> parent) : Directory(nullptr, parent, nullptr) { };
 
     protected:
-      Directory(const SPFS* fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
+      Directory(SPFS* fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
           : _fs(fs), _parent(parent), _header(header) { }
 
       const DirectoryHeader* getHeader() const { return _header; }
@@ -100,18 +100,18 @@ public:
       std::vector<std::shared_ptr<Directory>> getSubdirectories() const;
       std::vector<std::shared_ptr<File>> getFiles() const;
 
-      std::shared_ptr<Directory> createDirectory(const std::string& name) const;
+      std::shared_ptr<Directory> createDirectory(const std::string& name);
 
     protected:
-      const SPFS* _fs;                     //!< Reference to the SPFS instance
+      SPFS* _fs;                          //!< Reference to the SPFS instance
       std::shared_ptr<Directory> _parent; //!< Reference to the parent directory
-      const DirectoryHeader* _header; //!< Header information for the directory
+      const DirectoryHeader* _header;           //!< Header information for the directory
   };
 
 private:
   class DirectoryInternal : public Directory {
   public:
-    DirectoryInternal(const SPFS* fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
+    DirectoryInternal(SPFS* fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
         : Directory(fs, parent, header) { }
 
     // Additional methods specific to internal directory management can be added here
@@ -158,8 +158,8 @@ private:
   bool formatDisk(const void *address, size_t size);
 
   std::shared_ptr<Directory> createNewFileSystem(const void *address, size_t size, const std::string& fs_name, const std::string& root_dir_name);
-  std::shared_ptr<Directory> createDirectory(std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
-  std::shared_ptr<Directory> createDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
+  std::shared_ptr<DirectoryInternal> createDirectory(std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
+  std::shared_ptr<DirectoryInternal> createDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
 
   const DirectoryHeader* findFreeSpaceForDirectory();
   const FileHeader* findFreeSpaceForFile(size_t name_size);

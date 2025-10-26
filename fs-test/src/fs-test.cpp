@@ -146,6 +146,13 @@ int main(int argc, char **argv) {
   printf("File System Size: %i\n", spfs.getFileSystemSize());
   printf("Directory Name  : %s\n", root->getName().c_str());
 
+  auto subdir = root->createDirectory("subdir");
+  if (subdir == nullptr) {
+    printf("Failed to create subdirectory\n");
+  } else {
+    printf("Created subdirectory: %s\n", subdir->getName().c_str());
+  }
+
   SaveFlashStateInFlashFile();
   free(config.flash_data);
 

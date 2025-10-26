@@ -34,6 +34,7 @@ static void OpenOrCreateFlashFile() {
   FILE* f = fopen(flash_file_name, "r+b");
   if (f != NULL) {
     //find filesize
+    printf("Opened file \"%s\"\n", flash_file_name);
     fseek(f, 0, SEEK_END);
     config.flash_size = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -87,6 +88,7 @@ static void OpenOrCreateFlashFile() {
 
   fflush(f);
   fclose(f);
+  printf("Created file \"%s\"\n", flash_file_name);
 }
 
 static void SaveFlashStateInFlashFile() {
@@ -113,11 +115,13 @@ static size_t RoundSizeToSector(size_t size) {
 }
 
 int main(int argc, char **argv) {
-  printf("Usage: fs-test [flash-size]\n");
+  printf("Usage: fs-test [filesystem-size]\n");
   if (argc > 1) {
-    config.flash_size = strtoul(argv[1], NULL, 0);
+    config.fs_size = strtoul(argv[1], NULL, 0);
+    printf("round size argument %zu", config.fs_size);
+    config.fs_size = RoundSizeToSector(config.fs_size);
+    printf(" to %zu\n", config.fs_size);
   }
-  config.flash_size = RoundSizeToSector(config.flash_size);
 
   OpenOrCreateFlashFile();
   if (config.flash_data == NULL) {
@@ -126,6 +130,7 @@ int main(int argc, char **argv) {
 
   FlashHAL::setFlashMemoryOffset(config.flash_data);
 
+  printf("******************************\n");
   printf("using flash file %s-in.bin\n", config.flash_file);
   printf("saving result in %s-out.bin\n", config.flash_file);
   printf("using flash offset of %zu\n", config.fs_offset);
@@ -134,11 +139,12 @@ int main(int argc, char **argv) {
   printf("using flash page size of %zu\n", config.page_size);
   printf("using flash Size of %zu\n", config.flash_size);
 
-  //TODO: add tests here
   SPFS spfs;
   auto root = spfs.getRootDirectory();
 
-  printf("Directory name: %s\n", root->getName().c_str());
+  printf("******************************\n");
+  printf("File System Size: %i\n", spfs.getFileSystemSize());
+  printf("Directory Name  : %s\n", root->getName().c_str());
 
   SaveFlashStateInFlashFile();
   free(config.flash_data);

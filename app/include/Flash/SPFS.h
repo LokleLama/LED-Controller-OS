@@ -54,7 +54,11 @@ private:
     int16_t previous;                      //!< offset of the previous extension block (in blocks)
     uint16_t checksum;                     //!< Checksum of the directory extension header
     int16_t next;                          //!< offset of the next extension block (in blocks)
-    uint16_t content[124];                 //!< Content of the directory extension, each entry is a uint16_t block offset
+  };
+
+  struct DirectoryContentHeader{
+    uint16_t type;
+    uint16_t block_offset;
   };
 
   struct FileHeader{
@@ -67,9 +71,7 @@ private:
                                            //!< - uint8_t file_type;   //!< Type of the file (mask: 0x00FF) (e.g., 0 = binary, 1 = text, etc.)
                                            //!< - uint8_t flags;       //!< Flags for the file (mask: 0xFF00) (e.g., read-only, hidden, executable, etc.)
     uint16_t checksum;                     //!< Checksum of the file header
-                                           //!< the content of the file will follow after the name
   };
-
   struct FileContentHeader{
     uint16_t magic;                        //!< Magic number to identify the file content
     uint16_t size;                         //!< Size of the file data (in bytes)
@@ -83,23 +85,39 @@ public:
   };
   class Directory{
     public:
-      Directory(std::shared_ptr<Directory> parent, const DirectoryHeader* header)
-          : _parent(parent), _header(header) { }
+      Directory(std::shared_ptr<Directory> parent) : Directory(nullptr, parent, nullptr) { };
+
+    protected:
+      Directory(const SPFS* fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
+          : _fs(fs), _parent(parent), _header(header) { }
 
       const DirectoryHeader* getHeader() const { return _header; }
-      void setHeader(const DirectoryHeader* header) { _header = header; }
 
+    public:
       std::shared_ptr<Directory> getParent() const { return _parent; }
       const std::string getName() const;
 
       std::vector<std::shared_ptr<Directory>> getSubdirectories() const;
       std::vector<std::shared_ptr<File>> getFiles() const;
 
+      std::shared_ptr<Directory> createDirectory(const std::string& name) const;
+
     protected:
-        std::shared_ptr<Directory> _parent; //!< Reference to the parent directory
-        const DirectoryHeader* _header; //!< Header information for the directory
+      const SPFS* _fs;                     //!< Reference to the SPFS instance
+      std::shared_ptr<Directory> _parent; //!< Reference to the parent directory
+      const DirectoryHeader* _header; //!< Header information for the directory
   };
 
+private:
+  class DirectoryInternal : public Directory {
+  public:
+    DirectoryInternal(const SPFS* fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
+        : Directory(fs, parent, header) { }
+
+    // Additional methods specific to internal directory management can be added here
+  };
+
+public:
   //! \brief Initialize the Flash File System
   /*!
    * This method initializes the Flash File System by checking the flash memory
@@ -108,8 +126,16 @@ public:
    */
   std::shared_ptr<Directory> getRootDirectory(int start_address = 0, int end_address = -1);
 
+  int getFileSystemSize() const{
+    if(_fs_header == nullptr){
+      return -1;
+    }
+    return _fs_header->size;
+  }
+
 private:
-  SPFS::FileSystemHeader *_fs_header = nullptr; //!< Start address of the flash memory for the file system
+  const SPFS::FileSystemHeader *_fs_header = nullptr; //!< Start address of the flash memory for the file system
+  const uint8_t* _start_search_address = nullptr;
 
   static constexpr uint32_t MAGIC_NUMBER = 0xA36CA3FA;              //!< Magic number for SPFS (SPFSv1)
   static constexpr uint32_t SPFS_VERSION = 0x01000000;              //!< Version number for SPFS (SPFSv1)
@@ -132,7 +158,14 @@ private:
   bool formatDisk(const void *address, size_t size);
 
   std::shared_ptr<Directory> createNewFileSystem(const void *address, size_t size, const std::string& fs_name, const std::string& root_dir_name);
-  std::shared_ptr<Directory> createDirectory(const void* address, const std::string& dir_name);
+  std::shared_ptr<Directory> createDirectory(std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
+  std::shared_ptr<Directory> createDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
+
+  const DirectoryHeader* findFreeSpaceForDirectory();
+  const FileHeader* findFreeSpaceForFile(size_t name_size);
+  const FileContentHeader* findFreeSpaceForFileContent(size_t content_size);
+  const void* findFreeSpace(const uint8_t* start_search, size_t size);
+  const void* findFreeSpace(size_t size);
 
   uint32_t calculateCRC32(const void *address, size_t size);
   uint16_t calculateCRC16(const void *address, size_t size);

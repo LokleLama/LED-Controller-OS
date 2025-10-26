@@ -57,14 +57,26 @@ std::shared_ptr<SPFS::Directory> SPFS::initializeFileSystem(void *address) {
   }
 
   _fs_header = header;
-  return std::make_shared<Directory>(nullptr, reinterpret_cast<const DirectoryHeader *>(address));
+  return std::make_shared<SPFS::DirectoryInternal>(this, nullptr, reinterpret_cast<const DirectoryHeader *>(address));
 }
 
 bool SPFS::formatDisk(const void *address, size_t size) {
   return Flash::erase(address, size) == 0;
 }
 
-std::shared_ptr<SPFS::Directory> SPFS::createDirectory(const void* address, const std::string& dir_name) {
+std::shared_ptr<SPFS::Directory> SPFS::Directory::createDirectory(const std::string& name) const{
+  return nullptr;
+}
+
+std::shared_ptr<SPFS::Directory> SPFS::createDirectory(std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {
+  auto address = findFreeSpaceForDirectory();
+  if(address == nullptr) {
+    return nullptr;
+  }
+  return createDirectory(address, parent, dir_name);
+}
+
+std::shared_ptr<SPFS::Directory> SPFS::createDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {
   if(dir_name.length() >= 200) {
     return nullptr; // Name too long
   }
@@ -85,7 +97,7 @@ std::shared_ptr<SPFS::Directory> SPFS::createDirectory(const void* address, cons
     return nullptr;
   }
 
-  return std::make_shared<SPFS::Directory>(nullptr, reinterpret_cast<const DirectoryHeader *>(address));
+  return std::make_shared<SPFS::DirectoryInternal>(this, parent, reinterpret_cast<const DirectoryHeader *>(address));
 }
 
 const std::string SPFS::Directory::getName() const {
@@ -122,8 +134,13 @@ std::shared_ptr<SPFS::Directory> SPFS::createNewFileSystem(const void *address, 
   fsmeta->root_directory_block = 0;
   while(root_dir == nullptr && fsmeta->root_directory_block < (size / FS_BLOCK_SIZE)) {
     fsmeta->root_directory_block++;
-    root_dir = createDirectory(reinterpret_cast<const uint8_t*>(address) + FS_BLOCK_SIZE, root_dir_name);
+    root_dir = createDirectory(reinterpret_cast<const uint8_t*>(address) + FS_BLOCK_SIZE, nullptr, root_dir_name);
   }
+  
+  if(root_dir == nullptr) {
+    return nullptr;
+  }
+
   size_t max_name_length = FS_BLOCK_SIZE - (sizeof(FileSystemMetadata) + sizeof(FileSystemHeader)) - 1;
   if(fs_name.length() < (size_t)max_name_length) {
     max_name_length = fs_name.length();
@@ -131,14 +148,38 @@ std::shared_ptr<SPFS::Directory> SPFS::createNewFileSystem(const void *address, 
   strncpy(reinterpret_cast<char*>(fsmeta) + sizeof(FileSystemMetadata), fs_name.c_str(), max_name_length + 1);
   fsmeta->checksum = calculateCRC16(fsmeta, sizeof(FileSystemMetadata) - sizeof(fsmeta->checksum));
 
-  if(root_dir == nullptr) {
-    return nullptr;
-  }
-
   if(Flash::write(buffer, address) < (int)buffer.size()) {
     return nullptr;
   }
+
+  _fs_header = reinterpret_cast<const FileSystemHeader *>(address);
   return root_dir;
+}
+
+const SPFS::DirectoryHeader* SPFS::findFreeSpaceForDirectory(){
+  return reinterpret_cast<const SPFS::DirectoryHeader*>(SPFS::findFreeSpace(sizeof(SPFS::DirectoryHeader)));
+}
+const SPFS::FileHeader* SPFS::findFreeSpaceForFile(size_t name_size){
+  return reinterpret_cast<const SPFS::FileHeader*>(SPFS::findFreeSpace(sizeof(SPFS::FileHeader) + name_size));
+}
+const SPFS::FileContentHeader* SPFS::findFreeSpaceForFileContent(size_t content_size){
+  return reinterpret_cast<const SPFS::FileContentHeader*>(SPFS::findFreeSpace(sizeof(SPFS::FileContentHeader) + content_size));
+}
+const void* SPFS::findFreeSpace(size_t size){
+  if(_start_search_address == nullptr){
+    _start_search_address = reinterpret_cast<const uint8_t*>(_fs_header) + FS_BLOCK_SIZE;
+  }
+  return findFreeSpace(_start_search_address, size);
+}
+const void* SPFS::findFreeSpace(const uint8_t* start_search, size_t size){
+  const uint8_t* end_address = reinterpret_cast<const uint8_t*>(_fs_header) + _fs_header->size;
+  while(reinterpret_cast<const uint32_t*>(start_search)[0] != 0xFFFFFFFF){
+    start_search += FS_BLOCK_SIZE;
+    if(start_search >= end_address){
+      return nullptr;
+    }
+  }
+  return start_search;
 }
 
 uint32_t SPFS::calculateCRC32(const void *address, size_t size) {

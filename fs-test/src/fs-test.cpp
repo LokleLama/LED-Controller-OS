@@ -114,6 +114,16 @@ static size_t RoundSizeToSector(size_t size) {
   return (size + config.sector_size - 1) & ~(config.sector_size - 1);
 }
 
+static std::shared_ptr<SPFS::Directory> CreateSubDirectory(std::shared_ptr<SPFS::Directory> parent, std::string name) {
+  auto subdir = parent->createDirectory(name);
+  if (subdir == nullptr) {
+    printf("Failed to create subdirectory (%s)\n", name.c_str());
+  } else {
+    printf("Created subdirectory  : %s\n", subdir->getName().c_str());
+  }
+  return subdir;
+}
+
 int main(int argc, char **argv) {
   printf("Usage: fs-test [filesystem-size]\n");
   if (argc > 1) {
@@ -143,15 +153,28 @@ int main(int argc, char **argv) {
   auto root = spfs.getRootDirectory();
 
   printf("******************************\n");
-  printf("File System Size: %i\n", spfs.getFileSystemSize());
-  printf("Directory Name  : %s\n", root->getName().c_str());
+  printf("File System Size      : %i\n", spfs.getFileSystemSize());
+  printf("Directory Name        : %s\n", root->getName().c_str());
 
-  auto subdir = root->createDirectory("subdir");
-  if (subdir == nullptr) {
-    printf("Failed to create subdirectory\n");
-  } else {
-    printf("Created subdirectory: %s\n", subdir->getName().c_str());
+  CreateSubDirectory(root, "config");
+  CreateSubDirectory(root, "data");
+
+  printf("******************************\n");
+  printf("reopening the same filesystem\n");
+  SPFS reopened_spfs;
+  auto reopened_root = reopened_spfs.getRootDirectory();
+  printf("File System Size      : %i\n", spfs.getFileSystemSize());
+  printf("Root Directory Name   : %s\n", reopened_root->getName().c_str());
+
+  auto subdirs = reopened_root->getSubdirectories();
+  printf("Found Subdirectories  : ");
+  for (const auto& dir : subdirs) {
+    printf("%s   ", dir->getName().c_str());
   }
+  printf("\n");
+
+
+  printf("******************************\n");
 
   SaveFlashStateInFlashFile();
   free(config.flash_data);

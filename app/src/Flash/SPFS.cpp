@@ -3,21 +3,21 @@
 #include <cstring>
 #include <cstring>
 
-std::shared_ptr<SPFS::Directory> SPFS::getRootDirectory(int start_address, int end_address) {
+std::shared_ptr<SPFS::Directory> SPFS::getRootDirectory(int start_offset, int end_offset) {
   if(_fs_header == nullptr) {
-    return findFileSystemStart(start_address, end_address);
+    return findFileSystemStart(start_offset, end_offset);
   }
 
   return nullptr;
 }
 
-std::shared_ptr<SPFS::Directory> SPFS::findFileSystemStart(int start_address, int end_address) {
-  if (end_address == -1) {
-    end_address = Flash::MAX_FLASH_SIZE;
+std::shared_ptr<SPFS::Directory> SPFS::findFileSystemStart(int start_offset, int end_offset) {
+  if (end_offset == -1) {
+    end_offset = Flash::MAX_FLASH_SIZE;
   }
 
-  int start_sector = (start_address + FS_ALIGNMENT - 1) / FS_ALIGNMENT;
-  int end_sector = (end_address + FS_ALIGNMENT - 1) / FS_ALIGNMENT;
+  int start_sector = (start_offset + FS_ALIGNMENT - 1) / FS_ALIGNMENT;
+  int end_sector = (end_offset + FS_ALIGNMENT - 1) / FS_ALIGNMENT;
 
   for (int n = start_sector; n < end_sector; n++) {
     uint32_t *sector_ptr = static_cast<uint32_t *>(Flash::readPointer(n * FS_ALIGNMENT));
@@ -57,7 +57,12 @@ std::shared_ptr<SPFS::Directory> SPFS::initializeFileSystem(void *address) {
   }
 
   _fs_header = header;
-  return std::make_shared<SPFS::DirectoryInternal>(this, nullptr, reinterpret_cast<const DirectoryHeader *>(address));
+  auto *fsmeta = reinterpret_cast<const FileSystemMetadata *>(reinterpret_cast<const uint8_t*>(address) + header->meta_offset);
+  if(fsmeta->magic != MAGIC_FS_METADATA_NUMBER) {
+    return nullptr;
+  }
+
+  return openDirectory(reinterpret_cast<const uint8_t*>(address) + fsmeta->root_directory_block * FS_BLOCK_SIZE, nullptr);
 }
 
 bool SPFS::formatDisk(const void *address, size_t size) {
@@ -78,7 +83,7 @@ std::shared_ptr<SPFS::Directory> SPFS::Directory::createDirectory(const std::str
   DirectoryHeader *dirheader = reinterpret_cast<DirectoryHeader *>(buffer.data());
 
   auto contentHeaders = reinterpret_cast<DirectoryContentHeader *>(reinterpret_cast<uint8_t*>(dirheader) + (dirheader->name_size_content_offset >> 8));
-  auto max_count = (int)(FS_BLOCK_SIZE - (dirheader->name_size_content_offset >> 8)) / sizeof(DirectoryContentHeader);
+  auto max_count = (int)((FS_BLOCK_SIZE - (dirheader->name_size_content_offset >> 8)) / sizeof(DirectoryContentHeader));
 
   int current = 0;
   while(contentHeaders[current].type != 0xFFFF && current < max_count) {
@@ -86,10 +91,11 @@ std::shared_ptr<SPFS::Directory> SPFS::Directory::createDirectory(const std::str
   }
 
   if(current >= max_count) {
+    //TODO: Implement directory extension
     return nullptr; // No space for new content
   }
 
-  contentHeaders[current].type = 0xD1FF; // Directory type
+  contentHeaders[current].type = MAGIC_SUBDIRMARKER; // Directory type
   contentHeaders[current].block_offset = (int16_t)(((uintptr_t)new_dir->getHeader() - (uintptr_t)getHeader()) / FS_BLOCK_SIZE);
 
   if(Flash::write(buffer, getHeader()) < (int)buffer.size()) {
@@ -97,6 +103,37 @@ std::shared_ptr<SPFS::Directory> SPFS::Directory::createDirectory(const std::str
   }
 
   return new_dir;
+}
+
+std::vector<std::shared_ptr<SPFS::Directory>> SPFS::Directory::getSubdirectories() {
+  std::vector<std::shared_ptr<SPFS::Directory>> subdirs;
+  // Implementation to populate subdirs from the directory content
+
+  auto contentHeaders = reinterpret_cast<const DirectoryContentHeader *>(reinterpret_cast<const uint8_t*>(getHeader()) + (getHeader()->name_size_content_offset >> 8));
+  auto max_count = (int)((FS_BLOCK_SIZE - (getHeader()->name_size_content_offset >> 8)) / sizeof(DirectoryContentHeader));
+
+  for(int i = 0; i < max_count; i++) {
+    if(contentHeaders[i].type == MAGIC_SUBDIRMARKER) { // Directory type
+      auto dir_address = reinterpret_cast<const uint8_t*>(getHeader()) + contentHeaders[i].block_offset * FS_BLOCK_SIZE;
+      auto subdir = _fs->openDirectory(dir_address, shared_from_this());
+      if(subdir != nullptr) {
+        subdirs.push_back(subdir);
+      }
+    }else if(contentHeaders[i].type == MAGIC_ENDMARKER) {
+      break; // End of content
+    }
+  }
+
+  return subdirs;
+}
+
+std::shared_ptr<SPFS::DirectoryInternal> SPFS::openDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent) {
+  auto *dirheader = reinterpret_cast<const DirectoryHeader *>(address);
+  if(dirheader->magic != MAGIC_DIR_NUMBER) {
+    return nullptr;
+  }
+
+  return std::make_shared<SPFS::DirectoryInternal>(this, parent, dirheader);
 }
 
 std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {

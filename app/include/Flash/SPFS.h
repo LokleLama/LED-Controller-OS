@@ -97,8 +97,8 @@ public:
       std::shared_ptr<Directory> getParent() const { return _parent; }
       const std::string getName() const;
 
-      std::vector<std::shared_ptr<Directory>> getSubdirectories() const;
-      std::vector<std::shared_ptr<File>> getFiles() const;
+      std::vector<std::shared_ptr<Directory>> getSubdirectories();
+      std::vector<std::shared_ptr<File>> getFiles();
 
       std::shared_ptr<Directory> createDirectory(const std::string& name);
 
@@ -124,7 +124,7 @@ public:
    * and preparing it for use.
    * \return 0 on success, negative error code on failure.
    */
-  std::shared_ptr<Directory> getRootDirectory(int start_address = 0, int end_address = -1);
+  std::shared_ptr<Directory> getRootDirectory(int start_offset = 0, int end_offset = -1);
 
   int getFileSystemSize() const{
     if(_fs_header == nullptr){
@@ -145,21 +145,28 @@ private:
   static constexpr uint32_t VERSION_BUILD_MASK = 0x000000FF;        //!< Build version mask
 
   static constexpr uint16_t MAGIC_FS_METADATA_NUMBER = 0xB50E;      //!< Magic number for SPFS File System Metadata (fsm)
+
   static constexpr uint16_t MAGIC_DIR_NUMBER = 0x9314;              //!< Magic number for SPFS Directory (dir)
   static constexpr uint16_t MAGIC_DIR_EXTENSION_NUMBER = 0x85E5;    //!< Magic number for SPFS Directory Extension (exd)
+  static constexpr uint16_t MAGIC_SUBDIRMARKER = 0xD1FF;            //!< Magic number for Directory entries (sdi)
+  static constexpr uint16_t MAGIC_FILEMARKER = 0xB313;              //!< Magic number for File entries (fil)
+  static constexpr uint16_t MAGIC_ENDMARKER = 0xFFFF;                //!< Magic number for End entries
+
   static constexpr uint16_t MAGIC_FILE_NUMBER = 0xB313;             //!< Magic number for SPFS File (fil)
   static constexpr uint16_t MAGIC_FILE_EXTENSION_NUMBER = 0x70CD;   //!< Magic number for SPFS File Extension (con)
 
   static constexpr int FS_ALIGNMENT = 4096;                         //!< Alignment for SPFS operations
   static constexpr int FS_BLOCK_SIZE = 256;                         //!< Block size for SPFS operations
 
-  std::shared_ptr<Directory> findFileSystemStart(int start_address, int end_address);
+  std::shared_ptr<Directory> findFileSystemStart(int start_offset, int end_offset);
   std::shared_ptr<Directory> initializeFileSystem(void *address);
   bool formatDisk(const void *address, size_t size);
 
   std::shared_ptr<Directory> createNewFileSystem(const void *address, size_t size, const std::string& fs_name, const std::string& root_dir_name);
   std::shared_ptr<DirectoryInternal> createDirectory(std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
   std::shared_ptr<DirectoryInternal> createDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
+
+  std::shared_ptr<DirectoryInternal> openDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent) ;
 
   const DirectoryHeader* findFreeSpaceForDirectory();
   const FileHeader* findFreeSpaceForFile(size_t name_size);

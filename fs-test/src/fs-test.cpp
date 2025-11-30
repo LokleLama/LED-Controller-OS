@@ -157,7 +157,9 @@ int main(int argc, char **argv) {
   printf("Directory Name        : %s\n", root->getName().c_str());
 
   CreateSubDirectory(root, "config");
-  CreateSubDirectory(root, "data");
+  auto data = CreateSubDirectory(root, "data");
+
+  CreateSubDirectory(data, "files");
 
   printf("******************************\n");
   printf("reopening the same filesystem\n");
@@ -167,12 +169,16 @@ int main(int argc, char **argv) {
   printf("Root Directory Name   : %s\n", reopened_root->getName().c_str());
 
   auto subdirs = reopened_root->getSubdirectories();
+  std::shared_ptr<SPFS::Directory> data_dir = nullptr;
+
   printf("Found Subdirectories  : ");
   for (const auto& dir : subdirs) {
     printf("%s   ", dir->getName().c_str());
+    if(dir->getName() == "data") {
+      data_dir = dir;
+    }
   }
   printf("\n");
-
 
   printf("******************************\n");
 

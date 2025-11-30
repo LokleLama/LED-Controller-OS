@@ -101,6 +101,7 @@ public:
       std::vector<std::shared_ptr<File>> getFiles();
 
       std::shared_ptr<Directory> createDirectory(const std::string& name);
+      std::shared_ptr<File> createFile(const std::string& name);
 
     protected:
       SPFS* _fs;                          //!< Reference to the SPFS instance

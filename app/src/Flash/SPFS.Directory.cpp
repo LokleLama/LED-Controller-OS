@@ -59,6 +59,27 @@ std::vector<std::shared_ptr<SPFS::Directory>> SPFS::Directory::getSubdirectories
   return subdirs;
 }
 
+std::vector<std::shared_ptr<SPFS::File>> SPFS::Directory::getFiles() {
+  std::vector<std::shared_ptr<SPFS::File>> files;
+
+  auto contentHeaders = reinterpret_cast<const DirectoryContentHeader *>(reinterpret_cast<const uint8_t*>(getHeader()) + (getHeader()->name_size_content_offset >> 8));
+  auto max_count = (int)((FS_BLOCK_SIZE - (getHeader()->name_size_content_offset >> 8)) / sizeof(DirectoryContentHeader));
+
+  for(int i = 0; i < max_count; i++) {
+    if(contentHeaders[i].type == MAGIC_FILEMARKER) { // Directory type
+      auto file_address = reinterpret_cast<const uint8_t*>(getHeader()) + contentHeaders[i].block_offset * FS_BLOCK_SIZE;
+      auto file = _fs->openFile(file_address, shared_from_this());
+      if(file != nullptr) {
+        files.push_back(file);
+      }
+    }else if(contentHeaders[i].type == MAGIC_ENDMARKER) {
+      break; // End of content
+    }
+  }
+
+  return files;
+}
+
 const std::string SPFS::Directory::getName() const {
   const char* name_ptr = reinterpret_cast<const char*>(_header) + sizeof(SPFS::DirectoryHeader);
   return std::string(name_ptr, _header->name_size_content_offset & 0x00FF);

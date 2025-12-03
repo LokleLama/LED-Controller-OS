@@ -65,8 +65,8 @@ private:
     uint16_t magic;                        //!< Magic number to identify the file
     uint16_t content_offset;               //!< offset of the file content (in blocks)
     uint16_t name_offset_size;             //!< the configuration contains the following fields:
-                                           //!< - uint8_t offset;      //!< Offset within the current block of the file name (mask: 0x00FF) (max: 200 bytes)
-                                           //!< - uint8_t size;        //!< Size of the file name (mask: 0xFF00) (max: 200 bytes)
+                                           //!< - uint8_t offset;      //!< Offset within the current block of the file name (mask: 0xFF00) (max: 200 bytes)
+                                           //!< - uint8_t size;        //!< Size of the file name (mask: 0x00FF) (max: 200 bytes)
     uint16_t file_type_flags;              //!< the configuration contains the following fields:
                                            //!< - uint8_t file_type;   //!< Type of the file (mask: 0x00FF) (e.g., 0 = binary, 1 = text, etc.)
                                            //!< - uint8_t flags;       //!< Flags for the file (mask: 0xFF00) (e.g., read-only, hidden, executable, etc.)
@@ -80,7 +80,25 @@ private:
   };
 
 public:
+  class Directory;
   class File {
+    public:
+      File(std::shared_ptr<Directory> parent) : File(nullptr, parent, nullptr) { };
+
+    protected:
+      File(SPFS* fs, std::shared_ptr<Directory> parent, const FileHeader* header)
+          : _fs(fs), _parent(parent), _header(header) { }
+
+      const FileHeader* getHeader() const { return _header; }
+
+    public:
+      std::shared_ptr<Directory> getParent() const { return _parent; }
+      const std::string getName() const;
+
+    protected:
+      SPFS* _fs;                          //!< Reference to the SPFS instance
+      std::shared_ptr<Directory> _parent; //!< Reference to the parent directory
+      const FileHeader* _header;          //!< Header information for the file
 
   };
   class Directory : public std::enable_shared_from_this<Directory> {
@@ -106,7 +124,7 @@ public:
     protected:
       SPFS* _fs;                          //!< Reference to the SPFS instance
       std::shared_ptr<Directory> _parent; //!< Reference to the parent directory
-      const DirectoryHeader* _header;           //!< Header information for the directory
+      const DirectoryHeader* _header;     //!< Header information for the directory
   };
 
 private:
@@ -114,6 +132,14 @@ private:
   public:
     DirectoryInternal(SPFS* fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
         : Directory(fs, parent, header) { }
+
+    // Additional methods specific to internal directory management can be added here
+  };
+
+  class FileInternal : public File {
+  public:
+    FileInternal(SPFS* fs, std::shared_ptr<Directory> parent, const FileHeader* header)
+        : File(fs, parent, header) { }
 
     // Additional methods specific to internal directory management can be added here
   };
@@ -151,7 +177,7 @@ private:
   static constexpr uint16_t MAGIC_DIR_EXTENSION_NUMBER = 0x85E5;    //!< Magic number for SPFS Directory Extension (exd)
   static constexpr uint16_t MAGIC_SUBDIRMARKER = 0xD1FF;            //!< Magic number for Directory entries (sdi)
   static constexpr uint16_t MAGIC_FILEMARKER = 0xB313;              //!< Magic number for File entries (fil)
-  static constexpr uint16_t MAGIC_ENDMARKER = 0xFFFF;                //!< Magic number for End entries
+  static constexpr uint16_t MAGIC_ENDMARKER = 0xFFFF;               //!< Magic number for End entries
 
   static constexpr uint16_t MAGIC_FILE_NUMBER = 0xB313;             //!< Magic number for SPFS File (fil)
   static constexpr uint16_t MAGIC_FILE_EXTENSION_NUMBER = 0x70CD;   //!< Magic number for SPFS File Extension (con)
@@ -167,7 +193,8 @@ private:
   std::shared_ptr<DirectoryInternal> createDirectory(std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
   std::shared_ptr<DirectoryInternal> createDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
 
-  std::shared_ptr<DirectoryInternal> openDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent) ;
+  std::shared_ptr<DirectoryInternal> openDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent);
+  std::shared_ptr<FileInternal> openFile(const void* address, std::shared_ptr<SPFS::Directory> parent);
 
   const DirectoryHeader* findFreeSpaceForDirectory();
   const FileHeader* findFreeSpaceForFile(size_t name_size);

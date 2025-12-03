@@ -77,6 +77,15 @@ std::shared_ptr<SPFS::DirectoryInternal> SPFS::openDirectory(const void* address
   return std::make_shared<SPFS::DirectoryInternal>(this, parent, dirheader);
 }
 
+std::shared_ptr<SPFS::FileInternal> SPFS::openFile(const void* address, std::shared_ptr<SPFS::Directory> parent) {
+  auto *fileheader = reinterpret_cast<const FileHeader *>(address);
+  if(fileheader->magic != MAGIC_FILE_NUMBER) {
+    return nullptr;
+  }
+
+  return std::make_shared<SPFS::FileInternal>(this, parent, fileheader);
+}
+
 std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {
   auto address = findFreeSpaceForDirectory();
   if(address == nullptr) {

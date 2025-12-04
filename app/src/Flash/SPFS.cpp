@@ -74,7 +74,7 @@ std::shared_ptr<SPFS::DirectoryInternal> SPFS::openDirectory(const void* address
     return nullptr;
   }
 
-  return std::make_shared<SPFS::DirectoryInternal>(this, parent, dirheader);
+  return std::make_shared<SPFS::DirectoryInternal>(shared_from_this(), parent, dirheader);
 }
 
 std::shared_ptr<SPFS::FileInternal> SPFS::openFile(const void* address, std::shared_ptr<SPFS::Directory> parent) {
@@ -83,7 +83,7 @@ std::shared_ptr<SPFS::FileInternal> SPFS::openFile(const void* address, std::sha
     return nullptr;
   }
 
-  return std::make_shared<SPFS::FileInternal>(this, parent, fileheader);
+  return std::make_shared<SPFS::FileInternal>(shared_from_this(), parent, fileheader);
 }
 
 std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {
@@ -115,7 +115,7 @@ std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const void* addre
     return nullptr;
   }
 
-  return std::make_shared<SPFS::DirectoryInternal>(this, parent, reinterpret_cast<const DirectoryHeader *>(address));
+  return std::make_shared<SPFS::DirectoryInternal>(shared_from_this(), parent, reinterpret_cast<const DirectoryHeader *>(address));
 }
 
 std::shared_ptr<SPFS::Directory> SPFS::createNewFileSystem(const void *address, size_t size, const std::string& fs_name, const std::string& root_dir_name) {

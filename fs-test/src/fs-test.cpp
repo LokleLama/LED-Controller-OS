@@ -149,11 +149,11 @@ int main(int argc, char **argv) {
   printf("using flash page size of %zu\n", config.page_size);
   printf("using flash Size of %zu\n", config.flash_size);
 
-  SPFS spfs;
-  auto root = spfs.getRootDirectory();
+  std::shared_ptr<SPFS> spfs = std::make_shared<SPFS>();
+  auto root = spfs->getRootDirectory();
 
   printf("******************************\n");
-  printf("File System Size      : %i\n", spfs.getFileSystemSize());
+  printf("File System Size      : %i\n", spfs->getFileSystemSize());
   printf("Directory Name        : %s\n", root->getName().c_str());
 
   CreateSubDirectory(root, "config");
@@ -163,9 +163,9 @@ int main(int argc, char **argv) {
 
   printf("******************************\n");
   printf("reopening the same filesystem\n");
-  SPFS reopened_spfs;
-  auto reopened_root = reopened_spfs.getRootDirectory();
-  printf("File System Size      : %i\n", spfs.getFileSystemSize());
+  std::shared_ptr<SPFS> reopened_spfs = std::make_shared<SPFS>();
+  auto reopened_root = reopened_spfs->getRootDirectory();
+  printf("File System Size      : %i\n", spfs->getFileSystemSize());
   printf("Root Directory Name   : %s\n", reopened_root->getName().c_str());
 
   auto subdirs = reopened_root->getSubdirectories();

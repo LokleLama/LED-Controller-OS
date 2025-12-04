@@ -15,7 +15,7 @@
  * operations. It is designed to be used with the Raspberry Pi Pico SDK.
  * \ingroup hardware_flash
  */
-class SPFS {
+class SPFS : public std::enable_shared_from_this<SPFS> {
 private:
   struct FileSystemHeader{
     uint32_t magic;                        //!< Magic number to identify the file system
@@ -86,7 +86,7 @@ public:
       File(std::shared_ptr<Directory> parent) : File(nullptr, parent, nullptr) { };
 
     protected:
-      File(SPFS* fs, std::shared_ptr<Directory> parent, const FileHeader* header)
+      File(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header)
           : _fs(fs), _parent(parent), _header(header) { }
 
       const FileHeader* getHeader() const { return _header; }
@@ -96,7 +96,7 @@ public:
       const std::string getName() const;
 
     protected:
-      SPFS* _fs;                          //!< Reference to the SPFS instance
+      std::shared_ptr<SPFS> _fs;          //!< Reference to the SPFS instance
       std::shared_ptr<Directory> _parent; //!< Reference to the parent directory
       const FileHeader* _header;          //!< Header information for the file
 
@@ -106,7 +106,7 @@ public:
       Directory(std::shared_ptr<Directory> parent) : Directory(nullptr, parent, nullptr) { };
 
     protected:
-      Directory(SPFS* fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
+      Directory(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
           : _fs(fs), _parent(parent), _header(header) { }
 
       const DirectoryHeader* getHeader() const { return _header; }
@@ -122,7 +122,7 @@ public:
       std::shared_ptr<File> createFile(const std::string& name);
 
     protected:
-      SPFS* _fs;                          //!< Reference to the SPFS instance
+      std::shared_ptr<SPFS> _fs;          //!< Reference to the SPFS instance
       std::shared_ptr<Directory> _parent; //!< Reference to the parent directory
       const DirectoryHeader* _header;     //!< Header information for the directory
   };
@@ -130,7 +130,7 @@ public:
 private:
   class DirectoryInternal : public Directory {
   public:
-    DirectoryInternal(SPFS* fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
+    DirectoryInternal(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
         : Directory(fs, parent, header) { }
 
     // Additional methods specific to internal directory management can be added here
@@ -138,7 +138,7 @@ private:
 
   class FileInternal : public File {
   public:
-    FileInternal(SPFS* fs, std::shared_ptr<Directory> parent, const FileHeader* header)
+    FileInternal(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header)
         : File(fs, parent, header) { }
 
     // Additional methods specific to internal directory management can be added here

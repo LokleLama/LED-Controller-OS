@@ -40,32 +40,38 @@ private:
                                            //! the name of the file system will follow after this structure
   };
 
-  struct DirectoryHeader{
-    uint16_t magic;                        //!< Magic number to identify the directory
-    uint16_t name_size_content_offset;     //!< the configuration contains the following fields:
-                                           //!< - uint8_t size;        //!< Size of the directory name (mask: 0x00FF) (max: 200 bytes)
-                                           //!< - uint8_t offset;      //!< Offset within the content block of the directory (mask: 0xFF00) (max: 200 bytes)
-    uint16_t checksum;                     //!< Checksum of the directory header
-    uint16_t next;                         //!< offset of the extension block (in blocks)
-                                           //!< The directory content will follow after the name. any file or directory in the current directory will be listed here as uint16_t block offsets.
-  };
-  struct DirectoryExtensionHeader{
-    uint16_t magic;                        //!< Magic number to identify the directory extension
-    int16_t previous;                      //!< offset of the previous extension block (in blocks)
-    uint16_t checksum;                     //!< Checksum of the directory extension header
-    int16_t next;                          //!< offset of the next extension block (in blocks)
-  };
-
   struct DirectoryContentHeader{
     uint16_t type;
     int16_t block_offset;
   };
 
+  struct DirectoryHeader{
+    uint16_t magic;                        //!< Magic number to identify the directory
+    uint16_t name_size_meta_offset;        //!< the configuration contains the following fields:
+                                           //!< - uint8_t size;        //!< Size of the directory name (mask: 0x00FF) (max: 200 bytes)
+                                           //!< - uint8_t offset;      //!< Offset within the content block of the directory (mask: 0xFF00) (max: 200 bytes)
+  };
+
+  struct DirectoryMetadataHeader{
+    uint16_t checksum;                     //!< Checksum of the directory header
+    uint16_t next;                         //!< offset of the extension block (in blocks)
+                                           //!< The directory content will follow after the name. any file or directory in the current directory will be listed here as uint16_t block offsets.
+    DirectoryContentHeader content[1];     //!< Content entries in the directory block
+  };
+
+  struct DirectoryExtensionHeader{
+    uint16_t magic;                        //!< Magic number to identify the directory extension
+    int16_t previous;                      //!< offset of the previous extension block (in blocks)
+    uint16_t checksum;                     //!< Checksum of the directory extension header
+    int16_t next;                          //!< offset of the next extension block (in blocks)
+    DirectoryContentHeader content[1];     //!< Content entries in the extension block
+  };
+
   struct FileHeader{
     uint16_t magic;                        //!< Magic number to identify the file
     uint16_t name_size_meta_offset;        //!< the configuration contains the following fields:
-                                           //!< - uint8_t offset;      //!< Offset within the current block of the file metadata block (mask: 0xFF00) (max: 200 bytes)
                                            //!< - uint8_t size;        //!< Size of the file name (mask: 0x00FF) (max: 200 bytes)
+                                           //!< - uint8_t offset;      //!< Offset within the current block of the file metadata block (mask: 0xFF00) (max: 200 bytes)
   };
   struct FileMetadataHeader{
     uint16_t checksum;                     //!< Checksum of the file header
@@ -112,6 +118,15 @@ public:
           : _fs(fs), _parent(parent), _header(header) { }
 
       const DirectoryHeader* getHeader() const { return _header; }
+      const DirectoryMetadataHeader* getMetadataHeader() const {
+        return reinterpret_cast<const DirectoryMetadataHeader *>(reinterpret_cast<const uint8_t*>(_header) + (_header->name_size_meta_offset >> 8));
+      }
+      const DirectoryContentHeader* getContentHeaders() const {
+        return getMetadataHeader()->content;
+      }
+      int getMaxContentCount() const {
+        return (int)((FS_BLOCK_SIZE - (_header->name_size_meta_offset >> 8)) / sizeof(DirectoryContentHeader)) + 1;
+      }
 
     public:
       std::shared_ptr<Directory> getParent() const { return _parent; }
@@ -201,7 +216,7 @@ private:
   std::shared_ptr<DirectoryInternal> openDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent);
   std::shared_ptr<FileInternal> openFile(const void* address, std::shared_ptr<SPFS::Directory> parent);
 
-  const DirectoryHeader* findFreeSpaceForDirectory();
+  const DirectoryHeader* findFreeSpaceForDirectory(size_t name_size);
   const FileHeader* findFreeSpaceForFile(size_t name_size);
   const FileContentHeader* findFreeSpaceForFileContent(size_t content_size);
   const void* findFreeSpace(const uint8_t* start_search, size_t size);

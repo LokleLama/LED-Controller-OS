@@ -15,8 +15,9 @@ std::shared_ptr<SPFS::Directory> SPFS::Directory::createDirectory(const std::str
 
   DirectoryHeader *dirheader = reinterpret_cast<DirectoryHeader *>(buffer.data());
 
-  auto contentHeaders = reinterpret_cast<DirectoryContentHeader *>(reinterpret_cast<uint8_t*>(dirheader) + (dirheader->name_size_content_offset >> 8));
-  auto max_count = (int)((FS_BLOCK_SIZE - (dirheader->name_size_content_offset >> 8)) / sizeof(DirectoryContentHeader));
+  DirectoryMetadataHeader *dirmeta = reinterpret_cast<DirectoryMetadataHeader *>(buffer.data() + (dirheader->name_size_meta_offset >> 8));
+  auto contentHeaders = dirmeta->content;
+  auto max_count = getMaxContentCount();
 
   int current = 0;
   while(contentHeaders[current].type != 0xFFFF && current < max_count) {
@@ -41,8 +42,8 @@ std::shared_ptr<SPFS::Directory> SPFS::Directory::createDirectory(const std::str
 std::vector<std::shared_ptr<SPFS::Directory>> SPFS::Directory::getSubdirectories() {
   std::vector<std::shared_ptr<SPFS::Directory>> subdirs;
 
-  auto contentHeaders = reinterpret_cast<const DirectoryContentHeader *>(reinterpret_cast<const uint8_t*>(getHeader()) + (getHeader()->name_size_content_offset >> 8));
-  auto max_count = (int)((FS_BLOCK_SIZE - (getHeader()->name_size_content_offset >> 8)) / sizeof(DirectoryContentHeader));
+  auto contentHeaders = getContentHeaders();
+  auto max_count = getMaxContentCount();
 
   for(int i = 0; i < max_count; i++) {
     if(contentHeaders[i].type == MAGIC_SUBDIRMARKER) { // Directory type
@@ -62,8 +63,8 @@ std::vector<std::shared_ptr<SPFS::Directory>> SPFS::Directory::getSubdirectories
 std::vector<std::shared_ptr<SPFS::File>> SPFS::Directory::getFiles() {
   std::vector<std::shared_ptr<SPFS::File>> files;
 
-  auto contentHeaders = reinterpret_cast<const DirectoryContentHeader *>(reinterpret_cast<const uint8_t*>(getHeader()) + (getHeader()->name_size_content_offset >> 8));
-  auto max_count = (int)((FS_BLOCK_SIZE - (getHeader()->name_size_content_offset >> 8)) / sizeof(DirectoryContentHeader));
+  auto contentHeaders = getContentHeaders();
+  auto max_count = getMaxContentCount();
 
   for(int i = 0; i < max_count; i++) {
     if(contentHeaders[i].type == MAGIC_FILEMARKER) { // Directory type
@@ -82,7 +83,7 @@ std::vector<std::shared_ptr<SPFS::File>> SPFS::Directory::getFiles() {
 
 const std::string SPFS::Directory::getName() const {
   const char* name_ptr = reinterpret_cast<const char*>(_header) + sizeof(SPFS::DirectoryHeader);
-  return std::string(name_ptr, _header->name_size_content_offset & 0x00FF);
+  return std::string(name_ptr, _header->name_size_meta_offset & 0x00FF);
 }
 
 std::shared_ptr<SPFS::File> SPFS::Directory::createFile(const std::string& name){

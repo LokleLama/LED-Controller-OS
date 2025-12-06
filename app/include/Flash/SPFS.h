@@ -40,13 +40,18 @@ private:
                                            //! the name of the file system will follow after this structure
   };
 
+  struct SPFSBlockHeader{
+    uint16_t magic;                        //!< Magic number to identify the file system
+    uint16_t size;                         //!< Size of the following (in blocks)
+  };
+
   struct DirectoryContentHeader{
     uint16_t type;
     int16_t block_offset;
   };
 
   struct DirectoryHeader{
-    uint16_t magic;                        //!< Magic number to identify the directory
+    SPFSBlockHeader block;                 //!< Block description
     uint16_t name_size_meta_offset;        //!< the configuration contains the following fields:
                                            //!< - uint8_t size;        //!< Size of the directory name (mask: 0x00FF) (max: 200 bytes)
                                            //!< - uint8_t offset;      //!< Offset within the content block of the directory (mask: 0xFF00) (max: 200 bytes)
@@ -60,7 +65,7 @@ private:
   };
 
   struct DirectoryExtensionHeader{
-    uint16_t magic;                        //!< Magic number to identify the directory extension
+    SPFSBlockHeader block;                 //!< Block description
     int16_t previous;                      //!< offset of the previous extension block (in blocks)
     uint16_t checksum;                     //!< Checksum of the directory extension header
     int16_t next;                          //!< offset of the next extension block (in blocks)
@@ -68,7 +73,7 @@ private:
   };
 
   struct FileHeader{
-    uint16_t magic;                        //!< Magic number to identify the file
+    SPFSBlockHeader block;                 //!< Block description
     uint16_t name_size_meta_offset;        //!< the configuration contains the following fields:
                                            //!< - uint8_t size;        //!< Size of the file name (mask: 0x00FF) (max: 200 bytes)
                                            //!< - uint8_t offset;      //!< Offset within the current block of the file metadata block (mask: 0xFF00) (max: 200 bytes)
@@ -81,7 +86,7 @@ private:
     uint16_t content_offset;               //!< offset of the file content (in blocks)
   };
   struct FileContentHeader{
-    uint16_t magic;                        //!< Magic number to identify the file content
+    SPFSBlockHeader block;                 //!< Block description
     uint16_t size;                         //!< Size of the file data (in bytes)
     uint16_t checksum;                     //!< Checksum of the file data
     uint16_t next;                         //!< offset of the next file version content block (in blocks)

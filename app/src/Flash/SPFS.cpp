@@ -70,7 +70,7 @@ bool SPFS::formatDisk(const void *address, size_t size) {
 
 std::shared_ptr<SPFS::DirectoryInternal> SPFS::openDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent) {
   auto *dirheader = reinterpret_cast<const DirectoryHeader *>(address);
-  if(dirheader->magic != MAGIC_DIR_NUMBER) {
+  if(dirheader->block.magic != MAGIC_DIR_NUMBER) {
     return nullptr;
   }
 
@@ -79,7 +79,7 @@ std::shared_ptr<SPFS::DirectoryInternal> SPFS::openDirectory(const void* address
 
 std::shared_ptr<SPFS::FileInternal> SPFS::openFile(const void* address, std::shared_ptr<SPFS::Directory> parent) {
   auto *fileheader = reinterpret_cast<const FileHeader *>(address);
-  if(fileheader->magic != MAGIC_FILE_NUMBER) {
+  if(fileheader->block.magic != MAGIC_FILE_NUMBER) {
     return nullptr;
   }
 
@@ -106,7 +106,8 @@ std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const void* address, const 
 
   FileHeader *fileheader = reinterpret_cast<FileHeader *>(buffer.data());
 
-  fileheader->magic = MAGIC_FILE_NUMBER;
+  fileheader->block.magic = MAGIC_FILE_NUMBER;
+  fileheader->block.size = 1;
   fileheader->name_size_meta_offset = (uint16_t)(file_name.length() & 0xFF) | ((uint16_t)(((sizeof(FileHeader) + file_name.length() + 1 + 3) & 0xFC) << 8));
   strncpy(reinterpret_cast<char*>(fileheader) + sizeof(FileHeader), file_name.c_str(), file_name.length() + 1);
 
@@ -141,7 +142,8 @@ std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const void* addre
 
   DirectoryHeader *dirheader = reinterpret_cast<DirectoryHeader *>(buffer.data());
 
-  dirheader->magic = MAGIC_DIR_NUMBER;
+  dirheader->block.magic = MAGIC_DIR_NUMBER;
+  dirheader->block.size = 1;
   dirheader->name_size_meta_offset = (uint16_t)(dir_name.length() & 0xFF) | ((sizeof(DirectoryHeader) + dir_name.length() + 1 + 3) & 0xFC) << 8;
   strncpy(reinterpret_cast<char*>(dirheader) + sizeof(DirectoryHeader), dir_name.c_str(), dir_name.length() + 1);
 
@@ -247,6 +249,14 @@ const void* SPFS::findFreeSpace(const uint8_t* start_search, size_t size){
           search = block_addr; // Move search to this block
           break;
         }
+      }
+    }else{
+      const SPFSBlockHeader* block_header = reinterpret_cast<const SPFSBlockHeader*>(search);
+      if(block_header->magic == MAGIC_DIR_NUMBER || block_header->magic == MAGIC_FILE_NUMBER ||
+         block_header->magic == MAGIC_DIR_EXTENSION_NUMBER || block_header->magic == MAGIC_FILE_CONTENT_NUMBER) {
+        // Occupied block, skip ahead by its size
+        search += block_header->size * FS_BLOCK_SIZE;
+        continue;
       }
     }
 

@@ -142,7 +142,7 @@ std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const void* addre
   DirectoryHeader *dirheader = reinterpret_cast<DirectoryHeader *>(buffer.data());
 
   dirheader->magic = MAGIC_DIR_NUMBER;
-  dirheader->name_size_meta_offset = (uint16_t)(dir_name.length() & 0xFF) | ((sizeof(DirectoryHeader) + dir_name.length() + 1 + sizeof(DirectoryContentHeader) + 3) & 0xFC) << 8;
+  dirheader->name_size_meta_offset = (uint16_t)(dir_name.length() & 0xFF) | ((sizeof(DirectoryHeader) + dir_name.length() + 1 + 3) & 0xFC) << 8;
   strncpy(reinterpret_cast<char*>(dirheader) + sizeof(DirectoryHeader), dir_name.c_str(), dir_name.length() + 1);
 
   DirectoryMetadataHeader *dirmeta = reinterpret_cast<DirectoryMetadataHeader *>(buffer.data() + (dirheader->name_size_meta_offset >> 8));

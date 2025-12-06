@@ -86,6 +86,41 @@ std::shared_ptr<SPFS::FileInternal> SPFS::openFile(const void* address, std::sha
   return std::make_shared<SPFS::FileInternal>(shared_from_this(), parent, fileheader);
 }
 
+std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name) {
+  if(file_name.length() >= 200) {
+    return nullptr; // Name too long
+  }
+  
+  auto address = findFreeSpaceForFile(file_name.length());
+  if(address == nullptr) {
+    return nullptr;
+  }
+  return createFile(address, parent, file_name);
+}
+
+std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const void* address, const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name) {
+  std::vector<uint8_t> buffer(FS_BLOCK_SIZE);
+  if(Flash::read(buffer, address) < (int)buffer.size()) {
+    return nullptr;
+  }
+
+  FileHeader *fileheader = reinterpret_cast<FileHeader *>(buffer.data());
+
+  fileheader->magic = MAGIC_FILE_NUMBER;
+  fileheader->name_size_meta_offset = (uint16_t)(file_name.length() & 0xFF) | ((uint16_t)(((sizeof(FileHeader) + file_name.length() + 1 + 3) & 0xFC) << 8));
+  strncpy(reinterpret_cast<char*>(fileheader) + sizeof(FileHeader), file_name.c_str(), file_name.length() + 1);
+
+  FileMetadataHeader *filemeta = reinterpret_cast<FileMetadataHeader *>(buffer.data() + (fileheader->name_size_meta_offset >> 8));
+
+  filemeta->checksum = calculateCRC16(fileheader, fileheader->name_size_meta_offset >> 8);
+
+  if(Flash::write(buffer, address) < (int)buffer.size()) {
+    return nullptr;
+  }
+
+  return std::make_shared<SPFS::FileInternal>(shared_from_this(), parent, reinterpret_cast<const FileHeader *>(address));
+}
+
 std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {
   auto address = findFreeSpaceForDirectory();
   if(address == nullptr) {

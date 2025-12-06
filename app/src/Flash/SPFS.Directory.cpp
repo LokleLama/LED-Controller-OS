@@ -85,3 +85,7 @@ const std::string SPFS::Directory::getName() const {
   return std::string(name_ptr, _header->name_size_content_offset & 0x00FF);
 }
 
+std::shared_ptr<SPFS::File> SPFS::Directory::createFile(const std::string& name){
+  return _fs->createFile(shared_from_this(), name);
+}
+

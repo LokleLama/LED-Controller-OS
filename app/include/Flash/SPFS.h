@@ -63,14 +63,16 @@ private:
 
   struct FileHeader{
     uint16_t magic;                        //!< Magic number to identify the file
-    uint16_t content_offset;               //!< offset of the file content (in blocks)
-    uint16_t name_offset_size;             //!< the configuration contains the following fields:
-                                           //!< - uint8_t offset;      //!< Offset within the current block of the file name (mask: 0xFF00) (max: 200 bytes)
+    uint16_t name_size_meta_offset;        //!< the configuration contains the following fields:
+                                           //!< - uint8_t offset;      //!< Offset within the current block of the file metadata block (mask: 0xFF00) (max: 200 bytes)
                                            //!< - uint8_t size;        //!< Size of the file name (mask: 0x00FF) (max: 200 bytes)
+  };
+  struct FileMetadataHeader{
+    uint16_t checksum;                     //!< Checksum of the file header
     uint16_t file_type_flags;              //!< the configuration contains the following fields:
                                            //!< - uint8_t file_type;   //!< Type of the file (mask: 0x00FF) (e.g., 0 = binary, 1 = text, etc.)
                                            //!< - uint8_t flags;       //!< Flags for the file (mask: 0xFF00) (e.g., read-only, hidden, executable, etc.)
-    uint16_t checksum;                     //!< Checksum of the file header
+    uint16_t content_offset;               //!< offset of the file content (in blocks)
   };
   struct FileContentHeader{
     uint16_t magic;                        //!< Magic number to identify the file content
@@ -192,6 +194,9 @@ private:
   std::shared_ptr<Directory> createNewFileSystem(const void *address, size_t size, const std::string& fs_name, const std::string& root_dir_name);
   std::shared_ptr<DirectoryInternal> createDirectory(std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
   std::shared_ptr<DirectoryInternal> createDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
+
+  std::shared_ptr<FileInternal> createFile(const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name);
+  std::shared_ptr<FileInternal> createFile(const void* address, const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name);
 
   std::shared_ptr<DirectoryInternal> openDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent);
   std::shared_ptr<FileInternal> openFile(const void* address, std::shared_ptr<SPFS::Directory> parent);

@@ -181,6 +181,9 @@ int main(int argc, char **argv) {
   printf("\n");
 
   printf("******************************\n");
+  printf("creating new file\n");
+  data_dir->createFile("testfile.txt");
+  data_dir->createFile("testfile1.txt");
 
   SaveFlashStateInFlashFile();
   free(config.flash_data);

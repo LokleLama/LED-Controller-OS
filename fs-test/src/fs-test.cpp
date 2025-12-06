@@ -181,9 +181,16 @@ int main(int argc, char **argv) {
   printf("\n");
 
   printf("******************************\n");
-  printf("creating new file\n");
+  printf("creating new files in the %s directory\n", data_dir->getName().c_str());
   data_dir->createFile("testfile.txt");
   data_dir->createFile("testfile1.txt");
+
+  auto files = data_dir->getFiles();
+  printf("Found Files           : ");
+  for (const auto& file : files) {
+    printf("%s   ", file->getName().c_str());
+  }
+  printf("\n");
 
   SaveFlashStateInFlashFile();
   free(config.flash_data);

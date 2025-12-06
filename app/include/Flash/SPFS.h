@@ -90,6 +90,8 @@ private:
 public:
   class Directory;
   class File {
+    friend class Directory;
+
     public:
       File(std::shared_ptr<Directory> parent) : File(nullptr, parent, nullptr) { };
 
@@ -127,6 +129,10 @@ public:
       int getMaxContentCount() const {
         return (int)((FS_BLOCK_SIZE - (_header->name_size_meta_offset >> 8)) / sizeof(DirectoryContentHeader)) + 1;
       }
+
+      bool addContent(uint16_t type, uintptr_t content_address);
+      bool addContent(std::shared_ptr<Directory> dir);
+      bool addContent(std::shared_ptr<File> file);
 
     public:
       std::shared_ptr<Directory> getParent() const { return _parent; }
@@ -192,12 +198,12 @@ private:
 
   static constexpr uint16_t MAGIC_DIR_NUMBER = 0x9314;              //!< Magic number for SPFS Directory (dir)
   static constexpr uint16_t MAGIC_DIR_EXTENSION_NUMBER = 0x85E5;    //!< Magic number for SPFS Directory Extension (exd)
-  static constexpr uint16_t MAGIC_SUBDIRMARKER = 0xD1FF;            //!< Magic number for Directory entries (sdi)
+  static constexpr uint16_t MAGIC_SUBDIRMARKER = 0xA498;            //!< Magic number for Directory entries (sdi)
   static constexpr uint16_t MAGIC_FILEMARKER = 0xB313;              //!< Magic number for File entries (fil)
   static constexpr uint16_t MAGIC_ENDMARKER = 0xFFFF;               //!< Magic number for End entries
 
   static constexpr uint16_t MAGIC_FILE_NUMBER = 0xB313;             //!< Magic number for SPFS File (fil)
-  static constexpr uint16_t MAGIC_FILE_EXTENSION_NUMBER = 0x70CD;   //!< Magic number for SPFS File Extension (con)
+  static constexpr uint16_t MAGIC_FILE_CONTENT_NUMBER = 0x70CD;     //!< Magic number for SPFS File Extension (con)
 
   static constexpr int FS_ALIGNMENT = 4096;                         //!< Alignment for SPFS operations
   static constexpr int FS_BLOCK_SIZE = 256;                         //!< Block size for SPFS operations

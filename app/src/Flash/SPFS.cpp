@@ -224,13 +224,41 @@ const void* SPFS::findFreeSpace(size_t size){
 }
 const void* SPFS::findFreeSpace(const uint8_t* start_search, size_t size){
   const uint8_t* end_address = reinterpret_cast<const uint8_t*>(_fs_header) + _fs_header->size;
-  while(reinterpret_cast<const uint32_t*>(start_search)[0] != 0xFFFFFFFF){
-    start_search += FS_BLOCK_SIZE;
-    if(start_search >= end_address){
-      return nullptr;
-    }
+
+  if (size == 0) {
+    return nullptr;
   }
-  return start_search;
+
+  // Number of FS blocks required to hold 'size'
+  size_t blocks_needed = (size + FS_BLOCK_SIZE - 1) / FS_BLOCK_SIZE;
+
+  const uint8_t* search = start_search;
+  // Ensure we don't read past the end when checking blocks_needed
+  while (search + blocks_needed * FS_BLOCK_SIZE <= end_address) {
+    bool all_free = false;
+
+    if (reinterpret_cast<const uint32_t*>(search)[0] == 0xFFFFFFFFu) {
+      all_free = true;
+      for (size_t b = 1; b < blocks_needed; ++b) {
+        const uint8_t* block_addr = search + b * FS_BLOCK_SIZE;
+        // Check first word of each block for 0xFFFFFFFF (erased flash)
+        if (reinterpret_cast<const uint32_t*>(block_addr)[0] != 0xFFFFFFFFu) {
+          all_free = false;
+          search = block_addr; // Move search to this block
+          break;
+        }
+      }
+    }
+
+    if (all_free) {
+      return search;
+    }
+
+    // Move to next block and try again
+    search += FS_BLOCK_SIZE;
+  }
+
+  return nullptr;
 }
 
 uint32_t SPFS::calculateCRC32(const void *address, size_t size) {

@@ -181,8 +181,8 @@ int main(int argc, char **argv) {
   printf("\n");
 
   printf("******************************\n");
-  printf("creating new files in the %s directory\n", data_dir->getName().c_str());
-  data_dir->createFile("testfile.txt");
+  printf("creating new files in the \"%s\" directory\n", data_dir->getName().c_str());
+  auto file1 = data_dir->createFile("testfile.txt");
   data_dir->createFile("testfile1.txt");
 
   auto files = data_dir->getFiles();
@@ -191,6 +191,30 @@ int main(int argc, char **argv) {
     printf("%s   ", file->getName().c_str());
   }
   printf("\n");
+
+  printf("******************************\n");
+  printf("getting stats of file \"%s\"\n", file1->getName().c_str());
+  printf("File Version          : %zu\n", file1->getVersionCount());
+  printf("File Size             : %zu bytes\n", file1->getFileSize());
+  printf("File Size on Disk     : %zu bytes\n", file1->getFileSizeOnDisk());
+
+  printf("******************************\n");
+  printf("add content to file \"%s\"\n", file1->getName().c_str());
+
+  std::string file_content = "This is a test content for the file.\nIt has multiple lines.\nThis is line 3.\nEnd of file.";
+  if (file1->write(file_content)) {
+    printf("Wrote %zu bytes\n", file_content.length());
+  } else {
+    printf("Failed to write to file \"%s\"\n", file1->getName().c_str());
+  }
+  
+  SaveFlashStateInFlashFile();
+
+  printf("******************************\n");
+  printf("getting stats of file \"%s\"\n", file1->getName().c_str());
+  printf("File Version          : %zu\n", file1->getVersionCount());
+  printf("File Size             : %zu bytes\n", file1->getFileSize());
+  printf("File Size on Disk     : %zu bytes\n", file1->getFileSizeOnDisk());
 
   SaveFlashStateInFlashFile();
   free(config.flash_data);

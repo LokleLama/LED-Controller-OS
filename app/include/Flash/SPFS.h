@@ -83,11 +83,14 @@ private:
     uint16_t file_type_flags;              //!< the configuration contains the following fields:
                                            //!< - uint8_t file_type;   //!< Type of the file (mask: 0x00FF) (e.g., 0 = binary, 1 = text, etc.)
                                            //!< - uint8_t flags;       //!< Flags for the file (mask: 0xFF00) (e.g., read-only, hidden, executable, etc.)
-    uint16_t content_offset;               //!< offset of the file content (in blocks)
+    uint16_t content_block;                //!< offset of the file content (in blocks)
   };
   struct FileContentHeader{
     SPFSBlockHeader block;                 //!< Block description
     uint16_t size;                         //!< Size of the file data (in bytes)
+    uint16_t data_offset;                  //!< Offset within the current block of the file data (in bytes)
+                                           //!< - uint8_t offset;      //!< Offset within the current block of the file data (mask: 0x00FF) (in bytes)
+                                           //!< - uint8_t reserved;    //!< Reserved for future use (mask: 0xFF00) (must be 0xFF)
     uint16_t checksum;                     //!< Checksum of the file data
     uint16_t next;                         //!< offset of the next file version content block (in blocks)
   };
@@ -102,19 +105,32 @@ public:
 
     protected:
       File(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header)
-          : _fs(fs), _parent(parent), _header(header) { }
+          : _fs(fs), _parent(parent), _header(header) { 
+        _metadata_header = reinterpret_cast<const FileMetadataHeader *>(reinterpret_cast<const uint8_t*>(_header) + (_header->name_size_meta_offset >> 8)); 
+        FindCurrentContentHeader();
+      }
 
       const FileHeader* getHeader() const { return _header; }
+      void FindCurrentContentHeader();
 
     public:
       std::shared_ptr<Directory> getParent() const { return _parent; }
       const std::string getName() const;
 
+      size_t getVersionCount() const;
+      size_t getFileSize() const;
+      size_t getFileSizeOnDisk() const;
+
+      bool write(std::string data);
+      bool write(std::vector<uint8_t> data);
+      bool write(const uint8_t* data, size_t size);
+
     protected:
       std::shared_ptr<SPFS> _fs;          //!< Reference to the SPFS instance
       std::shared_ptr<Directory> _parent; //!< Reference to the parent directory
       const FileHeader* _header;          //!< Header information for the file
-
+      const FileMetadataHeader* _metadata_header; //!< Header information for the file metadata
+      const FileContentHeader* _content_header = nullptr; //!< Header information for the file content
   };
   class Directory : public std::enable_shared_from_this<Directory> {
     public:

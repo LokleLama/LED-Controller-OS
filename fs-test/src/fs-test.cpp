@@ -207,8 +207,28 @@ int main(int argc, char **argv) {
   } else {
     printf("Failed to write to file \"%s\"\n", file1->getName().c_str());
   }
-  
-  SaveFlashStateInFlashFile();
+
+  printf("******************************\n");
+  printf("getting stats of file \"%s\"\n", file1->getName().c_str());
+  printf("File Version          : %zu\n", file1->getVersionCount());
+  printf("File Size             : %zu bytes\n", file1->getFileSize());
+  printf("File Size on Disk     : %zu bytes\n", file1->getFileSizeOnDisk());
+
+  printf("******************************\n");
+  printf("add content to file \"%s\"\n", file1->getName().c_str());
+
+  std::string file_content_300 = "This is a test content for the file with at least 300 bytes of data.\n"
+    "It has multiple lines to ensure the content is long enough.\n"
+    "This is line 3 of the test content.\n"
+    "Line 4: The file system needs to handle larger file contents correctly.\n"
+    "Line 5: Additional padding to ensure we reach the minimum 300 byte threshold.\n"
+    "Line 6: Testing file I/O with a reasonable amount of test data.\n"
+    "End of file content - this string is now over 300 bytes long.";
+  if (file1->write(file_content_300)) {
+    printf("Wrote %zu bytes\n", file_content_300.length());
+  } else {
+    printf("Failed to write to file \"%s\"\n", file1->getName().c_str());
+  }
 
   printf("******************************\n");
   printf("getting stats of file \"%s\"\n", file1->getName().c_str());

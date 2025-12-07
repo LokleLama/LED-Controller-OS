@@ -98,7 +98,27 @@ private:
 public:
   class Directory;
   class ReadOnlyFile{
+    protected:
+      ReadOnlyFile(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header, const FileContentHeader* content_header)
+          : _fs(fs), _parent(parent), _header(header), _content_header(content_header) {}
 
+    public:
+      size_t getFileSize() const;
+
+      std::shared_ptr<Directory> getParent() const { return _parent; }
+      const std::string getName() const;
+
+      std::string readAsString() const;
+      std::vector<uint8_t> readAsVector() const;
+      std::vector<uint8_t> readBytes(size_t offset, size_t size) const;
+
+      const uint8_t* getMemoryMappedAddress() const;
+
+    protected:
+      std::shared_ptr<SPFS> _fs;                //!< Reference to the SPFS instance
+      std::shared_ptr<Directory> _parent;       //!< Reference to the parent directory
+      const FileHeader* _header;                //!< Header information for the file
+      const FileContentHeader* _content_header; //!< Header information for the file content
   };
   class File : public ReadOnlyFile{
     friend class Directory;
@@ -108,8 +128,8 @@ public:
 
     protected:
       File(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header)
-          : _fs(fs), _parent(parent), _header(header) { 
-        FindCurrentContentHeader();
+          : ReadOnlyFile(fs, parent, header, nullptr) {
+            FindCurrentContentHeader();
       }
 
       const FileHeader* getHeader() const { return _header; }
@@ -119,28 +139,12 @@ public:
       void FindCurrentContentHeader();
 
     public:
-      std::shared_ptr<Directory> getParent() const { return _parent; }
-      const std::string getName() const;
-
       size_t getVersionCount() const;
-      size_t getFileSize() const;
       size_t getFileSizeOnDisk() const;
 
       bool write(std::string data);
       bool write(std::vector<uint8_t> data);
       bool write(const uint8_t* data, size_t size);
-
-      std::string readAsString() const;
-      std::vector<uint8_t> readAsVector() const;
-      std::vector<uint8_t> readBytes(size_t offset, size_t size) const;
-
-      const uint8_t* getMemoryMappedAddress() const;
-
-    protected:
-      std::shared_ptr<SPFS> _fs;          //!< Reference to the SPFS instance
-      std::shared_ptr<Directory> _parent; //!< Reference to the parent directory
-      const FileHeader* _header;          //!< Header information for the file
-      const FileContentHeader* _content_header = nullptr; //!< Header information for the file content
   };
   class Directory : public std::enable_shared_from_this<Directory> {
     public:

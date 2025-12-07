@@ -17,11 +17,6 @@ SPFS::File::File(std::shared_ptr<Directory> parent, const std::string& name) : F
   }
 }
 
-const std::string SPFS::File::getName() const {
-  const char* name_ptr = reinterpret_cast<const char*>(_header) + sizeof(SPFS::FileHeader);
-  return std::string(name_ptr, _header->name_size_meta_offset & 0x00FF);
-}
-
 size_t SPFS::File::getVersionCount() const {
   size_t count = 0;
   uint16_t next_block = getMetadataHeader()->content_block;
@@ -44,13 +39,6 @@ void SPFS::File::FindCurrentContentHeader() {
     _content_header = reinterpret_cast<const FileContentHeader*>(content_address);
     next_block = _content_header->next;
   }
-}
-
-size_t SPFS::File::getFileSize() const {
-  if(_content_header == nullptr) {
-    return 0;
-  }
-  return _content_header->size;
 }
 
 size_t SPFS::File::getFileSizeOnDisk() const {
@@ -141,39 +129,4 @@ bool SPFS::File::write(const uint8_t* data, size_t size) {
   _content_header = reinterpret_cast<const FileContentHeader*>(address);
 
   return true;
-}
-
-const uint8_t* SPFS::File::getMemoryMappedAddress() const {
-  if(_content_header == nullptr) {
-    return nullptr;
-  }
-  return reinterpret_cast<const uint8_t*>(_content_header) + (_content_header->data_offset & 0x00FF);
-}
-std::string SPFS::File::readAsString() const {
-  if(_content_header == nullptr) {
-    return "";
-  }
-  const char * data_ptr = reinterpret_cast<const char*>(getMemoryMappedAddress());
-  return std::string(data_ptr, _content_header->size);
-}
-std::vector<uint8_t> SPFS::File::readAsVector() const {
-  if(_content_header == nullptr) {
-    return std::vector<uint8_t>();
-  }
-  std::vector<uint8_t> data_vector(_content_header->size);
-  const uint8_t * data_ptr = getMemoryMappedAddress();
-  memcpy(data_vector.data(), data_ptr, _content_header->size);
-  return data_vector;
-}
-std::vector<uint8_t> SPFS::File::readBytes(size_t offset, size_t size) const {
-  if(_content_header == nullptr || offset >= _content_header->size) {
-    return std::vector<uint8_t>();
-  }
-  if(offset + size > _content_header->size) {
-    size = _content_header->size - offset;
-  }
-  std::vector<uint8_t> data_vector(size);
-  const uint8_t * data_ptr = getMemoryMappedAddress() + offset;
-  memcpy(data_vector.data(), data_ptr, size);
-  return data_vector;
 }

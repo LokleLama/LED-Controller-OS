@@ -97,20 +97,25 @@ private:
 
 public:
   class Directory;
-  class File {
+  class ReadOnlyFile{
+
+  };
+  class File : public ReadOnlyFile{
     friend class Directory;
 
     public:
-      File(std::shared_ptr<Directory> parent) : File(nullptr, parent, nullptr) { };
+      File(std::shared_ptr<Directory> parent, const std::string& name);
 
     protected:
       File(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header)
           : _fs(fs), _parent(parent), _header(header) { 
-        _metadata_header = reinterpret_cast<const FileMetadataHeader *>(reinterpret_cast<const uint8_t*>(_header) + (_header->name_size_meta_offset >> 8)); 
         FindCurrentContentHeader();
       }
 
       const FileHeader* getHeader() const { return _header; }
+      const FileMetadataHeader* getMetadataHeader() const {
+        return reinterpret_cast<const FileMetadataHeader *>(reinterpret_cast<const uint8_t*>(_header) + (_header->name_size_meta_offset >> 8));
+      }
       void FindCurrentContentHeader();
 
     public:
@@ -125,16 +130,21 @@ public:
       bool write(std::vector<uint8_t> data);
       bool write(const uint8_t* data, size_t size);
 
+      std::string readAsString() const;
+      std::vector<uint8_t> readAsVector() const;
+      std::vector<uint8_t> readBytes(size_t offset, size_t size) const;
+
+      const uint8_t* getMemoryMappedAddress() const;
+
     protected:
       std::shared_ptr<SPFS> _fs;          //!< Reference to the SPFS instance
       std::shared_ptr<Directory> _parent; //!< Reference to the parent directory
       const FileHeader* _header;          //!< Header information for the file
-      const FileMetadataHeader* _metadata_header; //!< Header information for the file metadata
       const FileContentHeader* _content_header = nullptr; //!< Header information for the file content
   };
   class Directory : public std::enable_shared_from_this<Directory> {
     public:
-      Directory(std::shared_ptr<Directory> parent) : Directory(nullptr, parent, nullptr) { };
+      Directory(std::shared_ptr<Directory> parent, const std::string& name);
 
     protected:
       Directory(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
@@ -164,6 +174,8 @@ public:
 
       std::shared_ptr<Directory> createDirectory(const std::string& name);
       std::shared_ptr<File> createFile(const std::string& name);
+      std::shared_ptr<Directory> openSubdirectory(const std::string& name);
+      std::shared_ptr<File> openFile(const std::string& name);
 
     protected:
       std::shared_ptr<SPFS> _fs;          //!< Reference to the SPFS instance

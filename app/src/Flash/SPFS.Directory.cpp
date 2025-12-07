@@ -2,6 +2,20 @@
 #include "flash.h"
 #include <cstring>
 
+SPFS::Directory::Directory(std::shared_ptr<Directory> parent, const std::string& name) : Directory(nullptr, parent, nullptr) {
+  auto dir = parent->openSubdirectory(name);
+  if(dir != nullptr){
+    _fs = dir->_fs;
+    _header = dir->_header;
+  }else{
+    dir = parent->createDirectory(name);
+    if(dir != nullptr){
+      _fs = dir->_fs;
+      _header = dir->_header;
+    }
+  }
+}
+
 std::vector<std::shared_ptr<SPFS::Directory>> SPFS::Directory::getSubdirectories() {
   std::vector<std::shared_ptr<SPFS::Directory>> subdirs;
 
@@ -110,3 +124,22 @@ std::shared_ptr<SPFS::File> SPFS::Directory::createFile(const std::string& name)
   return new_file;
 }
 
+std::shared_ptr<SPFS::Directory> SPFS::Directory::openSubdirectory(const std::string& name){
+  auto subdirs = getSubdirectories();
+  for(const auto& dir : subdirs){
+    if(dir->getName() == name){
+      return dir;
+    }
+  }
+  return nullptr;
+}
+
+std::shared_ptr<SPFS::File> SPFS::Directory::openFile(const std::string& name){
+  auto files = getFiles();
+  for(const auto& file : files){
+    if(file->getName() == name){
+      return file;
+    }
+  }
+  return nullptr;
+}

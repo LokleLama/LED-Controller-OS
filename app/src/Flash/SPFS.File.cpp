@@ -2,6 +2,21 @@
 #include "flash.h"
 #include <cstring>
 
+SPFS::File::File(std::shared_ptr<Directory> parent, const std::string& name) : File(nullptr, parent, nullptr) {
+  auto file = parent->openFile(name);
+  if(file != nullptr){
+    _fs = file->_fs;
+    _header = file->_header;
+    FindCurrentContentHeader();
+  }else{
+    file = parent->createFile(name);
+    if(file != nullptr){
+      _fs = file->_fs;
+      _header = file->_header;
+    }
+  }
+}
+
 const std::string SPFS::File::getName() const {
   const char* name_ptr = reinterpret_cast<const char*>(_header) + sizeof(SPFS::FileHeader);
   return std::string(name_ptr, _header->name_size_meta_offset & 0x00FF);
@@ -9,7 +24,7 @@ const std::string SPFS::File::getName() const {
 
 size_t SPFS::File::getVersionCount() const {
   size_t count = 0;
-  uint16_t next_block = _metadata_header->content_block;
+  uint16_t next_block = getMetadataHeader()->content_block;
   while (next_block != 0xFFFF) {
     count++;
     const uint8_t* content_address = reinterpret_cast<const uint8_t*>(_header) + next_block * SPFS::FS_BLOCK_SIZE;
@@ -23,7 +38,7 @@ void SPFS::File::FindCurrentContentHeader() {
   if(_content_header != nullptr) {
     return;
   }
-  uint16_t next_block = _metadata_header->content_block;
+  uint16_t next_block = getMetadataHeader()->content_block;
   while (next_block != 0xFFFF) {
     const uint8_t* content_address = reinterpret_cast<const uint8_t*>(_header) + next_block * SPFS::FS_BLOCK_SIZE;
     _content_header = reinterpret_cast<const FileContentHeader*>(content_address);
@@ -40,7 +55,7 @@ size_t SPFS::File::getFileSize() const {
 
 size_t SPFS::File::getFileSizeOnDisk() const {
   size_t total_size_on_disk = _header->block.size;
-  uint16_t next_block = _metadata_header->content_block;
+  uint16_t next_block = getMetadataHeader()->content_block;
   while (next_block != 0xFFFF) {
     const uint8_t* content_address = reinterpret_cast<const uint8_t*>(_header) + next_block * SPFS::FS_BLOCK_SIZE;
     const FileContentHeader* content_header = reinterpret_cast<const FileContentHeader*>(content_address);
@@ -76,7 +91,7 @@ bool SPFS::File::write(const uint8_t* data, size_t size) {
 
   size_t current_pos = 0;
 
-  size_t to_copy = size;
+  int to_copy = size;
   if(to_copy > FS_BLOCK_SIZE - (contentheader->data_offset & 0x00FF)) {
     to_copy = FS_BLOCK_SIZE - (contentheader->data_offset & 0x00FF);
   }
@@ -126,4 +141,39 @@ bool SPFS::File::write(const uint8_t* data, size_t size) {
   _content_header = reinterpret_cast<const FileContentHeader*>(address);
 
   return true;
+}
+
+const uint8_t* SPFS::File::getMemoryMappedAddress() const {
+  if(_content_header == nullptr) {
+    return nullptr;
+  }
+  return reinterpret_cast<const uint8_t*>(_content_header) + (_content_header->data_offset & 0x00FF);
+}
+std::string SPFS::File::readAsString() const {
+  if(_content_header == nullptr) {
+    return "";
+  }
+  const char * data_ptr = reinterpret_cast<const char*>(getMemoryMappedAddress());
+  return std::string(data_ptr, _content_header->size);
+}
+std::vector<uint8_t> SPFS::File::readAsVector() const {
+  if(_content_header == nullptr) {
+    return std::vector<uint8_t>();
+  }
+  std::vector<uint8_t> data_vector(_content_header->size);
+  const uint8_t * data_ptr = getMemoryMappedAddress();
+  memcpy(data_vector.data(), data_ptr, _content_header->size);
+  return data_vector;
+}
+std::vector<uint8_t> SPFS::File::readBytes(size_t offset, size_t size) const {
+  if(_content_header == nullptr || offset >= _content_header->size) {
+    return std::vector<uint8_t>();
+  }
+  if(offset + size > _content_header->size) {
+    size = _content_header->size - offset;
+  }
+  std::vector<uint8_t> data_vector(size);
+  const uint8_t * data_ptr = getMemoryMappedAddress() + offset;
+  memcpy(data_vector.data(), data_ptr, size);
+  return data_vector;
 }

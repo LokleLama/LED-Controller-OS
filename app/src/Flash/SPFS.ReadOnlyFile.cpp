@@ -48,3 +48,26 @@ std::vector<uint8_t> SPFS::ReadOnlyFile::readBytes(size_t offset, size_t size) c
   memcpy(data_vector.data(), data_ptr, size);
   return data_vector;
 }
+
+std::shared_ptr<SPFS::ReadOnlyFile> SPFS::ReadOnlyFile::openVersion(size_t version) const{
+  if(version >= _content_version) {
+    return nullptr;
+  }
+  if(version == 0) {
+    return std::make_shared<SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, nullptr, 0);
+  }
+
+  const FileContentHeader* content_header = nullptr;
+  size_t current_version = 0;
+  uint16_t next_block = getMetadataHeader()->content_block;
+  while (next_block != 0xFFFF) {
+    const uint8_t* content_address = reinterpret_cast<const uint8_t*>(_header) + next_block * SPFS::FS_BLOCK_SIZE;
+    content_header = reinterpret_cast<const FileContentHeader*>(content_address);
+    current_version++;
+    if(current_version == version) {
+      break;
+    }
+    next_block = content_header->next;
+  }
+  return std::make_shared<SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, content_header, version);
+}

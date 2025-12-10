@@ -98,15 +98,25 @@ private:
 public:
   class Directory;
   class ReadOnlyFile{
-    protected:
-      ReadOnlyFile(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header, const FileContentHeader* content_header)
-          : _fs(fs), _parent(parent), _header(header), _content_header(content_header) {}
+    friend class Directory;
 
+    protected:
+      ReadOnlyFile(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header, const FileContentHeader* content_header, size_t content_version)
+          : _fs(fs), _parent(parent), _header(header), _content_header(content_header), _content_version(content_version) {}
+
+      const FileHeader* getHeader() const { return _header; }
+      const FileMetadataHeader* getMetadataHeader() const {
+        return reinterpret_cast<const FileMetadataHeader *>(reinterpret_cast<const uint8_t*>(_header) + (_header->name_size_meta_offset >> 8));
+      }
     public:
       size_t getFileSize() const;
 
       std::shared_ptr<Directory> getParent() const { return _parent; }
       const std::string getName() const;
+      
+      size_t getVersion() const { return _content_version; }
+
+      std::shared_ptr<ReadOnlyFile> openVersion(size_t version) const;
 
       std::string readAsString() const;
       std::vector<uint8_t> readAsVector() const;
@@ -119,27 +129,20 @@ public:
       std::shared_ptr<Directory> _parent;       //!< Reference to the parent directory
       const FileHeader* _header;                //!< Header information for the file
       const FileContentHeader* _content_header; //!< Header information for the file content
+      size_t _content_version;                  //!< Version of the file content
   };
   class File : public ReadOnlyFile{
-    friend class Directory;
-
     public:
       File(std::shared_ptr<Directory> parent, const std::string& name);
 
     protected:
       File(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header)
-          : ReadOnlyFile(fs, parent, header, nullptr) {
+          : ReadOnlyFile(fs, parent, header, nullptr, 0) {
             FindCurrentContentHeader();
-      }
-
-      const FileHeader* getHeader() const { return _header; }
-      const FileMetadataHeader* getMetadataHeader() const {
-        return reinterpret_cast<const FileMetadataHeader *>(reinterpret_cast<const uint8_t*>(_header) + (_header->name_size_meta_offset >> 8));
       }
       void FindCurrentContentHeader();
 
     public:
-      size_t getVersionCount() const;
       size_t getFileSizeOnDisk() const;
 
       bool write(std::string data);
@@ -202,6 +205,11 @@ private:
         : File(fs, parent, header) { }
 
     // Additional methods specific to internal directory management can be added here
+  };
+  class ReadOnlyFileInternal : public ReadOnlyFile {
+    public:
+      ReadOnlyFileInternal(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header, const FileContentHeader* content_header, size_t content_version)
+          : ReadOnlyFile(fs, parent, header, content_header, content_version) { }
   };
 
 public:

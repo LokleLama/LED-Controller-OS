@@ -194,7 +194,7 @@ int main(int argc, char **argv) {
 
   printf("******************************\n");
   printf("getting stats of file \"%s\"\n", file1->getName().c_str());
-  printf("File Version          : %zu\n", file1->getVersionCount());
+  printf("File Version          : %zu\n", file1->getVersion());
   printf("File Size             : %zu bytes\n", file1->getFileSize());
   printf("File Size on Disk     : %zu bytes\n", file1->getFileSizeOnDisk());
 
@@ -210,7 +210,7 @@ int main(int argc, char **argv) {
 
   printf("******************************\n");
   printf("getting stats of file \"%s\"\n", file1->getName().c_str());
-  printf("File Version          : %zu\n", file1->getVersionCount());
+  printf("File Version          : %zu\n", file1->getVersion());
   printf("File Size             : %zu bytes\n", file1->getFileSize());
   printf("File Size on Disk     : %zu bytes\n", file1->getFileSizeOnDisk());
 
@@ -232,9 +232,23 @@ int main(int argc, char **argv) {
 
   printf("******************************\n");
   printf("getting stats of file \"%s\"\n", file1->getName().c_str());
-  printf("File Version          : %zu\n", file1->getVersionCount());
+  printf("File Version          : %zu\n", file1->getVersion());
   printf("File Size             : %zu bytes\n", file1->getFileSize());
   printf("File Size on Disk     : %zu bytes\n", file1->getFileSizeOnDisk());
+  printf("******************************\n");
+  printf("reading current file content of \"%s\"\n", file1->getName().c_str());
+  std::string read_content = file1->readAsString();
+  printf("File Content          : \"%s\"\n", read_content.c_str());
+
+  printf("******************************\n");
+  printf("opening old version of \"%s\"\n", file1->getName().c_str());
+  auto old_version_file = file1->openVersion(1);
+  if (old_version_file != nullptr) {
+    std::string old_content = old_version_file->readAsString();
+    printf("Old Version (%zu) Content: \"%s\"\n", old_version_file->getVersion(), old_content.c_str());
+  } else {
+    printf("Failed to open old version of file \"%s\"\n", file1->getName().c_str());
+  }
 
   SaveFlashStateInFlashFile();
   free(config.flash_data);

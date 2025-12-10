@@ -17,24 +17,14 @@ SPFS::File::File(std::shared_ptr<Directory> parent, const std::string& name) : F
   }
 }
 
-size_t SPFS::File::getVersionCount() const {
-  size_t count = 0;
-  uint16_t next_block = getMetadataHeader()->content_block;
-  while (next_block != 0xFFFF) {
-    count++;
-    const uint8_t* content_address = reinterpret_cast<const uint8_t*>(_header) + next_block * SPFS::FS_BLOCK_SIZE;
-    const FileContentHeader* content_header = reinterpret_cast<const FileContentHeader*>(content_address);
-    next_block = content_header->next;
-  }
-  return count;
-}
-
 void SPFS::File::FindCurrentContentHeader() {
   if(_content_header != nullptr) {
     return;
   }
+  _content_version = 0;
   uint16_t next_block = getMetadataHeader()->content_block;
   while (next_block != 0xFFFF) {
+    _content_version++;
     const uint8_t* content_address = reinterpret_cast<const uint8_t*>(_header) + next_block * SPFS::FS_BLOCK_SIZE;
     _content_header = reinterpret_cast<const FileContentHeader*>(content_address);
     next_block = _content_header->next;
@@ -127,6 +117,7 @@ bool SPFS::File::write(const uint8_t* data, size_t size) {
     }
   }
   _content_header = reinterpret_cast<const FileContentHeader*>(address);
+  _content_version++;
 
   return true;
 }

@@ -169,6 +169,7 @@ public:
       }
 
       bool addContent(uint16_t type, uintptr_t content_address);
+      bool removeContent(uintptr_t content_address);
       bool addContent(std::shared_ptr<Directory> dir);
       bool addContent(std::shared_ptr<File> file);
 
@@ -183,6 +184,11 @@ public:
       std::shared_ptr<File> createFile(const std::string& name);
       std::shared_ptr<Directory> openSubdirectory(const std::string& name);
       std::shared_ptr<File> openFile(const std::string& name);
+
+      //bool removeFile(const std::string& name);
+      //bool removeDirectory(const std::string& name);
+      bool remove(std::shared_ptr<File> file);
+      bool remove(std::shared_ptr<Directory> dir);
 
     protected:
       std::shared_ptr<SPFS> _fs;          //!< Reference to the SPFS instance

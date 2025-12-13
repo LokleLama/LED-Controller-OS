@@ -94,6 +94,34 @@ bool SPFS::Directory::addContent(uint16_t type, uintptr_t content_address){
   return true;
 }
 
+bool SPFS::Directory::removeContent(uintptr_t content_address){
+  std::vector<uint8_t> buffer(FS_BLOCK_SIZE);
+  if(Flash::read(buffer, getHeader()) < (int)buffer.size()) {
+    return false;
+  }
+
+  DirectoryHeader *dirheader = reinterpret_cast<DirectoryHeader *>(buffer.data());
+
+  DirectoryMetadataHeader *dirmeta = reinterpret_cast<DirectoryMetadataHeader *>(buffer.data() + (dirheader->name_size_meta_offset >> 8));
+  auto contentHeaders = dirmeta->content;
+  auto max_count = getMaxContentCount();
+
+  int current = 0;
+  int16_t target_block = (int16_t)((content_address - (uintptr_t)getHeader()) / FS_BLOCK_SIZE);
+  while(current < max_count && contentHeaders[current].type != 0xFFFF) {
+    if(contentHeaders[current].block_offset == target_block) {
+      contentHeaders[current].type &= 0x0FFF; // Mark as deleted
+      if(Flash::write(buffer, getHeader()) < (int)buffer.size()) {
+        return false;
+      }
+      return true;
+    }
+    current++;
+  }
+
+  return false; // Content not found
+}
+
 bool SPFS::Directory::addContent(std::shared_ptr<SPFS::Directory> dir){
   return addContent(MAGIC_SUBDIRMARKER, (uintptr_t)dir->getHeader());
 }
@@ -142,4 +170,11 @@ std::shared_ptr<SPFS::File> SPFS::Directory::openFile(const std::string& name){
     }
   }
   return nullptr;
+}
+
+bool SPFS::Directory::remove(std::shared_ptr<SPFS::File> file){
+  return removeContent((uintptr_t)file->getHeader());
+}
+bool SPFS::Directory::remove(std::shared_ptr<SPFS::Directory> dir){
+  return removeContent((uintptr_t)dir->getHeader());
 }

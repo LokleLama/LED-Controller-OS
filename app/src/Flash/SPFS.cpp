@@ -86,7 +86,7 @@ std::shared_ptr<SPFS::FileInternal> SPFS::openFile(const void* address, std::sha
   return std::make_shared<SPFS::FileInternal>(shared_from_this(), parent, fileheader);
 }
 
-std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name) {
+std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name, const FileContentHeader* initial_content) {
   if(file_name.length() >= 200) {
     return nullptr; // Name too long
   }
@@ -95,10 +95,18 @@ std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const std::shared_ptr<SPFS:
   if(address == nullptr) {
     return nullptr;
   }
-  return createFile(address, parent, file_name);
+  return createFile(address, parent, file_name, initial_content);
 }
 
-std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const void* address, const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name) {
+std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const void* address, const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name, const FileContentHeader* initial_content) {
+  uint16_t content_block_offset = 0xFFFF;
+  if(initial_content != nullptr) {
+    content_block_offset = calculateContentBlockOffset(address, initial_content);
+    if(content_block_offset == 0xFFFF) {
+      return nullptr; // Invalid content block: difference is too big
+    }
+  }
+  
   std::vector<uint8_t> buffer(FS_BLOCK_SIZE);
   if(Flash::read(buffer, address) < (int)buffer.size()) {
     return nullptr;
@@ -114,12 +122,37 @@ std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const void* address, const 
   FileMetadataHeader *filemeta = reinterpret_cast<FileMetadataHeader *>(buffer.data() + (fileheader->name_size_meta_offset >> 8));
 
   filemeta->checksum = calculateCRC16(fileheader, fileheader->name_size_meta_offset >> 8);
+  filemeta->content_block = content_block_offset;
 
   if(Flash::write(buffer, address) < (int)buffer.size()) {
     return nullptr;
   }
 
   return std::make_shared<SPFS::FileInternal>(shared_from_this(), parent, reinterpret_cast<const FileHeader *>(address));
+}
+
+uint16_t SPFS::calculateContentBlockOffset(const void* reference_address, const SPFS::FileContentHeader* content_header) const {
+  uint16_t content_block_offset = 0xFFFF;
+  if(reinterpret_cast<const uint8_t*>(content_header) > reinterpret_cast<const uint8_t*>(reference_address)){
+    content_block_offset = (uint16_t)((reinterpret_cast<const uint8_t*>(content_header) - reinterpret_cast<const uint8_t*>(reference_address)) / FS_BLOCK_SIZE);
+  }else{
+    content_block_offset = (uint16_t)((reinterpret_cast<const uint8_t*>(reference_address) - reinterpret_cast<const uint8_t*>(content_header)) / FS_BLOCK_SIZE);
+    content_block_offset |= 0x8000; // Negative offset
+  }
+  return content_block_offset;
+}
+
+const SPFS::FileContentHeader* SPFS::calculateContentHeaderAddress(const void* reference_address, uint16_t content_block_offset) const {
+  if(content_block_offset == 0xFFFF) {
+    return nullptr;
+  }
+  const uint8_t* content_address = reinterpret_cast<const uint8_t*>(reference_address);
+  if((content_block_offset & 0x8000) == 0){
+    content_address += (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
+  }else{
+    content_address -= (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
+  }
+  return reinterpret_cast<const FileContentHeader*>(content_address);
 }
 
 std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {

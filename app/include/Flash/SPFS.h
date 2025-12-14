@@ -83,6 +83,9 @@ private:
     uint16_t file_type_flags;              //!< the configuration contains the following fields:
                                            //!< - uint8_t file_type;   //!< Type of the file (mask: 0x00FF) (e.g., 0 = binary, 1 = text, etc.)
                                            //!< - uint8_t flags;       //!< Flags for the file (mask: 0xFF00) (e.g., read-only, hidden, executable, etc.)
+                                           //!< - 0x01: Read-only
+                                           //!< - 0x02: Hidden
+                                           //!< - 0x04: Executable
     uint16_t content_block;                //!< offset of the file content (in blocks)
   };
   struct FileContentHeader{
@@ -108,8 +111,12 @@ public:
       const FileMetadataHeader* getMetadataHeader() const {
         return reinterpret_cast<const FileMetadataHeader *>(reinterpret_cast<const uint8_t*>(_header) + (_header->name_size_meta_offset >> 8));
       }
+      const FileContentHeader* getContentHeader() const {
+        return _content_header;
+      }
     public:
-      size_t getFileSize() const;
+      size_t getSize() const;
+      size_t getSizeOnDisk() const;
 
       std::shared_ptr<Directory> getParent() const { return _parent; }
       const std::string getName() const;
@@ -143,8 +150,6 @@ public:
       void FindCurrentContentHeader();
 
     public:
-      size_t getFileSizeOnDisk() const;
-
       bool write(std::string data);
       bool write(std::vector<uint8_t> data);
       bool write(const uint8_t* data, size_t size);
@@ -177,6 +182,8 @@ public:
       std::shared_ptr<Directory> getParent() const { return _parent; }
       const std::string getName() const;
 
+      size_t getSizeOnDisk() const;
+
       std::vector<std::shared_ptr<Directory>> getSubdirectories();
       std::vector<std::shared_ptr<File>> getFiles();
 
@@ -185,10 +192,11 @@ public:
       std::shared_ptr<Directory> openSubdirectory(const std::string& name);
       std::shared_ptr<File> openFile(const std::string& name);
 
-      //bool removeFile(const std::string& name);
-      //bool removeDirectory(const std::string& name);
       bool remove(std::shared_ptr<File> file);
       bool remove(std::shared_ptr<Directory> dir);
+
+      std::shared_ptr<Directory> createHardlink(std::shared_ptr<Directory> subdir);
+      std::shared_ptr<File> createHardlink(std::shared_ptr<File> file, const std::string& new_name = "");
 
     protected:
       std::shared_ptr<SPFS> _fs;          //!< Reference to the SPFS instance
@@ -267,8 +275,8 @@ private:
   std::shared_ptr<DirectoryInternal> createDirectory(std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
   std::shared_ptr<DirectoryInternal> createDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
 
-  std::shared_ptr<FileInternal> createFile(const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name);
-  std::shared_ptr<FileInternal> createFile(const void* address, const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name);
+  std::shared_ptr<FileInternal> createFile(const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name, const FileContentHeader* initial_content = nullptr);
+  std::shared_ptr<FileInternal> createFile(const void* address, const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name, const FileContentHeader* initial_content = nullptr);
 
   std::shared_ptr<DirectoryInternal> openDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent);
   std::shared_ptr<FileInternal> openFile(const void* address, std::shared_ptr<SPFS::Directory> parent);
@@ -278,6 +286,9 @@ private:
   const FileContentHeader* findFreeSpaceForFileContent(size_t content_size);
   const void* findFreeSpace(const uint8_t* start_search, size_t size);
   const void* findFreeSpace(size_t size);
+
+  uint16_t calculateContentBlockOffset(const void* reference_address, const FileContentHeader* content_header) const;
+  const FileContentHeader* calculateContentHeaderAddress(const void* reference_address, uint16_t content_block_offset) const;
 
   uint32_t calculateCRC32(const void *address, size_t size);
   uint16_t calculateCRC16(const void *address, size_t size);

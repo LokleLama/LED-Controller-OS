@@ -155,6 +155,7 @@ int main(int argc, char **argv) {
   printf("******************************\n");
   printf("File System Size      : %i\n", spfs->getFileSystemSize());
   printf("Directory Name        : %s\n", root->getName().c_str());
+  printf("Directory Disk Space  : %zu bytes\n", root->getSizeOnDisk());
 
   CreateSubDirectory(root, "config");
   auto data = CreateSubDirectory(root, "data");
@@ -167,6 +168,7 @@ int main(int argc, char **argv) {
   auto reopened_root = reopened_spfs->getRootDirectory();
   printf("File System Size      : %i\n", spfs->getFileSystemSize());
   printf("Root Directory Name   : %s\n", reopened_root->getName().c_str());
+  printf("Directory Disk Space  : %zu bytes\n", reopened_root->getSizeOnDisk());
 
   auto subdirs = reopened_root->getSubdirectories();
   std::shared_ptr<SPFS::Directory> data_dir = nullptr;
@@ -195,8 +197,8 @@ int main(int argc, char **argv) {
   printf("******************************\n");
   printf("getting stats of file \"%s\"\n", file1->getName().c_str());
   printf("File Version          : %zu\n", file1->getVersion());
-  printf("File Size             : %zu bytes\n", file1->getFileSize());
-  printf("File Size on Disk     : %zu bytes\n", file1->getFileSizeOnDisk());
+  printf("File Size             : %zu bytes\n", file1->getSize());
+  printf("File Size on Disk     : %zu bytes\n", file1->getSizeOnDisk());
 
   printf("******************************\n");
   printf("add content to file \"%s\"\n", file1->getName().c_str());
@@ -211,8 +213,8 @@ int main(int argc, char **argv) {
   printf("******************************\n");
   printf("getting stats of file \"%s\"\n", file1->getName().c_str());
   printf("File Version          : %zu\n", file1->getVersion());
-  printf("File Size             : %zu bytes\n", file1->getFileSize());
-  printf("File Size on Disk     : %zu bytes\n", file1->getFileSizeOnDisk());
+  printf("File Size             : %zu bytes\n", file1->getSize());
+  printf("File Size on Disk     : %zu bytes\n", file1->getSizeOnDisk());
 
   printf("******************************\n");
   printf("add content to file \"%s\"\n", file1->getName().c_str());
@@ -233,8 +235,8 @@ int main(int argc, char **argv) {
   printf("******************************\n");
   printf("getting stats of file \"%s\"\n", file1->getName().c_str());
   printf("File Version          : %zu\n", file1->getVersion());
-  printf("File Size             : %zu bytes\n", file1->getFileSize());
-  printf("File Size on Disk     : %zu bytes\n", file1->getFileSizeOnDisk());
+  printf("File Size             : %zu bytes\n", file1->getSize());
+  printf("File Size on Disk     : %zu bytes\n", file1->getSizeOnDisk());
   printf("******************************\n");
   printf("reading current file content of \"%s\"\n", file1->getName().c_str());
   std::string read_content = file1->readAsString();
@@ -244,10 +246,26 @@ int main(int argc, char **argv) {
   printf("opening old version of \"%s\"\n", file1->getName().c_str());
   auto old_version_file = file1->openVersion(1);
   if (old_version_file != nullptr) {
+    printf("File Size             : %zu bytes\n", old_version_file->getSize());
+    printf("File Size on Disk     : %zu bytes\n", old_version_file->getSizeOnDisk());
     std::string old_content = old_version_file->readAsString();
-    printf("Old Version (%zu) Content: \"%s\"\n", old_version_file->getVersion(), old_content.c_str());
+    printf("Version %zu Content     : \"%s\"\n", old_version_file->getVersion(), old_content.c_str());
   } else {
     printf("Failed to open old version of file \"%s\"\n", file1->getName().c_str());
+  }
+
+  printf("******************************\n");
+  printf("creating a hardlink with different name to file \"%s\"\n", file1->getName().c_str());
+  auto hardlink_file = data_dir->createHardlink(file1, "hardlink_to_testfile.txt");
+  if (hardlink_file != nullptr) {
+    printf("Created hardlink file          : %s\n", hardlink_file->getName().c_str());
+    printf("Hardlink File Size             : %zu bytes\n", hardlink_file->getSize());
+    printf("Hardlink File Size on Disk     : %zu bytes\n", hardlink_file->getSizeOnDisk());
+    printf("File Version                   : %zu\n", hardlink_file->getVersion());
+    std::string hardlink_content = hardlink_file->readAsString();
+    printf("Hardlink File Content          : \"%s\"\n", hardlink_content.c_str());
+  } else {
+    printf("Failed to create hardlink to file \"%s\"\n", file1->getName().c_str());
   }
 
   SaveFlashStateInFlashFile();

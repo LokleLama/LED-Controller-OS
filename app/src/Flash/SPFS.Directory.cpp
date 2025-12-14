@@ -16,6 +16,17 @@ SPFS::Directory::Directory(std::shared_ptr<Directory> parent, const std::string&
   }
 }
 
+size_t SPFS::Directory::getSizeOnDisk() const {
+  size_t total_size_on_disk = _header->block.size;
+  uint16_t next_block = getMetadataHeader()->next;
+  while (next_block != 0xFFFF) {
+    // not Yet implemented
+    //total_size_on_disk += content_header->block.size;
+    next_block = 0xFFFF;
+  }
+  return total_size_on_disk * SPFS::FS_BLOCK_SIZE;
+}
+
 std::vector<std::shared_ptr<SPFS::Directory>> SPFS::Directory::getSubdirectories() {
   std::vector<std::shared_ptr<SPFS::Directory>> subdirs;
 
@@ -75,8 +86,13 @@ bool SPFS::Directory::addContent(uint16_t type, uintptr_t content_address){
   auto contentHeaders = dirmeta->content;
   auto max_count = getMaxContentCount();
 
+  uint16_t content_block_offset = (uint16_t)((content_address - (uintptr_t)getHeader()) / FS_BLOCK_SIZE);
+
   int current = 0;
   while(contentHeaders[current].type != 0xFFFF && current < max_count) {
+    if(contentHeaders[current].block_offset == content_block_offset) {
+      return false; // Content already exists
+    }
     current++;
   }
 
@@ -86,7 +102,7 @@ bool SPFS::Directory::addContent(uint16_t type, uintptr_t content_address){
   }
 
   contentHeaders[current].type = type; // Directory type
-  contentHeaders[current].block_offset = (int16_t)((content_address - (uintptr_t)getHeader()) / FS_BLOCK_SIZE);
+  contentHeaders[current].block_offset = content_block_offset;
 
   if(Flash::write(buffer, getHeader()) < (int)buffer.size()) {
     return false;
@@ -178,3 +194,34 @@ bool SPFS::Directory::remove(std::shared_ptr<SPFS::File> file){
 bool SPFS::Directory::remove(std::shared_ptr<SPFS::Directory> dir){
   return removeContent((uintptr_t)dir->getHeader());
 }
+
+std::shared_ptr<SPFS::Directory> SPFS::Directory::createHardlink(std::shared_ptr<SPFS::Directory> subdir){
+  if(subdir == nullptr) {
+    return nullptr;
+  }
+  if(!addContent(subdir)) {
+    return nullptr;
+  }
+  return subdir;
+}
+std::shared_ptr<SPFS::File> SPFS::Directory::createHardlink(std::shared_ptr<SPFS::File> file, const std::string& new_name){
+  if(file == nullptr) {
+    return nullptr;
+  }
+  if(new_name != "") {
+    // Create a new file with the new name that points to the same content
+    auto hardlink_file = _fs->createFile(shared_from_this(), new_name, file->getContentHeader());
+    if(hardlink_file == nullptr) {
+      return nullptr;
+    }
+    if(!addContent(hardlink_file)) {
+      return nullptr;
+    }
+    return hardlink_file;
+  }
+  if(!addContent(file)) {
+    return nullptr;
+  }
+  return file;
+}
+

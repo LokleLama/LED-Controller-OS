@@ -23,24 +23,13 @@ void SPFS::File::FindCurrentContentHeader() {
   }
   _content_version = 0;
   uint16_t next_block = getMetadataHeader()->content_block;
+  const void* content_address = reinterpret_cast<const void*>(_header);
   while (next_block != 0xFFFF) {
     _content_version++;
-    const uint8_t* content_address = reinterpret_cast<const uint8_t*>(_header) + next_block * SPFS::FS_BLOCK_SIZE;
-    _content_header = reinterpret_cast<const FileContentHeader*>(content_address);
+    _content_header = _fs->calculateContentHeaderAddress(content_address, next_block);
+    content_address = _content_header;
     next_block = _content_header->next;
   }
-}
-
-size_t SPFS::File::getFileSizeOnDisk() const {
-  size_t total_size_on_disk = _header->block.size;
-  uint16_t next_block = getMetadataHeader()->content_block;
-  while (next_block != 0xFFFF) {
-    const uint8_t* content_address = reinterpret_cast<const uint8_t*>(_header) + next_block * SPFS::FS_BLOCK_SIZE;
-    const FileContentHeader* content_header = reinterpret_cast<const FileContentHeader*>(content_address);
-    total_size_on_disk += content_header->block.size;
-    next_block = content_header->next;
-  }
-  return total_size_on_disk * SPFS::FS_BLOCK_SIZE;
 }
 
 bool SPFS::File::write(std::string data){
@@ -55,6 +44,16 @@ bool SPFS::File::write(const uint8_t* data, size_t size) {
   auto address = _fs->findFreeSpaceForFileContent(size);
   if(address == nullptr) {
     return false;
+  }
+
+  uint16_t content_block_offset = 0xFFFF;
+  if(_content_header != nullptr) {
+    content_block_offset = _fs->calculateContentBlockOffset(_content_header, address);
+  }else{
+    content_block_offset = _fs->calculateContentBlockOffset(_header, address);
+  }
+  if(content_block_offset == 0xFFFF) {
+    return false; // Invalid content block: difference is too big
   }
 
   std::vector<uint8_t> buffer(FS_BLOCK_SIZE, 0xFF);
@@ -102,7 +101,7 @@ bool SPFS::File::write(const uint8_t* data, size_t size) {
       return false;
     }
     FileContentHeader *prev_contentheader = reinterpret_cast<FileContentHeader *>(buffer.data());
-    prev_contentheader->next = (uint16_t)((reinterpret_cast<const uint8_t*>(address) - reinterpret_cast<const uint8_t*>(_header)) / FS_BLOCK_SIZE);
+    prev_contentheader->next = content_block_offset;
     if(Flash::write(buffer, _content_header) < (int)buffer.size()) {
       return false;
     }
@@ -111,7 +110,7 @@ bool SPFS::File::write(const uint8_t* data, size_t size) {
       return false;
     }
     FileMetadataHeader *filemeta = reinterpret_cast<FileMetadataHeader *>(buffer.data() + (_header->name_size_meta_offset >> 8));
-    filemeta->content_block = (uint16_t)((reinterpret_cast<const uint8_t*>(address) - reinterpret_cast<const uint8_t*>(_header)) / SPFS::FS_BLOCK_SIZE);
+    filemeta->content_block = content_block_offset;
     if(Flash::write(buffer, _header) < (int)buffer.size()) {
       return false;
     }

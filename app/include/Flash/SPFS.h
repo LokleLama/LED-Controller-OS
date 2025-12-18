@@ -185,6 +185,9 @@ public:
 
       size_t getSizeOnDisk() const;
 
+      size_t getFileCount() const;
+      size_t getDirectoryCount() const;
+
       std::vector<std::shared_ptr<Directory>> getSubdirectories();
       std::vector<std::shared_ptr<File>> getFiles();
 

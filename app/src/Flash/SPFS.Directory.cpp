@@ -154,6 +154,38 @@ bool SPFS::Directory::addContent(std::shared_ptr<SPFS::File> file){
   return addContent(MAGIC_FILEMARKER, (uintptr_t)file->getHeader());
 }
 
+size_t SPFS::Directory::getDirectoryCount() const {
+  size_t count = 0;
+  auto contentHeaders = getContentHeaders();
+  auto max_count = getMaxContentCount();
+
+  for(int i = 0; i < max_count; i++) {
+    if(contentHeaders[i].type == MAGIC_ENDMARKER) {
+      break; // End of content
+    }
+    if(contentHeaders[i].type == MAGIC_SUBDIRMARKER) { // Directory type
+      count++;
+    }
+  }
+  return count;
+}
+
+size_t SPFS::Directory::getFileCount() const {
+  size_t count = 0;
+  auto contentHeaders = getContentHeaders();
+  auto max_count = getMaxContentCount();
+
+  for(int i = 0; i < max_count; i++) {
+    if(contentHeaders[i].type == MAGIC_ENDMARKER) {
+      break; // End of content
+    }
+    if(contentHeaders[i].type == MAGIC_FILEMARKER) { // File type
+      count++;
+    }
+  }
+  return count;
+}
+
 std::shared_ptr<SPFS::Directory> SPFS::Directory::createDirectory(const std::string& name){
   auto new_dir = _fs->createDirectory(shared_from_this(), name);
   if(new_dir == nullptr){

@@ -22,6 +22,7 @@ public:
     for(const auto& dir : subdirs) {
       if(dir->getName() == args[1]) {
         std::cout << "Directory already exists: " << args[1] << std::endl;
+        _console.currentDirectory = dir;
         return -1; // Return 1 to indicate failure
       }
     }

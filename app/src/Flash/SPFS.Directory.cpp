@@ -74,6 +74,14 @@ const std::string SPFS::Directory::getName() const {
   return std::string(name_ptr, _header->name_size_meta_offset & 0x00FF);
 }
 
+const std::string SPFS::Directory::getFullPath() const {
+  if (_parent == nullptr) {
+    return getName(); // Root directory
+  } else {
+    return _parent->getFullPath() + "/" + getName();
+  }
+}
+
 bool SPFS::Directory::addContent(uint16_t type, uintptr_t content_address){
   std::vector<uint8_t> buffer(FS_BLOCK_SIZE);
   if(Flash::read(buffer, getHeader()) < (int)buffer.size()) {

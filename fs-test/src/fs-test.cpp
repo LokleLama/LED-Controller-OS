@@ -6,6 +6,8 @@
 #include "Flash/flashHAL.h"
 #include "Flash/SPFS.h"
 
+#include "Console.h"
+
 struct config_t {
   size_t flash_size;
   size_t fs_offset;
@@ -267,6 +269,9 @@ int main(int argc, char **argv) {
   } else {
     printf("Failed to create hardlink to file \"%s\"\n", file1->getName().c_str());
   }
+
+  Console console(reopened_root);
+  console.ExecuteTask();
 
   SaveFlashStateInFlashFile();
   free(config.flash_data);

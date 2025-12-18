@@ -181,6 +181,7 @@ public:
     public:
       std::shared_ptr<Directory> getParent() const { return _parent; }
       const std::string getName() const;
+      const std::string getFullPath() const;
 
       size_t getSizeOnDisk() const;
 

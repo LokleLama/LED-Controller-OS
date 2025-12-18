@@ -28,7 +28,7 @@ public:
       std::cout << " <DIR>  " << dir->getName() << " (" << dir->getDirectoryCount() + dir->getFileCount() << " entries)" << std::endl;
     }
     for (const auto &file : files) {
-      std::cout << "        v" << file->getVersion() << " " << file->getName() << " (" << file->getSize() << " bytes)" << std::endl;
+      std::cout << " - v" << file->getVersion() << " - " << file->getName() << " (" << file->getSize() << " bytes)" << std::endl;
     }
     return 0; // Return 0 to indicate success
   }

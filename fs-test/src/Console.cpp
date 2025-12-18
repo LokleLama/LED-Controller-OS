@@ -8,6 +8,7 @@
 #include "Commands/DirCommand.h"
 #include "Commands/ChangeDirCommand.h"
 #include "Commands/MakeDirCommand.h"
+#include "Commands/CatCommand.h"
 
 Console::Console(std::shared_ptr<SPFS::Directory> rootDir)  : currentDirectory(rootDir) {
     // You can register default commands here if needed
@@ -16,6 +17,7 @@ Console::Console(std::shared_ptr<SPFS::Directory> rootDir)  : currentDirectory(r
     registerCommand(std::make_shared<DirCommand>(*this));
     registerCommand(std::make_shared<ChangeDirCommand>(*this));
     registerCommand(std::make_shared<MakeDirCommand>(*this));
+    registerCommand(std::make_shared<CatCommand>(*this));
 }
 
 bool Console::registerCommand(std::shared_ptr<ICommand> command) {

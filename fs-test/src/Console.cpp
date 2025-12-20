@@ -9,15 +9,19 @@
 #include "Commands/ChangeDirCommand.h"
 #include "Commands/MakeDirCommand.h"
 #include "Commands/CatCommand.h"
+#include "Commands/FSInfoCommand.h"
 
-Console::Console(std::shared_ptr<SPFS::Directory> rootDir)  : currentDirectory(rootDir) {
+Console::Console(std::shared_ptr<SPFS> fs)  : _fs(fs) {
     // You can register default commands here if needed
+    currentDirectory = _fs->getRootDirectory();
+
     registerCommand(std::make_shared<ExitCommand>(*this));
     registerCommand(std::make_shared<HelpCommand>(*this));
     registerCommand(std::make_shared<DirCommand>(*this));
     registerCommand(std::make_shared<ChangeDirCommand>(*this));
     registerCommand(std::make_shared<MakeDirCommand>(*this));
     registerCommand(std::make_shared<CatCommand>(*this));
+    registerCommand(std::make_shared<FSInfoCommand>(*this));
 }
 
 bool Console::registerCommand(std::shared_ptr<ICommand> command) {
@@ -49,7 +53,6 @@ bool Console::ExecuteTask() {
     while (running){
         outputPrompt();
 
-
         std::string input;
         std::getline(std::cin, input);
         std::istringstream stream(input);
@@ -72,6 +75,11 @@ bool Console::ExecuteTask() {
 }
 
 void Console::outputPrompt() const {
+  if(!currentDirectory) {
+      std::cout << "/ > ";
+      std::cout.flush();
+      return;
+  }
   std::cout << currentDirectory->getFullPath() << " > ";
   std::cout.flush();
 }

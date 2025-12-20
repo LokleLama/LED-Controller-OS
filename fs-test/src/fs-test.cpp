@@ -270,7 +270,7 @@ int main(int argc, char **argv) {
     printf("Failed to create hardlink to file \"%s\"\n", file1->getName().c_str());
   }
 
-  Console console(reopened_root);
+  Console console(reopened_spfs);
   console.ExecuteTask();
 
   SaveFlashStateInFlashFile();

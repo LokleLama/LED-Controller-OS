@@ -7,7 +7,11 @@ std::shared_ptr<SPFS::Directory> SPFS::getRootDirectory(int start_offset, int en
     return findFileSystemStart(start_offset, end_offset);
   }
 
-  return nullptr;
+  auto *fsmeta = reinterpret_cast<const FileSystemMetadata *>(reinterpret_cast<const uint8_t*>(_fs_header) + _fs_header->meta_offset);
+  if(fsmeta->magic != MAGIC_FS_METADATA_NUMBER) {
+    return nullptr;
+  }
+  return openDirectory(reinterpret_cast<const uint8_t*>(_fs_header) + fsmeta->root_directory_block * FS_BLOCK_SIZE, nullptr);
 }
 
 std::shared_ptr<SPFS::Directory> SPFS::findFileSystemStart(int start_offset, int end_offset) {
@@ -336,3 +340,66 @@ uint16_t SPFS::calculateCRC16(const void *address, size_t size) {
   return crc ^ 0xFFFFu;
 }
 
+
+std::vector<SPFS::BlockState> SPFS::getBlockUsageMap() const {
+  std::vector<BlockState> usage_map;
+  if(_fs_header == nullptr) {
+    return usage_map;
+  }
+
+  size_t total_blocks = _fs_header->size / FS_BLOCK_SIZE;
+  usage_map.resize(total_blocks, BlockState::FREE);
+
+  const uint8_t* current_address = reinterpret_cast<const uint8_t*>(_fs_header) + FS_BLOCK_SIZE;
+  const uint8_t* end_address = reinterpret_cast<const uint8_t*>(_fs_header) + _fs_header->size;
+
+  usage_map[0] = BlockState::USED; // File system header block
+
+  for(size_t block_index = 1; block_index < total_blocks && current_address < end_address; ) {
+
+    const SPFSBlockHeader* block_header = reinterpret_cast<const SPFSBlockHeader*>(current_address);
+
+    if(block_header->magic == 0xFFFF) {
+      usage_map[block_index] = BlockState::FREE;
+      current_address += FS_BLOCK_SIZE;
+      block_index += 1;
+      continue;
+    }
+
+    size_t block_size = block_header->size;
+    if(block_index + block_size >= total_blocks) {
+      usage_map[block_index] = BlockState::BAD;
+      block_index += 1;
+      current_address += FS_BLOCK_SIZE;;
+      continue;
+    }
+
+    switch(block_header->magic) {
+      case MAGIC_DIR_NUMBER:
+      case MAGIC_DIR_EXTENSION_NUMBER:
+        // Directory block
+        for(size_t b = 0; b < block_size; ++b) {
+            usage_map[block_index + b] = BlockState::USED_DIR;
+        }
+        break;
+      case MAGIC_FILE_NUMBER:
+      case MAGIC_FILE_CONTENT_NUMBER:
+        // File block
+        for(size_t b = 0; b < block_size; ++b) {
+            usage_map[block_index + b] = BlockState::USED_FILE;
+        }
+        break;
+      default:
+        // Unknown or bad block
+        for(size_t b = 0; b < block_size; ++b) {
+            usage_map[block_index + b] = BlockState::BAD;
+        }
+        break;
+    }
+
+    current_address += block_size * FS_BLOCK_SIZE;
+    block_index += block_size;
+  }
+
+  return usage_map;
+}

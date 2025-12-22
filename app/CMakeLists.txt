@@ -37,6 +37,7 @@ endif()
 set(SPFS_RESERVED_SIZE 262144)  # 256KB for filesystem
 math(EXPR PROGRAM_FLASH_SIZE "${PICO_FLASH_SIZE_BYTES} - ${SPFS_RESERVED_SIZE}")
 math(EXPR SPFS_FLASH_OFFSET "${PROGRAM_FLASH_SIZE}")
+math(EXPR SPFS_FLASH_ORIGIN "0x10000000 + ${SPFS_FLASH_OFFSET}")
 
 # Add compile definitions so your code knows where SPFS lives
 target_compile_definitions(${OUTPUT_NAME} PRIVATE
@@ -49,9 +50,10 @@ target_compile_definitions(${OUTPUT_NAME} PRIVATE
 set(CUSTOM_FLASH_REGION ${CMAKE_CURRENT_BINARY_DIR}/pico_flash_region.ld)
 file(WRITE ${CUSTOM_FLASH_REGION} "/* Custom flash region with SPFS reservation */\n")
 file(APPEND ${CUSTOM_FLASH_REGION} "FLASH(rx) : ORIGIN = 0x10000000, LENGTH = ${PROGRAM_FLASH_SIZE}\n")
+file(APPEND ${CUSTOM_FLASH_REGION} "SPFS(rx) : ORIGIN = ${SPFS_FLASH_ORIGIN}, LENGTH = ${SPFS_RESERVED_SIZE}\n")
 
 # Tell CMake to use our custom flash region
-target_link_options(${OUTPUT_NAME} PRIVATE "LINKER:--defsym=__SPFS_start__=0x${SPFS_FLASH_OFFSET}")
+target_link_options(${OUTPUT_NAME} PRIVATE "LINKER:--defsym=__SPFS_start__=${SPFS_FLASH_ORIGIN}")
 target_link_options(${OUTPUT_NAME} PRIVATE "LINKER:--defsym=__SPFS_size__=${SPFS_RESERVED_SIZE}")
 target_link_options(${OUTPUT_NAME} PRIVATE "LINKER:-L${CMAKE_CURRENT_BINARY_DIR}")
 
@@ -64,7 +66,7 @@ add_custom_command(TARGET ${OUTPUT_NAME} POST_BUILD
     COMMAND echo "Reserved SPFS: ${SPFS_RESERVED_SIZE} bytes = 256 KB at offset ${SPFS_FLASH_OFFSET}"
     COMMAND echo "===================="
     COMMAND echo "Checking .map file for FLASH region..."
-    COMMAND grep -A 2 "^FLASH" ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_NAME}.elf.map || true
+    COMMAND grep -A 5 "^FLASH" ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_NAME}.elf.map || true
     COMMENT "Displaying memory layout after build"
 )
 

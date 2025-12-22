@@ -20,6 +20,12 @@
 #include "Commands/TimeCommand.h"
 #include "Commands/VersionCommand.h"
 
+#include "Commands/DirCommand.h"
+#include "Commands/ChangeDirCommand.h"
+#include "Commands/MakeDirCommand.h"
+#include "Commands/CatCommand.h"
+#include "Commands/FSInfoCommand.h"
+
 #include "Commands/ReadCommand.h"
 
 #include "HLKLogger.h"
@@ -86,6 +92,12 @@ int main() {
   console.registerCommand(std::make_shared<LedCommand>(pio0, 2));
   console.registerCommand(std::make_shared<LedCommand>(pio0, 3));
   console.registerCommand(std::make_shared<LedCommand>(pio0, 4));
+
+  console.registerCommand(std::make_shared<DirCommand>(console));
+  console.registerCommand(std::make_shared<ChangeDirCommand>(console));
+  console.registerCommand(std::make_shared<MakeDirCommand>(console));
+  console.registerCommand(std::make_shared<CatCommand>(console));
+  console.registerCommand(std::make_shared<FSInfoCommand>(console));
 
   console.registerCommand(std::make_shared<ReadCommand>());
 

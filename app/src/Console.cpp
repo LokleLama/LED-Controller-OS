@@ -94,6 +94,10 @@ void Console::OnNewConnection() const {
 }
 
 void Console::outputPrompt() const {
-  std::cout << "> ";
+  if(!currentDirectory) {
+    std::cout << " > ";
+  }else{
+    std::cout << currentDirectory->getFullPath() << " > ";
+  }
   std::cout.flush();
 }

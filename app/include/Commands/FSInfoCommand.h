@@ -14,6 +14,10 @@ public:
   // Executes the command
   int execute(const std::vector<std::string> &args) override {
     auto fs = _console.getFileSystem();
+    if(fs == nullptr) {
+      std::cout << "No filesystem loaded." << std::endl;
+      return 1; // Return 1 to indicate error
+    }
     std::cout << " File System Information:" << std::endl;
     std::cout << "  - Total Size: " << fs->getFileSystemSize() << " bytes" << std::endl;
     auto usage_map =  fs->getBlockUsageMap();

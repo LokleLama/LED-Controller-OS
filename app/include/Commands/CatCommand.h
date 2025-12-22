@@ -13,6 +13,10 @@ public:
 
   // Executes the command
   int execute(const std::vector<std::string> &args) override {
+    if(_console.currentDirectory == nullptr) {
+      std::cout << "No filesystem loaded." << std::endl;
+      return 1; // Return 1 to indicate error
+    }
     if (args.size() < 2) {
       std::cout << "Usage: cat <filename>" << std::endl;
       return 1; // Return 1 to indicate error

@@ -16,19 +16,19 @@ public:
     return "led" + std::to_string(_number);
   }
 
+  const std::string getHelp() const override {
+    return "Usage: " + getName() + " open <pin> <led_count> [bits_per_led]\n"
+           "       " + getName() + " status\n"
+           "       " + getName() + " set <base64_pattern>\n"
+           "       " + getName() + " add <base64_pattern> <- returns the number of the pattern buffer\n"
+           "       " + getName() + " use <pattern_number>\n"
+           "       " + getName() + " del <pattern_number>";
+  }
+
   // Executes the command
   int execute(const std::vector<std::string> &args) override {
     if (args.size() < 2) {
-      std::cout << "Usage: " << args[0]
-                << " open <pin> <led_count> [bits_per_led]" << std::endl;
-      std::cout << "       " << args[0] << " status" << std::endl;
-      std::cout << "       " << args[0] << " set <base64_pattern>" << std::endl;
-      std::cout
-          << "       " << args[0]
-          << " add <base64_pattern> <- returns the number of the patternbuffer"
-          << std::endl;
-      std::cout << "       " << args[0] << " use <pattern_number>" << std::endl;
-      std::cout << "       " << args[0] << " del <pattern_number>" << std::endl;
+      std::cout << getHelp() << std::endl;
       return -1; // Return -1 to indicate failure
     }
 

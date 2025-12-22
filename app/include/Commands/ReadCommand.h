@@ -11,12 +11,17 @@ public:
   // Returns the name of the command
   const std::string getName() const override { return "read"; }
 
+  const std::string getHelp() const override {
+    return "Usage: read <offset> <length>\n"
+           "       Reads data from flash memory starting at <offset> for <length> bytes.\n"
+           "           <offset> is the byte offset from the start of flash memory\n"
+           "           <length> is the number of bytes to read";
+  }
+
   // Executes the command
   int execute(const std::vector<std::string> &args) override {
     if (args.size() < 3) {
-      std::cout << "Usage: " << args[0] << " <offset> <length>" << std::endl;
-      std::cout << "                    <offset> is the byte offset from the start of flash memory" << std::endl;
-      std::cout << "                    <length> is the number of bytes to read" << std::endl;
+      std::cout << getHelp() << std::endl;
       return -1; // Return -1 to indicate an error
     }
     int addr = std::stoi(args[1], nullptr, 0);

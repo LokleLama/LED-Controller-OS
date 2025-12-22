@@ -10,6 +10,9 @@ public:
   // Returns the name of the command
   virtual const std::string getName() const = 0;
 
+  // Returns the Usage Help of the command
+  virtual const std::string getHelp() const = 0;
+
   // Executes the command
   virtual int execute(const std::vector<std::string> &args) = 0;
 };

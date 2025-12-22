@@ -11,6 +11,11 @@ public:
   // Returns the name of the command
   const std::string getName() const override { return "dir"; }
 
+  const std::string getHelp() const override {
+    return "Usage: dir\n"
+           "       Lists the contents of the current directory.";
+  }
+
   // Executes the command
   int execute(const std::vector<std::string> &args) override {
     if(_console.currentDirectory == nullptr) {

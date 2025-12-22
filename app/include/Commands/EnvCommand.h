@@ -11,6 +11,11 @@ public:
   // Returns the name of the command
   const std::string getName() const override { return "env"; }
 
+  const std::string getHelp() const override {
+    return "Usage: env\n"
+           "       Lists all environment variables.";
+  }
+
   int execute(const std::vector<std::string> &args) override {
     const auto value = store.getAllVariables();
     if (value.empty()) {

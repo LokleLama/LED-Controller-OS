@@ -11,6 +11,11 @@ public:
   // Returns the name of the command
   const std::string getName() const override { return "fsinfo"; }
 
+  const std::string getHelp() const override {
+    return "Usage: fsinfo\n"
+           "       Displays information about the file system.";
+  }
+
   // Executes the command
   int execute(const std::vector<std::string> &args) override {
     auto fs = _console.getFileSystem();

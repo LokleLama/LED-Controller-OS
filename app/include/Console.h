@@ -26,6 +26,7 @@ public:
   bool registerCommand(std::shared_ptr<ICommand> command);
 
   std::vector<std::string> getCommandList() const;
+  std::shared_ptr<ICommand> findCommand(const std::string &name) const;
 
   bool ExecuteTask() override;
 
@@ -41,6 +42,5 @@ private:
   std::string inputBuffer;
 
   void OnNewConnection() const;
-  std::shared_ptr<ICommand> findCommand(const std::string &name) const;
   void outputPrompt() const;
 };

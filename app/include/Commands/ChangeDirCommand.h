@@ -11,6 +11,11 @@ public:
   // Returns the name of the command
   const std::string getName() const override { return "cd"; }
 
+  const std::string getHelp() const override {
+    return "Usage: cd <directory>\n"
+           "       Changes the current directory to the specified directory.";
+  }
+
   // Executes the command
   int execute(const std::vector<std::string> &args) override {
     if(_console.currentDirectory == nullptr) {
@@ -18,7 +23,7 @@ public:
       return 1; // Return 1 to indicate error
     }
     if(args.size() < 2) {
-      std::cout << "Usage: cd <directory>" << std::endl;
+      std::cout << getHelp() << std::endl;
       return -1; // Return 1 to indicate failure
     }
     if(args[1] == "..") {

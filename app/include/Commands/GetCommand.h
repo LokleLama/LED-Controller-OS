@@ -11,9 +11,14 @@ public:
   // Returns the name of the command
   const std::string getName() const override { return "get"; }
 
+  const std::string getHelp() const override {
+    return "Usage: get <key>\n"
+           "       Gets the value of the specified variable.";
+  }
+
   int execute(const std::vector<std::string> &args) override {
     if (args.size() < 2) {
-      std::cout << "Usage: " << args[0] << " <key>\n";
+      std::cout << getHelp() << std::endl;
       return -1;
     }
     auto value = store.getVariable(args[1]);

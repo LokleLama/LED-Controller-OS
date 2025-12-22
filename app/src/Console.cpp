@@ -4,6 +4,7 @@
 #include "pico/stdlib.h"
 #include "tusb.h"
 #include <cstddef>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 
@@ -72,8 +73,13 @@ bool Console::ExecuteTask() {
       if (!inputBuffer.empty()) {
         inputBuffer.pop_back();
       }
-    } else {
+    } else if (isprint(static_cast<unsigned char>(buf[i]))) {
       inputBuffer += buf[i];
+    } else {
+      std::cout << "~"
+                << std::hex << std::setfill('0') << std::setw(2)
+                << static_cast<int>(buf[i])
+                << std::dec;
     }
   }
   tud_cdc_n_write_flush(INTERFACE_NUMBER);

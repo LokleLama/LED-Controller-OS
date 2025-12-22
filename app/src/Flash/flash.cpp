@@ -4,25 +4,21 @@
 #include <stdexcept>
 
 
-void *Flash::readPointer(int offset) {
-  if (offset < 0 || offset >= (int)MAX_FLASH_SIZE) {
+void *Flash::readPointer(size_t offset) {
+  if (offset >= MAX_FLASH_SIZE) {
     return nullptr;
   }
   return (void *)((uint8_t *)FlashHAL::getFlashMemoryOffset() + offset);
 }
 
-int Flash::read(std::vector<uint8_t> &buffer, int offset) {
-  if (offset < 0 || buffer.size() == 0 ||
-      (offset + buffer.size() > (MAX_FLASH_SIZE))) {
-    return 0; // Invalid parameters
-  }
-  memcpy(buffer.data(), (uint8_t *)FlashHAL::getFlashMemoryOffset() + offset, buffer.size());
-  return buffer.size();
+int Flash::read(std::vector<uint8_t> &buffer, size_t offset) {
+  return read(buffer, readPointer(offset));
 }
 
 int Flash::read(std::vector<uint8_t> &buffer, const void* address) {
   if (address == nullptr || buffer.size() == 0 ||
-      ((((uint8_t*)address) - ((uint8_t*)FlashHAL::getFlashMemoryOffset())) + buffer.size()) > (MAX_FLASH_SIZE)) {
+      ((uint8_t*)address - (uint8_t*)FlashHAL::getFlashMemoryOffset()) > (MAX_FLASH_SIZE - buffer.size()) ||
+      ((uint8_t*)address - (uint8_t*)FlashHAL::getFlashMemoryOffset()) < 0) {
     return 0; // Invalid parameters
   }
   memcpy(buffer.data(), address, buffer.size());

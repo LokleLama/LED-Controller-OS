@@ -7,9 +7,9 @@
 
 class Flash {
 public:
-  static void *readPointer(int offset);
+  static void *readPointer(size_t offset);
   static int read(std::vector<uint8_t> &buffer, const void* address);
-  static int read(std::vector<uint8_t> &buffer, int offset);
+  static int read(std::vector<uint8_t> &buffer, size_t offset);
   static int write(const std::vector<uint8_t> &buffer, const void* address);
   static int erase(const void* address, int length);
 

@@ -2,9 +2,16 @@
 #include "flash.h"
 #include <cstring>
 
-std::shared_ptr<SPFS::Directory> SPFS::getRootDirectory(int start_offset, int end_offset) {
+std::shared_ptr<SPFS::Directory> SPFS::searchFileSystem(int start_offset, int end_offset){
   if(_fs_header == nullptr) {
     return findFileSystemStart(start_offset, end_offset);
+  }
+  return getRootDirectory();
+}
+
+std::shared_ptr<SPFS::Directory> SPFS::getRootDirectory() {
+  if(_fs_header == nullptr) {
+    return nullptr;
   }
 
   auto *fsmeta = reinterpret_cast<const FileSystemMetadata *>(reinterpret_cast<const uint8_t*>(_fs_header) + _fs_header->meta_offset);
@@ -195,7 +202,31 @@ std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const void* addre
   return std::make_shared<SPFS::DirectoryInternal>(shared_from_this(), parent, reinterpret_cast<const DirectoryHeader *>(address));
 }
 
+std::shared_ptr<SPFS::Directory> SPFS::createNewFileSystem(int offset, size_t size, const std::string& fs_name, const std::string& root_dir_name){
+  if(offset < 0 || 
+    size < SPFS::FS_BLOCK_SIZE * 2 || 
+    (size_t)offset + size > Flash::MAX_FLASH_SIZE || 
+    fs_name.length() >= 200 || 
+    root_dir_name.length() >= 200 || 
+    (offset & (SPFS::FS_ALIGNMENT - 1)) != 0) {
+    return nullptr;
+  }
+
+  if(!formatDisk(Flash::readPointer(offset), size)) {
+    return nullptr;
+  }
+  return createNewFileSystem(Flash::readPointer(offset), size, fs_name, root_dir_name);
+}
+
 std::shared_ptr<SPFS::Directory> SPFS::createNewFileSystem(const void *address, size_t size, const std::string& fs_name, const std::string& root_dir_name) {
+  if(address == nullptr || size < FS_BLOCK_SIZE * 2) {
+    return nullptr;
+  }
+
+  if(fs_name.length() >= 200 || root_dir_name.length() >= 200) {
+    return nullptr; // Name too long
+  }
+
   std::vector<uint8_t> buffer(FS_BLOCK_SIZE);
   if(Flash::read(buffer, address) < (int)buffer.size()) {
     return nullptr;

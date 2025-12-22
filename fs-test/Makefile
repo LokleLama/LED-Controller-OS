@@ -3,8 +3,8 @@
 # Compiler and flags
 CC := gcc
 CXX := g++
-CFLAGS := -Wall -Wextra -O2 -g
-CXXFLAGS := -Wall -Wextra -O2 -g
+CFLAGS := -Wall -Wextra -g
+CXXFLAGS := -Wall -Wextra -g
 
 
 # Find all source files

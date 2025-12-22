@@ -237,7 +237,11 @@ public:
    * and preparing it for use.
    * \return 0 on success, negative error code on failure.
    */
-  std::shared_ptr<Directory> getRootDirectory(int start_offset = 0, int end_offset = -1);
+  std::shared_ptr<Directory> searchFileSystem(int start_offset, int end_offset = -1);
+  std::shared_ptr<Directory> createNewFileSystem(int offset, size_t size, const std::string& fs_name = "SPFS", const std::string& root_dir_name = "root");
+  
+  std::shared_ptr<Directory> getRootDirectory();
+  
 
   int getFileSystemSize() const{
     if(_fs_header == nullptr){
@@ -281,11 +285,11 @@ private:
   static constexpr int FS_ALIGNMENT = 4096;                         //!< Alignment for SPFS operations
   static constexpr int FS_BLOCK_SIZE = 256;                         //!< Block size for SPFS operations
 
+  std::shared_ptr<Directory> createNewFileSystem(const void *address, size_t size, const std::string& fs_name, const std::string& root_dir_name);
   std::shared_ptr<Directory> findFileSystemStart(int start_offset, int end_offset);
   std::shared_ptr<Directory> initializeFileSystem(void *address);
   bool formatDisk(const void *address, size_t size);
 
-  std::shared_ptr<Directory> createNewFileSystem(const void *address, size_t size, const std::string& fs_name, const std::string& root_dir_name);
   std::shared_ptr<DirectoryInternal> createDirectory(std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
   std::shared_ptr<DirectoryInternal> createDirectory(const void* address, std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);
 

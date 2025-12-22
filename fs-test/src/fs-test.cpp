@@ -20,7 +20,7 @@ struct config_t {
 } config = {
     .flash_size = 2 * 1024 * 1024,
     .fs_offset = 4 * 4096,
-    .fs_size = 1 * 1024 * 1024,
+    .fs_size = 8 * 1024,
     .sector_size = 4096,
     .page_size = 256,
     .flash_file = "flash",
@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
   printf("using flash Size of %zu\n", config.flash_size);
 
   std::shared_ptr<SPFS> spfs = std::make_shared<SPFS>();
-  auto root = spfs->getRootDirectory();
+  auto root = spfs->searchFileSystem(0);
 
   printf("******************************\n");
   printf("File System Size      : %i\n", spfs->getFileSystemSize());
@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
   printf("******************************\n");
   printf("reopening the same filesystem\n");
   std::shared_ptr<SPFS> reopened_spfs = std::make_shared<SPFS>();
-  auto reopened_root = reopened_spfs->getRootDirectory();
+  auto reopened_root = reopened_spfs->searchFileSystem(0);
   printf("File System Size      : %i\n", spfs->getFileSystemSize());
   printf("Root Directory Name   : %s\n", reopened_root->getName().c_str());
   printf("Directory Disk Space  : %zu bytes\n", reopened_root->getSizeOnDisk());
@@ -270,7 +270,14 @@ int main(int argc, char **argv) {
     printf("Failed to create hardlink to file \"%s\"\n", file1->getName().c_str());
   }
 
-  Console console(reopened_spfs);
+  printf("******************************\n");
+  std::shared_ptr<SPFS> new_fs = std::make_shared<SPFS>();
+  if(!new_fs->createNewFileSystem(2*1024*1024 - 256*1024, 256*1024, "NewFS", "new_root")) {
+    printf("Failed to create new filesystem\n");
+    return -1;
+  }
+
+  Console console(new_fs);
   console.ExecuteTask();
 
   SaveFlashStateInFlashFile();

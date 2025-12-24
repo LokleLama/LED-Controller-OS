@@ -17,6 +17,7 @@ public:
   bool registerCommand(std::shared_ptr<ICommand> command);
 
   std::vector<std::string> getCommandList() const;
+  std::shared_ptr<ICommand> findCommand(const std::string &name) const;
 
   bool ExecuteTask() override;
   void Stop() { running = false; }
@@ -30,6 +31,5 @@ private:
   std::vector<std::shared_ptr<ICommand>> commandList;
   bool running = true;
 
-  std::shared_ptr<ICommand> findCommand(const std::string &name) const;
   void outputPrompt() const;
 };

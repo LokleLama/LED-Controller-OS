@@ -11,6 +11,11 @@ public:
   // Returns the name of the command
   const std::string getName() const override { return "exit"; }
 
+  const std::string getHelp() const override {
+    return "Usage: exit\n"
+           "       Exits the console.";
+  }
+
   // Executes the command
   int execute(const std::vector<std::string> &args) override {
     _console.Stop();

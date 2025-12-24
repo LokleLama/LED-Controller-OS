@@ -27,6 +27,9 @@
 #include "Commands/FSInfoCommand.h"
 
 #include "Commands/ReadCommand.h"
+#include "Commands/WriteCommand.h"
+
+#include "Commands/MakeFilesystemCommand.h"
 
 #include "HLKLogger.h"
 #include "HLKStack/HLKPackageFinder.h"
@@ -77,7 +80,18 @@ int main() {
 
   Mainloop mainloop;
   VariableStore variableStore;
-  Console console(variableStore);
+
+  auto fs = std::make_shared<SPFS>();
+  auto rootDir = fs->searchFileSystem(SPFS_FLASH_OFFSET, SPFS_FLASH_OFFSET + SPFS_FLASH_SIZE);
+  if (!rootDir) {
+    if(!fs->createNewFileSystem(SPFS_FLASH_OFFSET, SPFS_FLASH_SIZE, "LEDControllerFS", "root")){
+      fs = nullptr;
+    }
+  }
+  variableStore.addVariable("fs.offset", SPFS_FLASH_OFFSET);
+  variableStore.addVariable("fs.size", SPFS_FLASH_SIZE);
+
+  Console console(variableStore, fs);
 
   picoTime = std::make_shared<PicoTime>();
 
@@ -100,6 +114,9 @@ int main() {
   console.registerCommand(std::make_shared<FSInfoCommand>(console));
 
   console.registerCommand(std::make_shared<ReadCommand>());
+  console.registerCommand(std::make_shared<WriteCommand>());
+
+  console.registerCommand(std::make_shared<MakeFilesystemCommand>(console));
 
   variableStore.addVariable("uart0.baud", 115200);
   variableStore.addVariable("uart0.format", "8n1");

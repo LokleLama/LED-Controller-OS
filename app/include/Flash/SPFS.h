@@ -242,6 +242,14 @@ public:
   
   std::shared_ptr<Directory> getRootDirectory();
   
+  std::string getFileSystemName() const{
+    if(_fs_header == nullptr){
+      return "";
+    }
+    const FileSystemMetadata* fsm = reinterpret_cast<const FileSystemMetadata *>(reinterpret_cast<const uint8_t*>(_fs_header) + _fs_header->meta_offset);
+    const char* name_ptr = reinterpret_cast<const char*>(fsm) + sizeof(FileSystemMetadata);
+    return std::string(name_ptr, fsm->name_size);
+  }
 
   int getFileSystemSize() const{
     if(_fs_header == nullptr){
@@ -287,7 +295,7 @@ private:
 
   std::shared_ptr<Directory> createNewFileSystem(const void *address, size_t size, const std::string& fs_name, const std::string& root_dir_name);
   std::shared_ptr<Directory> findFileSystemStart(int start_offset, int end_offset);
-  std::shared_ptr<Directory> initializeFileSystem(void *address);
+  std::shared_ptr<Directory> initializeFileSystem(const void *address);
   bool formatDisk(const void *address, size_t size);
 
   std::shared_ptr<DirectoryInternal> createDirectory(std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name);

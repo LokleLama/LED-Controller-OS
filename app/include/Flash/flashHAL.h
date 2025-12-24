@@ -1,4 +1,5 @@
 #include "hardware/flash.h"
+#include "pico/flash.h"
 #include "pico/stdlib.h"
 #include <cstring>
 #include <stdexcept>
@@ -14,7 +15,11 @@ public:
    * (one sector).
    */
   static void flash_range_erase(uint32_t flash_offs, size_t count) {
-    ::flash_range_erase(flash_offs, count);
+    flash_param_t params = {flash_offs, nullptr, count};
+    ::flash_safe_execute([](void* p) {
+      flash_param_t* params = static_cast<flash_param_t*>(p);
+      ::flash_range_erase(params->flash_offset, params->size);
+    }, &params, UINT32_MAX);
   }
 
   /*! \brief  Program flash
@@ -28,7 +33,11 @@ public:
    */
   static void flash_range_program(uint32_t flash_offs, const uint8_t *data,
                                   size_t count) {
-    ::flash_range_program(flash_offs, data, count);
+    flash_param_t params = {flash_offs, data, count};
+    ::flash_safe_execute([](void* p) {
+      flash_param_t* params = static_cast<flash_param_t*>(p);
+      ::flash_range_program(params->flash_offset, params->data, params->size);
+    }, &params, UINT32_MAX);
   }
 
   /*! \brief Get flash unique 64 bit identifier
@@ -55,4 +64,11 @@ public:
   static int calculatePageAddress(int page) { return page * FLASH_PAGE_SIZE; }
 
   static void* getFlashMemoryOffset() { return (void*)XIP_BASE; }
+
+private:
+  struct flash_param_t {
+    uint32_t flash_offset;
+    const uint8_t* data;
+    size_t size;
+  };
 };

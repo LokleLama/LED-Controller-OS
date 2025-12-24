@@ -30,7 +30,7 @@ public:
     int result = Flash::read(buffer, addr);
     if (result == len) {
       std::cout << "Data read from flash: 0x";
-      std::cout << std::hex << std::setfill('0') << std::setw(8) << Flash::readPointer(addr);
+      std::cout << std::hex << std::setfill('0') << std::setw(8) << Flash::getAddress(addr);
 
       std::cout << std::endl;
       for (int i = 0; i < len;) {

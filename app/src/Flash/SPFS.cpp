@@ -30,7 +30,7 @@ std::shared_ptr<SPFS::Directory> SPFS::findFileSystemStart(int start_offset, int
   int end_sector = (end_offset + FS_ALIGNMENT - 1) / FS_ALIGNMENT;
 
   for (int n = start_sector; n < end_sector; n++) {
-    uint32_t *sector_ptr = static_cast<uint32_t *>(Flash::readPointer(n * FS_ALIGNMENT));
+    const uint32_t *sector_ptr = static_cast<const uint32_t *>(Flash::getAddress(n * FS_ALIGNMENT));
     if (sector_ptr == nullptr) {
       return nullptr;
     }
@@ -41,10 +41,9 @@ std::shared_ptr<SPFS::Directory> SPFS::findFileSystemStart(int start_offset, int
   return nullptr;
 }
 
-std::shared_ptr<SPFS::Directory> SPFS::initializeFileSystem(void *address) {
-  FileSystemHeader *header = static_cast<FileSystemHeader *>(address);
+std::shared_ptr<SPFS::Directory> SPFS::initializeFileSystem(const void *address) {
+  const FileSystemHeader *header = static_cast<const FileSystemHeader *>(address);
   if (header->magic != MAGIC_NUMBER) {
-    printf("Invalid magic number: 0x%08X\n", header->magic);
     return nullptr;
   }
 
@@ -118,19 +117,20 @@ std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const void* address, const 
     }
   }
   
-  std::vector<uint8_t> buffer(FS_BLOCK_SIZE);
+  std::vector<uint16_t> buffer(FS_BLOCK_SIZE / sizeof(uint16_t));
   if(Flash::read(buffer, address) < (int)buffer.size()) {
     return nullptr;
   }
+  uint8_t* byte_buffer = reinterpret_cast<uint8_t*>(buffer.data());
 
-  FileHeader *fileheader = reinterpret_cast<FileHeader *>(buffer.data());
+  FileHeader *fileheader = reinterpret_cast<FileHeader *>(byte_buffer);
 
   fileheader->block.magic = MAGIC_FILE_NUMBER;
   fileheader->block.size = 1;
   fileheader->name_size_meta_offset = (uint16_t)(file_name.length() & 0xFF) | ((uint16_t)(((sizeof(FileHeader) + file_name.length() + 1 + 3) & 0xFC) << 8));
   strncpy(reinterpret_cast<char*>(fileheader) + sizeof(FileHeader), file_name.c_str(), file_name.length() + 1);
 
-  FileMetadataHeader *filemeta = reinterpret_cast<FileMetadataHeader *>(buffer.data() + (fileheader->name_size_meta_offset >> 8));
+  FileMetadataHeader *filemeta = reinterpret_cast<FileMetadataHeader *>(byte_buffer + (fileheader->name_size_meta_offset >> 8));
 
   filemeta->checksum = calculateCRC16(fileheader, fileheader->name_size_meta_offset >> 8);
   filemeta->content_block = content_block_offset;
@@ -179,19 +179,20 @@ std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const std::shared
 }
 
 std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const void* address, const std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {
-  std::vector<uint8_t> buffer(FS_BLOCK_SIZE);
+  std::vector<uint16_t> buffer(FS_BLOCK_SIZE / sizeof(uint16_t));
   if(Flash::read(buffer, address) < (int)buffer.size()) {
     return nullptr;
   }
+  uint8_t* byte_buffer = reinterpret_cast<uint8_t*>(buffer.data());
 
-  DirectoryHeader *dirheader = reinterpret_cast<DirectoryHeader *>(buffer.data());
+  DirectoryHeader *dirheader = reinterpret_cast<DirectoryHeader *>(byte_buffer);
 
   dirheader->block.magic = MAGIC_DIR_NUMBER;
   dirheader->block.size = 1;
   dirheader->name_size_meta_offset = (uint16_t)(dir_name.length() & 0xFF) | ((sizeof(DirectoryHeader) + dir_name.length() + 1 + 3) & 0xFC) << 8;
   strncpy(reinterpret_cast<char*>(dirheader) + sizeof(DirectoryHeader), dir_name.c_str(), dir_name.length() + 1);
 
-  DirectoryMetadataHeader *dirmeta = reinterpret_cast<DirectoryMetadataHeader *>(buffer.data() + (dirheader->name_size_meta_offset >> 8));
+  DirectoryMetadataHeader *dirmeta = reinterpret_cast<DirectoryMetadataHeader *>(byte_buffer + (dirheader->name_size_meta_offset >> 8));
 
   dirmeta->checksum = calculateCRC16(dirheader, (dirheader->name_size_meta_offset >> 8));
 
@@ -212,10 +213,10 @@ std::shared_ptr<SPFS::Directory> SPFS::createNewFileSystem(int offset, size_t si
     return nullptr;
   }
 
-  if(!formatDisk(Flash::readPointer(offset), size)) {
+  if(!formatDisk(Flash::getAddress(offset), size)) {
     return nullptr;
   }
-  return createNewFileSystem(Flash::readPointer(offset), size, fs_name, root_dir_name);
+  return createNewFileSystem(Flash::getAddress(offset), size, fs_name, root_dir_name);
 }
 
 std::shared_ptr<SPFS::Directory> SPFS::createNewFileSystem(const void *address, size_t size, const std::string& fs_name, const std::string& root_dir_name) {
@@ -227,12 +228,12 @@ std::shared_ptr<SPFS::Directory> SPFS::createNewFileSystem(const void *address, 
     return nullptr; // Name too long
   }
 
-  std::vector<uint8_t> buffer(FS_BLOCK_SIZE);
+  std::vector<uint32_t> buffer(FS_BLOCK_SIZE / sizeof(uint32_t));
   if(Flash::read(buffer, address) < (int)buffer.size()) {
     return nullptr;
   }
-
-  FileSystemHeader *newheader = reinterpret_cast<FileSystemHeader *>(buffer.data());
+  uint8_t* byte_buffer = reinterpret_cast<uint8_t*>(buffer.data());
+  FileSystemHeader *newheader = reinterpret_cast<FileSystemHeader *>(byte_buffer);
 
   if(newheader->magic != MAGIC_NUMBER || newheader->version != SPFS_VERSION || newheader->size != size) {
     if(newheader->magic == 0xFFFFFFFF && newheader->version == 0xFFFFFFFF && newheader->size == 0xFFFFFFFF) {
@@ -243,11 +244,12 @@ std::shared_ptr<SPFS::Directory> SPFS::createNewFileSystem(const void *address, 
       return nullptr;
     }
   }
+
   newheader->block_and_page_size = (FS_BLOCK_SIZE & 0xFFFF) | ((FS_ALIGNMENT & 0xFFFF) << 16);
   newheader->meta_offset = sizeof(FileSystemHeader);
   newheader->checksum = calculateCRC32(newheader, sizeof(FileSystemHeader) - sizeof(newheader->checksum));
 
-  FileSystemMetadata *fsmeta = reinterpret_cast<FileSystemMetadata *>(buffer.data() + newheader->meta_offset);
+  FileSystemMetadata *fsmeta = reinterpret_cast<FileSystemMetadata *>(byte_buffer + newheader->meta_offset);
   fsmeta->magic = MAGIC_FS_METADATA_NUMBER;
   fsmeta->name_size = (uint16_t)(fs_name.length() & 0xFF);
 

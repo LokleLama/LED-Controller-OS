@@ -32,10 +32,10 @@ void SPFS::File::FindCurrentContentHeader() {
   }
 }
 
-bool SPFS::File::write(std::string data){
+bool SPFS::File::write(const std::string& data){
   return write(reinterpret_cast<const uint8_t*>(data.data()), data.length() + 1);
 }
-bool SPFS::File::write(std::vector<uint8_t> data){
+bool SPFS::File::write(const std::vector<uint8_t>& data){
   return write(data.data(), data.size());
 }
 

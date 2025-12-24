@@ -4,7 +4,7 @@
 #include <string>
 #include <variant>
 
-#include "IVariable.h"
+#include "VariableStore/IVariable.h"
 
 class IntVariable : public IVariable {
 public:
@@ -49,6 +49,9 @@ public:
     value_ = value ? 1 : 0;
     return true;
   }
+
+  // Get the type of the variable
+  Type getType() const override { return Type::INT; }
 
 private:
   int value_;

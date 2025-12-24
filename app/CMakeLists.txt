@@ -90,6 +90,7 @@ target_link_libraries(${OUTPUT_NAME} pico_stdlib
                                      hardware_rtc
                                      hardware_flash)
 
-target_include_directories(${OUTPUT_NAME} PRIVATE ${INCLUDE_DIRS})
+target_include_directories(${OUTPUT_NAME} PRIVATE ${INCLUDE_DIRS}
+                                                  ${CMAKE_SOURCE_DIR}/ThirdParty/json/include)
 
 pico_add_extra_outputs(${OUTPUT_NAME})

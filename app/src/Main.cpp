@@ -100,7 +100,7 @@ int main() {
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));
   console.registerCommand(std::make_shared<SetCommand>(variableStore));
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
-  console.registerCommand(std::make_shared<EnvCommand>(variableStore));
+  console.registerCommand(std::make_shared<EnvCommand>(variableStore, console));
   console.registerCommand(std::make_shared<HelpCommand>(console));
   console.registerCommand(std::make_shared<LedCommand>(pio0, 1));
   console.registerCommand(std::make_shared<LedCommand>(pio0, 2));

@@ -4,7 +4,7 @@
 #include <string>
 #include <variant>
 
-#include "IVariable.h"
+#include "VariableStore/IVariable.h"
 
 class StringVariable : public IVariable {
 public:
@@ -55,6 +55,9 @@ public:
     value_ = std::to_string(value);
     return true;
   }
+
+  // Get the type of the variable
+  Type getType() const override { return Type::STRING; }
 
 private:
   std::string value_;

@@ -6,6 +6,8 @@
 
 class IVariable {
 public:
+  enum class Type { STRING, INT, FLOAT, BOOL };
+
   // Destructor
   virtual ~IVariable() = default;
 
@@ -26,4 +28,7 @@ public:
   virtual bool set(float value) = 0;
   virtual bool set(int value) = 0;
   virtual bool set(bool value) = 0;
+
+  // Get the type of the variable
+  virtual Type getType() const = 0;
 };

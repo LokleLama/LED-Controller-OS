@@ -32,6 +32,9 @@ public:
   const std::unordered_map<std::string, std::string>
   getAllVariables() const override;
 
+  bool saveToFile(std::shared_ptr<SPFS::File>& file) const override;
+  bool loadFromFile(const std::shared_ptr<SPFS::File>& file) override;
+
 private:
   std::unordered_map<std::string, std::shared_ptr<IVariable>> variables;
   std::unordered_map<std::string, IVariableStore::Callback> callbacks;

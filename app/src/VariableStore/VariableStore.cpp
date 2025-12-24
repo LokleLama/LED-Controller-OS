@@ -5,6 +5,8 @@
 #include "VariableStore/StringVariable.h"
 #include <cstddef>
 
+#include "ArduinoJson.h"
+
 bool VariableStore::setVariable(const std::string &key,
                                 const std::string &value) {
   if (callbacks.find(key) != callbacks.end()) {
@@ -157,4 +159,52 @@ VariableStore::getAllVariables() const {
     result[pair.first] = pair.second->asString();
   }
   return result;
+}
+
+bool VariableStore::saveToFile(std::shared_ptr<SPFS::File>& file) const {
+  JsonDocument doc;
+  for (const auto& pair : variables) {
+    switch (pair.second->getType()) {
+      case IVariable::Type::INT:
+        doc[pair.first] = pair.second->asInt();
+        break;
+      case IVariable::Type::FLOAT:
+        doc[pair.first] = pair.second->asFloat();
+        break;
+      case IVariable::Type::BOOL:
+        doc[pair.first] = pair.second->asBool();
+        break;
+      default:
+      case IVariable::Type::STRING:
+        doc[pair.first] = pair.second->asString();
+        break;
+    }
+  }
+
+  std::string jsonString;
+  if (serializeJson(doc, jsonString) == 0) {
+    return false;
+  }
+
+  return file->write(jsonString);
+}
+
+bool VariableStore::loadFromFile(const std::shared_ptr<SPFS::File>& file) {
+  
+  /*DynamicJsonDocument doc(1024);
+  DeserializationError error = deserializeJson(doc, *file);
+  if (error) {
+    return false;
+  }
+  for (JsonPair kv : doc.as<JsonObject>()) {
+    const std::string key = kv.key().c_str();
+    const std::string value = kv.value().as<std::string>();
+    if (variables.find(key) == variables.end()) {
+      auto ret = std::make_shared<StringVariable>(value);
+      variables[key] = ret;
+    } else {
+      variables[key]->set(value);
+    }
+  }*/
+  return true;
 }

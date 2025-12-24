@@ -11,10 +11,14 @@ public:
   // Returns the name of the command
   const std::string getName() const override { return "set"; }
 
+  const std::string getHelp() const override {
+    return "Usage: set [-a] <key> <value>\n"
+           "       -a: Set variable and create it if it doesn't exist";
+  }
+
   int execute(const std::vector<std::string> &args) override {
     if (args.size() < 3) {
-      std::cout << "Usage: " << args[0] << " [-a] <key> <value>\n";
-      std::cout << "  -a: Set variable and create it if it doesn't exist\n";
+      std::cout << getHelp() << std::endl;
       return -1;
     }
     if (args[1] == "-a") {

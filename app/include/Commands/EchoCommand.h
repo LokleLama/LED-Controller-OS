@@ -9,13 +9,17 @@ public:
   // Returns the name of the command
   const std::string getName() const override { return "echo"; }
 
+  const std::string getHelp() const override {
+    return "Usage: echo [-b64] [+b64] <message>\n"
+           "       Echos the message to the console\n"
+           "           -b64: Encode the message in Base64\n"
+           "           +b64: Decodes the message in Base64";
+  }
+
   // Executes the command
   int execute(const std::vector<std::string> &args) override {
     if (args[1] == "-h"){
-      std::cout << "Usage: " << args[0] << " [-b64] [+b64] <message>" << std::endl;
-      std::cout << "  Echos the message to the console" << std::endl;
-      std::cout << "  -b64: Encode the message in Base64" << std::endl;
-      std::cout << "  +b64: Decodes the message in Base64" << std::endl;
+      std::cout << getHelp() << std::endl;
       return 0;
     }
     bool encodeBase64 = false;

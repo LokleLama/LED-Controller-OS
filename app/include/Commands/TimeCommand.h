@@ -13,6 +13,13 @@ public:
   // Returns the name of the command
   const std::string getName() const override { return "time"; }
 
+  const std::string getHelp() const override {
+    return "Usage: time [get]\n"
+           "       time set [YYYY-MM-DD] [HH:MM[:SS]]\n"
+           "       time set [DD.MM.[YY]YY] [HH:MM[:SS]]\n"
+           "       Gets or sets the current system time.";
+  }
+
   // Constructor that takes a shared pointer to PicoTime
   TimeCommand(std::shared_ptr<PicoTime> picoTime)
       : picoTime(std::move(picoTime)) {}

@@ -28,7 +28,7 @@ void SPFS::File::FindCurrentContentHeader() {
     _content_version++;
     _content_header = _fs->calculateContentHeaderAddress(content_address, next_block);
     content_address = _content_header;
-    next_block = _content_header->next;
+    next_block = _content_header->next_version;
   }
 }
 
@@ -63,8 +63,9 @@ bool SPFS::File::write(const uint8_t* data, size_t size) {
   contentheader->data_offset = ((sizeof(FileContentHeader) + 7) & 0x00F8) | 0xFF00; // Align to 4 bytes
   contentheader->block.size = (uint16_t)(((contentheader->data_offset & 0x00FF) + size + FS_BLOCK_SIZE - 1) / FS_BLOCK_SIZE);
   contentheader->size = size;
-  contentheader->checksum = _fs->calculateCRC16(contentheader, sizeof(FileContentHeader) - sizeof(contentheader->checksum)- sizeof(contentheader->next));
-  contentheader->next = 0xFFFF; // No next content
+  contentheader->checksum = _fs->calculateCRC16(contentheader, sizeof(FileContentHeader) - sizeof(contentheader->checksum) - sizeof(contentheader->next_partition) - sizeof(contentheader->next_version));
+  contentheader->next_partition = 0xFFFF; // No next content
+  contentheader->next_version = 0xFFFF; // No next content
 
   size_t current_pos = 0;
 
@@ -101,7 +102,7 @@ bool SPFS::File::write(const uint8_t* data, size_t size) {
       return false;
     }
     FileContentHeader *prev_contentheader = reinterpret_cast<FileContentHeader *>(buffer.data());
-    prev_contentheader->next = content_block_offset;
+    prev_contentheader->next_version = content_block_offset;
     if(Flash::write(buffer, _content_header) < (int)buffer.size()) {
       return false;
     }

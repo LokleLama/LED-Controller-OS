@@ -22,7 +22,7 @@ size_t SPFS::ReadOnlyFile::getSizeOnDisk() const {
     auto content_header = _fs->calculateContentHeaderAddress(content_address, next_block);
     content_address = content_header;
     total_size_on_disk += content_header->block.size;
-    next_block = content_header->next;
+    next_block = content_header->next_version;
   }
   return total_size_on_disk * SPFS::FS_BLOCK_SIZE;
 }
@@ -81,7 +81,7 @@ std::shared_ptr<SPFS::ReadOnlyFile> SPFS::ReadOnlyFile::openVersion(size_t versi
     if(current_version == version) {
       break;
     }
-    next_block = content_header->next;
+    next_block = content_header->next_version;
   }
   return std::make_shared<SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, content_header, version);
 }

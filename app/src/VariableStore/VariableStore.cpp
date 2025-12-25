@@ -190,21 +190,41 @@ bool VariableStore::saveToFile(std::shared_ptr<SPFS::File>& file) const {
 }
 
 bool VariableStore::loadFromFile(const std::shared_ptr<SPFS::File>& file) {
-  
-  /*DynamicJsonDocument doc(1024);
-  DeserializationError error = deserializeJson(doc, *file);
+  if(file == nullptr) {
+    return false;
+  }
+
+  std::string fileContent = file->readAsString();
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, fileContent);
   if (error) {
     return false;
   }
+
   for (JsonPair kv : doc.as<JsonObject>()) {
     const std::string key = kv.key().c_str();
-    const std::string value = kv.value().as<std::string>();
     if (variables.find(key) == variables.end()) {
-      auto ret = std::make_shared<StringVariable>(value);
-      variables[key] = ret;
+      // Variable does not exist, create it based on the type in JSON
+      if (kv.value().is<int>()) {
+        auto ret = std::make_shared<IntVariable>(kv.value().as<int>());
+        variables[key] = ret;
+      } else if (kv.value().is<float>() || kv.value().is<double>()) {
+        auto ret = std::make_shared<FloatVariable>(kv.value().as<float>());
+        variables[key] = ret;
+      } else if (kv.value().is<bool>()) {
+        auto ret = std::make_shared<BoolVariable>(kv.value().as<bool>());
+        variables[key] = ret;
+      } else if (kv.value().is<std::string>()) {
+        auto ret = std::make_shared<StringVariable>(kv.value().as<std::string>());
+        variables[key] = ret;
+      } else if (kv.value().is<const char*>()) {
+        auto ret = std::make_shared<StringVariable>(std::string(kv.value().as<const char*>()));
+        variables[key] = ret;
+      }
     } else {
-      variables[key]->set(value);
+      // Variable exists, set its value
+      variables[key]->set(kv.value().as<std::string>());
     }
-  }*/
+  }
   return true;
 }

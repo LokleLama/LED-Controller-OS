@@ -4,7 +4,7 @@
 #include <string>
 #include <variant>
 
-#include "IVariable.h"
+#include "VariableStore/IVariable.h"
 
 class BoolVariable : public IVariable {
 public:
@@ -56,6 +56,9 @@ public:
     value_ = value;
     return true;
   }
+
+  // Get the type of the variable
+  Type getType() const override { return Type::BOOL; }
 
 private:
   bool value_;

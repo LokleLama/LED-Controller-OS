@@ -150,8 +150,8 @@ public:
       void FindCurrentContentHeader();
 
     public:
-      bool write(std::string data);
-      bool write(std::vector<uint8_t> data);
+      bool write(const std::string& data);
+      bool write(const std::vector<uint8_t>& data);
       bool write(const uint8_t* data, size_t size);
   };
   class Directory : public std::enable_shared_from_this<Directory> {

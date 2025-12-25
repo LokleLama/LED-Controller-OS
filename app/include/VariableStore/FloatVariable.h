@@ -4,7 +4,7 @@
 #include <string>
 #include <variant>
 
-#include "IVariable.h"
+#include "VariableStore/IVariable.h"
 
 class FloatVariable : public IVariable {
 public:
@@ -55,6 +55,9 @@ public:
     value_ = value ? 1.0f : 0.0f;
     return true;
   }
+
+  // Get the type of the variable
+  Type getType() const override { return Type::FLOAT; }
 
 private:
   float value_;

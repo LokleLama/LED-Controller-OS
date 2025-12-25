@@ -6,6 +6,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "Flash/SPFS.h"
+
 #include "IVariable.h"
 
 class IVariableStore {
@@ -37,4 +39,7 @@ public:
 
   virtual const std::unordered_map<std::string, std::string>
   getAllVariables() const = 0;
+  
+  virtual bool saveToFile(std::shared_ptr<SPFS::File>& file) const = 0;
+  virtual bool loadFromFile(const std::shared_ptr<SPFS::File>& file) = 0;
 };

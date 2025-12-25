@@ -5,6 +5,8 @@
 #include "VariableStore/StringVariable.h"
 #include <cstddef>
 
+#include "ArduinoJson.h"
+
 bool VariableStore::setVariable(const std::string &key,
                                 const std::string &value) {
   if (callbacks.find(key) != callbacks.end()) {
@@ -157,4 +159,72 @@ VariableStore::getAllVariables() const {
     result[pair.first] = pair.second->asString();
   }
   return result;
+}
+
+bool VariableStore::saveToFile(std::shared_ptr<SPFS::File>& file) const {
+  JsonDocument doc;
+  for (const auto& pair : variables) {
+    switch (pair.second->getType()) {
+      case IVariable::Type::INT:
+        doc[pair.first] = pair.second->asInt();
+        break;
+      case IVariable::Type::FLOAT:
+        doc[pair.first] = pair.second->asFloat();
+        break;
+      case IVariable::Type::BOOL:
+        doc[pair.first] = pair.second->asBool();
+        break;
+      default:
+      case IVariable::Type::STRING:
+        doc[pair.first] = pair.second->asString();
+        break;
+    }
+  }
+
+  std::string jsonString;
+  if (serializeJson(doc, jsonString) == 0) {
+    return false;
+  }
+
+  return file->write(jsonString);
+}
+
+bool VariableStore::loadFromFile(const std::shared_ptr<SPFS::File>& file) {
+  if(file == nullptr) {
+    return false;
+  }
+
+  std::string fileContent = file->readAsString();
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, fileContent);
+  if (error) {
+    return false;
+  }
+
+  for (JsonPair kv : doc.as<JsonObject>()) {
+    const std::string key = kv.key().c_str();
+    if (variables.find(key) == variables.end()) {
+      // Variable does not exist, create it based on the type in JSON
+      if (kv.value().is<int>()) {
+        auto ret = std::make_shared<IntVariable>(kv.value().as<int>());
+        variables[key] = ret;
+      } else if (kv.value().is<float>() || kv.value().is<double>()) {
+        auto ret = std::make_shared<FloatVariable>(kv.value().as<float>());
+        variables[key] = ret;
+      } else if (kv.value().is<bool>()) {
+        auto ret = std::make_shared<BoolVariable>(kv.value().as<bool>());
+        variables[key] = ret;
+      } else if (kv.value().is<std::string>()) {
+        auto ret = std::make_shared<StringVariable>(kv.value().as<std::string>());
+        variables[key] = ret;
+      } else if (kv.value().is<const char*>()) {
+        auto ret = std::make_shared<StringVariable>(std::string(kv.value().as<const char*>()));
+        variables[key] = ret;
+      }
+    } else {
+      // Variable exists, set its value
+      variables[key]->set(kv.value().as<std::string>());
+    }
+  }
+  return true;
 }

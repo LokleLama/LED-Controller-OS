@@ -95,7 +95,8 @@ private:
                                            //!< - uint8_t offset;      //!< Offset within the current block of the file data (mask: 0x00FF) (in bytes)
                                            //!< - uint8_t reserved;    //!< Reserved for future use (mask: 0xFF00) (must be 0xFF)
     uint16_t checksum;                     //!< Checksum of the file data
-    uint16_t next;                         //!< offset of the next file version content block (in blocks)
+    uint16_t next_partition;               //!< offset of the next file content block (in blocks)
+    uint16_t next_version;                 //!< offset of the next file version content block (in blocks)
   };
 
 public:
@@ -272,8 +273,8 @@ private:
   const SPFS::FileSystemHeader *_fs_header = nullptr; //!< Start address of the flash memory for the file system
   const uint8_t* _start_search_address = nullptr;
 
-  static constexpr uint32_t MAGIC_NUMBER = 0xA36CA3FA;              //!< Magic number for SPFS (SPFSv1)
-  static constexpr uint32_t SPFS_VERSION = 0x01000000;              //!< Version number for SPFS (SPFSv1)
+  static constexpr uint32_t MAGIC_NUMBER = 0xA36CA3FA;              //!< Magic number for SPFS (SPFSv1.1)
+  static constexpr uint32_t SPFS_VERSION = 0x01010000;              //!< Version number for SPFS (SPFSv1.1)
   static constexpr uint32_t VERSION_MAJOR_MASK = 0xFF000000;        //!< Major version mask
   static constexpr uint32_t VERSION_MINOR_MASK = 0x00FF0000;        //!< Minor version mask
   static constexpr uint32_t VERSION_PATCH_MASK = 0x0000FF00;        //!< Patch version mask

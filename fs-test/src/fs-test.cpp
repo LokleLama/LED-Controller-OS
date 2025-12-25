@@ -28,7 +28,7 @@ struct config_t {
 };
 
 #define MAGIC_NUMBER  0xA36CA3FA
-#define SPFS_VERSION  0x01000000
+#define SPFS_VERSION  0x01010000
 
 static void OpenOrCreateFlashFile() {
   char flash_file_name[256];
@@ -72,7 +72,7 @@ static void OpenOrCreateFlashFile() {
   // write magic number at fs_offset
   uint32_t* fs_header = (uint32_t*)(config.flash_data + config.fs_offset);
   fs_header[0] = MAGIC_NUMBER;
-  fs_header[1] = SPFS_VERSION; // version 1.0
+  fs_header[1] = SPFS_VERSION; // version 1.1
   fs_header[2] = config.fs_size; // size of the filesystem
 
   // file doesn't exist, create it
@@ -153,6 +153,11 @@ int main(int argc, char **argv) {
 
   std::shared_ptr<SPFS> spfs = std::make_shared<SPFS>();
   auto root = spfs->searchFileSystem(0);
+
+  if(root == nullptr) {
+    printf("No valid filesystem found\n");
+    return -1;
+  }
 
   printf("******************************\n");
   printf("File System Size      : %i\n", spfs->getFileSystemSize());

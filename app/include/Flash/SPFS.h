@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <streambuf>
+#include <istream>
 
 //! \brief Simple Pico File System (SPFS) class
 /*!
@@ -101,6 +103,61 @@ private:
 
 public:
   class Directory;
+  
+  //! \brief Custom stream buffer for reading from SPFS files
+  /*!
+   * This class provides a stream buffer interface for reading from SPFS files.
+   * It allows the ReadOnlyFile class to be used with standard C++ stream operators.
+   */
+  class ReadOnlyFileStreamBuf : public std::streambuf {
+  public:
+    ReadOnlyFileStreamBuf(const uint8_t* data, size_t size)
+        : _data(data), _size(size), _pos(0) {
+      // Set up the get area to point to the file data
+      char* base = const_cast<char*>(reinterpret_cast<const char*>(_data));
+      setg(base, base, base + _size);
+    }
+
+  protected:
+    // Override seekoff for seeking within the stream
+    virtual std::streampos seekoff(std::streamoff off, std::ios_base::seekdir dir,
+                                   std::ios_base::openmode which = std::ios_base::in) override {
+      if (which & std::ios_base::in) {
+        std::streampos new_pos;
+        
+        if (dir == std::ios_base::beg) {
+          new_pos = off;
+        } else if (dir == std::ios_base::cur) {
+          new_pos = (gptr() - eback()) + off;
+        } else if (dir == std::ios_base::end) {
+          new_pos = _size + off;
+        } else {
+          return -1;
+        }
+        
+        if (new_pos < 0 || new_pos > static_cast<std::streampos>(_size)) {
+          return -1;
+        }
+        
+        char* base = const_cast<char*>(reinterpret_cast<const char*>(_data));
+        setg(base, base + new_pos, base + _size);
+        return new_pos;
+      }
+      return -1;
+    }
+
+    // Override seekpos for absolute positioning
+    virtual std::streampos seekpos(std::streampos pos,
+                                   std::ios_base::openmode which = std::ios_base::in) override {
+      return seekoff(pos, std::ios_base::beg, which);
+    }
+
+  private:
+    const uint8_t* _data;
+    size_t _size;
+    size_t _pos;
+  };
+
   class ReadOnlyFile{
     friend class Directory;
 
@@ -131,6 +188,14 @@ public:
       std::vector<uint8_t> readBytes(size_t offset, size_t size) const;
 
       const uint8_t* getMemoryMappedAddress() const;
+
+      //! \brief Get an input stream for reading from the file
+      /*!
+       * This method returns a unique_ptr to an std::istream that can be used
+       * to read from the file using standard C++ stream operators.
+       * \return A unique_ptr to an input stream for the file
+       */
+      std::unique_ptr<std::istream> getInputStream() const;
 
     protected:
       std::shared_ptr<SPFS> _fs;                //!< Reference to the SPFS instance

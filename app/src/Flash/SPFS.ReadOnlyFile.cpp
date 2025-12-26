@@ -85,3 +85,20 @@ std::shared_ptr<SPFS::ReadOnlyFile> SPFS::ReadOnlyFile::openVersion(size_t versi
   }
   return std::make_shared<SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, content_header, version);
 }
+
+std::unique_ptr<std::istream> SPFS::ReadOnlyFile::getInputStream() const {
+  if(_content_header == nullptr) {
+    // Return an empty stream for empty files
+    return std::make_unique<std::istream>(new SPFS::ReadOnlyFileStreamBuf(nullptr, 0));
+  }
+  
+  const uint8_t* data = getMemoryMappedAddress();
+  size_t size = _content_header->size;
+  
+  // Create a custom streambuf and wrap it in an istream
+  auto* buf = new SPFS::ReadOnlyFileStreamBuf(data, size);
+  auto stream = std::make_unique<std::istream>(buf);
+  
+  // The istream will take ownership of the streambuf and delete it when done
+  return stream;
+}

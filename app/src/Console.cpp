@@ -49,24 +49,56 @@ bool Console::ExecuteTask() {
 
   for (uint32_t i = 0; i < count; i++) {
     if (buf[i] == '\r' || buf[i] == '\n') {
+      inputBuffer = _variableStore.findAndReplaceVariables(inputBuffer);
+
       // Process the command
       std::vector<std::string> tokens;
       std::string token;
-      std::istringstream stream(inputBuffer);
-      while (stream >> token) {
-        tokens.push_back(token);
+      bool inQuotes = false;
+      char quoteChar = '\0';
+      
+      for (size_t i = 0; i < inputBuffer.length(); i++) {
+        char c = inputBuffer[i];
+        
+        if (!inQuotes && (c == '"' || c == '\'')) {
+          // Start of quoted string
+          inQuotes = true;
+          quoteChar = c;
+        } else if (inQuotes && c == quoteChar) {
+          // End of quoted string
+          inQuotes = false;
+          quoteChar = '\0';
+        } else if (!inQuotes && (c == ' ' || c == '\t')) {
+          // Whitespace outside quotes - token separator
+          if (!token.empty()) {
+            tokens.push_back(token);
+            token.clear();
+          }
+        } else {
+          // Regular character or whitespace inside quotes
+          token += c;
+        }
       }
 
-      std::string command = tokens.empty() ? "" : tokens[0];
       inputBuffer.clear();
+      if(inQuotes) {
+        // Handle unclosed quotes if necessary
+        std::cout << std::endl << "Error: Unclosed quotation mark." << std::endl;
+      } else{
+        // Add the last token if any
+        if (!token.empty()) {
+          tokens.push_back(token);
+        }
 
-      auto cmd = findCommand(command);
+        std::string command = tokens.empty() ? "" : tokens[0];
+        auto cmd = findCommand(command);
 
-      if (cmd != nullptr) {
-        std::cout << std::endl;
-        cmd->execute(tokens);
-      } else {
-        std::cout << std::endl << "Unknown command: " << command << std::endl;
+        if (cmd != nullptr) {
+          std::cout << std::endl;
+          cmd->execute(tokens);
+        } else {
+          std::cout << std::endl << "Unknown command: " << command << std::endl;
+        }
       }
       outputPrompt();
     } else if (buf[i] == 0x7F) { // Backspace

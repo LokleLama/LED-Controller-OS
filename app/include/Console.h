@@ -25,6 +25,7 @@ public:
   std::shared_ptr<ICommand> findCommand(const std::string &name) const;
 
   bool ExecuteTask() override;
+  bool ExecuteLine(const std::string &line);
 
   const std::shared_ptr<SPFS>& getFileSystem() const { return _fs; }
 
@@ -45,6 +46,7 @@ private:
   std::vector<std::shared_ptr<ICommand>> commandList;
   bool isConnected = false;
   std::string inputBuffer;
+  char openingQuoteChar = '\0';
 
   void OnNewConnection() const;
   void outputPrompt() const;

@@ -317,6 +317,18 @@ public:
     return std::string(name_ptr, fsm->name_size);
   }
 
+  std::string getFileSystemVersion() const{
+    if(_fs_header == nullptr){
+      return "";
+    }
+    uint32_t version = _fs_header->version;
+    uint8_t major = (version & VERSION_MAJOR_MASK) >> 24;
+    uint8_t minor = (version & VERSION_MINOR_MASK) >> 16;
+    uint8_t patch = (version & VERSION_PATCH_MASK) >> 8;
+    uint8_t build = (version & VERSION_BUILD_MASK);
+    return std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(patch) + " (build " + std::to_string(build) + ")";
+  }
+
   int getFileSystemSize() const{
     if(_fs_header == nullptr){
       return -1;

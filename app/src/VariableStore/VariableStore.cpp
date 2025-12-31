@@ -146,6 +146,19 @@ VariableStore::getVariable(const std::string &key) const {
   return nullptr;
 }
 
+size_t VariableStore::findVariableEnd(const std::string &input,
+                                      size_t startPos) const {
+  size_t pos = startPos;
+  while (pos < input.length()) {
+    char c = input[pos];
+    if (std::isspace(c) || std::ispunct(c)) {
+      break;
+    }
+    pos++;
+  }
+  return pos;
+}
+
 std::string VariableStore::findAndReplaceVariables(const std::string &input) const {
   std::string result = input;
   size_t pos = 0;
@@ -157,9 +170,22 @@ std::string VariableStore::findAndReplaceVariables(const std::string &input) con
     std::string varName = result.substr(pos + 2, endPos - pos - 2);
     auto var = getVariable(varName);
     if(var){
-    std::string varValue = var->asString();
-    result.replace(pos, endPos - pos + 1, varValue);
-    pos += varValue.length(); // Move past the replaced value
+      std::string varValue = "\"" + var->asString() + "\"";
+      result.replace(pos, endPos - pos + 1, varValue);
+      pos += varValue.length(); // Move past the replaced value
+    }else{
+      pos = endPos + 1; // Move past the closing brace if variable not found
+    }
+  }
+  pos = 0;
+  while ((pos = result.find("$", pos)) != std::string::npos) {
+    size_t endPos = findVariableEnd(result, pos + 1);
+    std::string varName = result.substr(pos + 1, endPos - pos - 1);
+    auto var = getVariable(varName);
+    if(var){
+      std::string varValue = var->asString();
+      result.replace(pos, endPos - pos, varValue);
+      pos += varValue.length(); // Move past the replaced value
     }else{
       pos = endPos + 1; // Move past the closing brace if variable not found
     }

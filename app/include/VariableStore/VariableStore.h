@@ -40,4 +40,6 @@ public:
 private:
   std::unordered_map<std::string, std::shared_ptr<IVariable>> variables;
   std::unordered_map<std::string, IVariableStore::Callback> callbacks;
+  
+  size_t findVariableEnd(const std::string &input, size_t startPos) const;
 };

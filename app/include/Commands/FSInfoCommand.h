@@ -23,7 +23,7 @@ public:
       std::cout << "No filesystem loaded." << std::endl;
       return 1; // Return 1 to indicate error
     }
-    std::cout << " File System Information: " << fs->getFileSystemName() << std::endl;
+    std::cout << " File System Information: " << fs->getFileSystemName() << " (version " << fs->getFileSystemVersion() << ")" << std::endl;
     std::cout << "  - Total Size: " << fs->getFileSystemSize() << " bytes" << std::endl;
     auto usage_map =  fs->getBlockUsageMap();
     size_t free_blocks = 0;

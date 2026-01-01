@@ -79,7 +79,10 @@ bool Console::ExecuteLine(const std::string &line) {
     auto cmd = findCommand(command);
 
     if (cmd != nullptr) {
-      cmd->execute(tokens);
+      auto result = cmd->execute(tokens);
+      if(resultVariable) {
+        resultVariable->set(result);
+      }
       return true;
     } else {
       std::cout << "Unknown command: " << command << std::endl;
@@ -89,6 +92,18 @@ bool Console::ExecuteLine(const std::string &line) {
 }
 
 bool Console::ExecuteTask() {
+  // Process commands from the queue first
+  if (!commandQueue.empty()) {
+    std::string command = commandQueue.front();
+    commandQueue.pop();
+    ExecuteLine(command);
+  }
+
+  // Then read from UART
+  return ReadUART();
+}
+
+bool Console::ReadUART() {
   if (!isConnected && tud_cdc_n_connected(INTERFACE_NUMBER)) {
     isConnected = true;
     OnNewConnection();

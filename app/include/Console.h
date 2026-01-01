@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <queue>
 
 #include "ICommand.h"
 #include "ITask.h"
@@ -16,6 +17,7 @@ public:
     _variableStore(variableStore)
   {
     setFileSystem(fs);
+    resultVariable = variableStore.getVariable("?");
   }
   ~Console(){};
 
@@ -25,7 +27,10 @@ public:
   std::shared_ptr<ICommand> findCommand(const std::string &name) const;
 
   bool ExecuteTask() override;
-  bool ExecuteLine(const std::string &line);
+  bool EnqueueCommand(const std::string &command) {
+    commandQueue.push(command);
+    return true;
+  }
 
   const std::shared_ptr<SPFS>& getFileSystem() const { return _fs; }
 
@@ -43,11 +48,16 @@ public:
 private:
   IVariableStore &_variableStore;
   std::shared_ptr<SPFS> _fs;
+  std::shared_ptr<IVariable> resultVariable;
   std::vector<std::shared_ptr<ICommand>> commandList;
   bool isConnected = false;
   std::string inputBuffer;
   char openingQuoteChar = '\0';
+  std::queue<std::string> commandQueue;
 
   void OnNewConnection() const;
   void outputPrompt() const;
+
+  bool ReadUART();
+  bool ExecuteLine(const std::string &line);
 };

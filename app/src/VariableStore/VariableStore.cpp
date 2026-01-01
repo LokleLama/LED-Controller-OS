@@ -211,6 +211,9 @@ VariableStore::getAllVariables() const {
 bool VariableStore::saveToFile(std::shared_ptr<SPFS::File>& file) const {
   JsonDocument doc;
   for (const auto& pair : variables) {
+    if (pair.first == "?" || pair.first.substr(0, 4) == "var.") {
+      continue; // Skip internal variables
+    }
     switch (pair.second->getType()) {
       case IVariable::Type::INT:
         doc[pair.first] = pair.second->asInt();

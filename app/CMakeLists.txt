@@ -57,17 +57,16 @@ target_link_options(${OUTPUT_NAME} PRIVATE "LINKER:--defsym=__SPFS_start__=${SPF
 target_link_options(${OUTPUT_NAME} PRIVATE "LINKER:--defsym=__SPFS_size__=${SPFS_RESERVED_SIZE}")
 target_link_options(${OUTPUT_NAME} PRIVATE "LINKER:-L${CMAKE_CURRENT_BINARY_DIR}")
 
-# Post-build: print ELF size and memory map
+# Generate detailed memory map file
+target_link_options(${OUTPUT_NAME} PRIVATE 
+    "LINKER:-Map=${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_NAME}.elf.map"
+    "LINKER:--print-memory-usage"
+)
+
+# Post-build: print comprehensive memory layout
 add_custom_command(TARGET ${OUTPUT_NAME} POST_BUILD
-    COMMAND arm-none-eabi-size $<TARGET_FILE:${OUTPUT_NAME}>
-    COMMAND echo "=== Flash Layout ==="
-    COMMAND echo "Total Flash: 2097152 bytes = 2048 KB"
-    COMMAND echo "Program Space: ${PROGRAM_FLASH_SIZE} bytes = 1792 KB"
-    COMMAND echo "Reserved SPFS: ${SPFS_RESERVED_SIZE} bytes = 256 KB at offset ${SPFS_FLASH_OFFSET}"
-    COMMAND echo "===================="
-    COMMAND echo "Checking .map file for FLASH region..."
-    COMMAND grep -A 5 "^FLASH" ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_NAME}.elf.map || true
-    COMMENT "Displaying memory layout after build"
+    COMMAND bash ${CMAKE_CURRENT_LIST_DIR}/analyze_memory.sh $<TARGET_FILE:${OUTPUT_NAME}> ${PROGRAM_FLASH_SIZE}
+    COMMENT "Displaying comprehensive memory layout after build"
 )
 
 pico_generate_pio_header(LEDController ${CMAKE_CURRENT_LIST_DIR}/include/PIO/led.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/include/PIO)

@@ -22,7 +22,17 @@ public:
            "       " + getName() + " set <base64_pattern>\n"
            "       " + getName() + " add <base64_pattern> <- returns the number of the pattern buffer\n"
            "       " + getName() + " use <pattern_number>\n"
-           "       " + getName() + " del <pattern_number>";
+           "       " + getName() + " del <pattern_number>\n"
+           "\n"
+           "Commands for controlling WS2812 LEDs connected to the specified pin.\n"
+           "  open            Initializes the LED strip on the given pin with the specified number of LEDs.\n"
+           "                  Optionally, you can specify bits per LED (default is 24).\n"
+           "  status          Displays the current status of the LED strip.\n"
+           "  set             Sets the LED pattern using a base64-encoded string.\n"
+           "                  The pattern must match the number of LEDs.\n"
+           "  add             Adds a new LED pattern and returns its pattern number.\n"
+           "  use             Uses the specified pattern number for the LED strip.\n"
+           "  del             Deletes the specified pattern number from the LED strip.";
   }
 
   // Executes the command
@@ -120,10 +130,16 @@ private:
     std::string base64_pattern = args[2];
     std::vector<uint8_t> pattern_raw = Base64::decode(base64_pattern);
     std::vector<uint32_t> pattern = convert(pattern_raw);
-    if (!_led->setPattern(pattern)) {
-      std::cout << "Pattern size is less than the number of LEDs (got "
-                << pattern.size() << ", bytes " << pattern_raw.size() << ")"
+    if( pattern.size() < static_cast<size_t>(_led_num) ) {
+      std::cout << "Pattern size is less than the number of LEDs filling with 0 (got "
+                << pattern.size() << " - bytes " << pattern_raw.size() << ", needed " << _led_num << ")"
                 << std::endl;
+      for (size_t i = pattern.size(); i < static_cast<size_t>(_led_num); i++) {
+        pattern.push_back(0); // Pad with zeros
+      }
+    }
+    if (!_led->setPattern(pattern)) {
+      std::cout << "Unable to set pattern" << std::endl;
       return -1; // Return -1 to indicate failure
     }
     return 0; // Return 0 to indicate success

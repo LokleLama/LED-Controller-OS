@@ -19,6 +19,7 @@
 #include "Commands/SetCommand.h"
 #include "Commands/TimeCommand.h"
 #include "Commands/VersionCommand.h"
+#include "Commands/MemInfoCommand.h"
 
 #include "Commands/DirCommand.h"
 #include "Commands/ChangeDirCommand.h"
@@ -100,6 +101,7 @@ int main() {
   console.registerCommand(std::make_shared<VersionCommand>());
   console.registerCommand(std::make_shared<EchoCommand>());
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));
+  console.registerCommand(std::make_shared<MemInfoCommand>());
   console.registerCommand(std::make_shared<SetCommand>(variableStore));
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
   console.registerCommand(std::make_shared<EnvCommand>(variableStore, console));
@@ -121,6 +123,7 @@ int main() {
   console.registerCommand(std::make_shared<WriteCommand>());
 
   console.registerCommand(std::make_shared<MakeFilesystemCommand>(console));
+  console.registerCommand(std::make_shared<MemInfoCommand>());
 
   variableStore.addVariable("init-script", "");
   variableStore.addVariable("?", 0);

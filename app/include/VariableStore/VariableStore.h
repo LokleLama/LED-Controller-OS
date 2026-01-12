@@ -25,6 +25,8 @@ public:
   bool setVariable(const std::string &key, int value) override;
 
   std::shared_ptr<IVariable> getVariable(const std::string &key) const override;
+  
+  std::string findAndReplaceVariables(const std::string &input) const override;
 
   void registerCallback(const std::string &key,
                         IVariableStore::Callback callback) override;
@@ -38,4 +40,6 @@ public:
 private:
   std::unordered_map<std::string, std::shared_ptr<IVariable>> variables;
   std::unordered_map<std::string, IVariableStore::Callback> callbacks;
+  
+  size_t findVariableEnd(const std::string &input, size_t startPos) const;
 };

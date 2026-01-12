@@ -35,6 +35,8 @@ public:
   virtual std::shared_ptr<IVariable>
   getVariable(const std::string &key) const = 0;
 
+  virtual std::string findAndReplaceVariables(const std::string &input) const = 0;
+
   virtual void registerCallback(const std::string &key, Callback callback) = 0;
 
   virtual const std::unordered_map<std::string, std::string>

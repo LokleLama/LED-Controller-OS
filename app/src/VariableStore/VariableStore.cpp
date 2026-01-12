@@ -146,6 +146,53 @@ VariableStore::getVariable(const std::string &key) const {
   return nullptr;
 }
 
+size_t VariableStore::findVariableEnd(const std::string &input,
+                                      size_t startPos) const {
+  size_t pos = startPos;
+  while (pos < input.length()) {
+    char c = input[pos];
+    if (std::isspace(c) || std::ispunct(c)) {
+      break;
+    }
+    pos++;
+  }
+  return pos;
+}
+
+std::string VariableStore::findAndReplaceVariables(const std::string &input) const {
+  std::string result = input;
+  size_t pos = 0;
+  while ((pos = result.find("${", pos)) != std::string::npos) {
+    size_t endPos = result.find("}", pos);
+    if (endPos == std::string::npos) {
+      break; // No closing parenthesis found
+    }
+    std::string varName = result.substr(pos + 2, endPos - pos - 2);
+    auto var = getVariable(varName);
+    if(var){
+      std::string varValue = "\"" + var->asString() + "\"";
+      result.replace(pos, endPos - pos + 1, varValue);
+      pos += varValue.length(); // Move past the replaced value
+    }else{
+      pos = endPos + 1; // Move past the closing brace if variable not found
+    }
+  }
+  pos = 0;
+  while ((pos = result.find("$", pos)) != std::string::npos) {
+    size_t endPos = findVariableEnd(result, pos + 1);
+    std::string varName = result.substr(pos + 1, endPos - pos - 1);
+    auto var = getVariable(varName);
+    if(var){
+      std::string varValue = var->asString();
+      result.replace(pos, endPos - pos, varValue);
+      pos += varValue.length(); // Move past the replaced value
+    }else{
+      pos = endPos + 1; // Move past the closing brace if variable not found
+    }
+  }
+  return result;
+}
+
 void VariableStore::registerCallback(const std::string &key,
                                      IVariableStore::Callback callback) {
   callbacks[key] = callback;
@@ -164,6 +211,9 @@ VariableStore::getAllVariables() const {
 bool VariableStore::saveToFile(std::shared_ptr<SPFS::File>& file) const {
   JsonDocument doc;
   for (const auto& pair : variables) {
+    if (pair.first == "?" || pair.first.substr(0, 4) == "var.") {
+      continue; // Skip internal variables
+    }
     switch (pair.second->getType()) {
       case IVariable::Type::INT:
         doc[pair.first] = pair.second->asInt();

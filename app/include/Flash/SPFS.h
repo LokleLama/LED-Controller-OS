@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <streambuf>
+#include <istream>
 
 //! \brief Simple Pico File System (SPFS) class
 /*!
@@ -101,6 +103,61 @@ private:
 
 public:
   class Directory;
+  
+  //! \brief Custom stream buffer for reading from SPFS files
+  /*!
+   * This class provides a stream buffer interface for reading from SPFS files.
+   * It allows the ReadOnlyFile class to be used with standard C++ stream operators.
+   */
+  class ReadOnlyFileStreamBuf : public std::streambuf {
+  public:
+    ReadOnlyFileStreamBuf(const uint8_t* data, size_t size)
+        : _data(data), _size(size), _pos(0) {
+      // Set up the get area to point to the file data
+      char* base = const_cast<char*>(reinterpret_cast<const char*>(_data));
+      setg(base, base, base + _size);
+    }
+
+  protected:
+    // Override seekoff for seeking within the stream
+    virtual std::streampos seekoff(std::streamoff off, std::ios_base::seekdir dir,
+                                   std::ios_base::openmode which = std::ios_base::in) override {
+      if (which & std::ios_base::in) {
+        std::streampos new_pos;
+        
+        if (dir == std::ios_base::beg) {
+          new_pos = off;
+        } else if (dir == std::ios_base::cur) {
+          new_pos = (gptr() - eback()) + off;
+        } else if (dir == std::ios_base::end) {
+          new_pos = _size + off;
+        } else {
+          return -1;
+        }
+        
+        if (new_pos < 0 || new_pos > static_cast<std::streampos>(_size)) {
+          return -1;
+        }
+        
+        char* base = const_cast<char*>(reinterpret_cast<const char*>(_data));
+        setg(base, base + new_pos, base + _size);
+        return new_pos;
+      }
+      return -1;
+    }
+
+    // Override seekpos for absolute positioning
+    virtual std::streampos seekpos(std::streampos pos,
+                                   std::ios_base::openmode which = std::ios_base::in) override {
+      return seekoff(pos, std::ios_base::beg, which);
+    }
+
+  private:
+    const uint8_t* _data;
+    size_t _size;
+    size_t _pos;
+  };
+
   class ReadOnlyFile{
     friend class Directory;
 
@@ -132,6 +189,14 @@ public:
 
       const uint8_t* getMemoryMappedAddress() const;
 
+      //! \brief Get an input stream for reading from the file
+      /*!
+       * This method returns a unique_ptr to an std::istream that can be used
+       * to read from the file using standard C++ stream operators.
+       * \return A unique_ptr to an input stream for the file
+       */
+      std::unique_ptr<std::istream> getInputStream() const;
+
     protected:
       std::shared_ptr<SPFS> _fs;                //!< Reference to the SPFS instance
       std::shared_ptr<Directory> _parent;       //!< Reference to the parent directory
@@ -154,6 +219,25 @@ public:
       bool write(const std::string& data);
       bool write(const std::vector<uint8_t>& data);
       bool write(const uint8_t* data, size_t size);
+
+      //! \brief Write Content to the file in chunks
+      /*!
+       * This method allows writing data to the file in multiple chunks.
+       * It is useful for writing large files that may not fit into memory all at once.
+       * \param data Pointer to the data to write
+       * \param size Size of the data to write (in bytes)
+       * \return true on success, false on failure
+       */
+       bool allocateContenSize(size_t size);
+       bool append(const std::string& data);
+       bool append(const std::vector<uint8_t>& data);
+       bool append(const uint8_t* data, size_t size);
+       bool finishContent();
+
+    private:
+      size_t _allocated_content_size = 0; //!< Allocated size for content
+      size_t _append_position = 0; //!< Current position for appending data
+      const FileContentHeader* _current_content_header = nullptr; //!< Current content header for appending data
   };
   class Directory : public std::enable_shared_from_this<Directory> {
     public:
@@ -250,6 +334,18 @@ public:
     const FileSystemMetadata* fsm = reinterpret_cast<const FileSystemMetadata *>(reinterpret_cast<const uint8_t*>(_fs_header) + _fs_header->meta_offset);
     const char* name_ptr = reinterpret_cast<const char*>(fsm) + sizeof(FileSystemMetadata);
     return std::string(name_ptr, fsm->name_size);
+  }
+
+  std::string getFileSystemVersion() const{
+    if(_fs_header == nullptr){
+      return "";
+    }
+    uint32_t version = _fs_header->version;
+    uint8_t major = (version & VERSION_MAJOR_MASK) >> 24;
+    uint8_t minor = (version & VERSION_MINOR_MASK) >> 16;
+    uint8_t patch = (version & VERSION_PATCH_MASK) >> 8;
+    uint8_t build = (version & VERSION_BUILD_MASK);
+    return std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(patch) + " (build " + std::to_string(build) + ")";
   }
 
   int getFileSystemSize() const{

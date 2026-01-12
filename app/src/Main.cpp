@@ -19,12 +19,15 @@
 #include "Commands/SetCommand.h"
 #include "Commands/TimeCommand.h"
 #include "Commands/VersionCommand.h"
+#include "Commands/MemInfoCommand.h"
 
 #include "Commands/DirCommand.h"
 #include "Commands/ChangeDirCommand.h"
 #include "Commands/MakeDirCommand.h"
 #include "Commands/CatCommand.h"
+#include "Commands/ExecCommand.h"
 #include "Commands/FSInfoCommand.h"
+#include "Commands/StoreCommand.h"
 
 #include "Commands/ReadCommand.h"
 #include "Commands/WriteCommand.h"
@@ -88,8 +91,8 @@ int main() {
       fs = nullptr;
     }
   }
-  variableStore.addVariable("fs.offset", SPFS_FLASH_OFFSET);
-  variableStore.addVariable("fs.size", SPFS_FLASH_SIZE);
+  variableStore.addVariable("var.fs_offset", SPFS_FLASH_OFFSET);
+  variableStore.addVariable("var.fs_size", SPFS_FLASH_SIZE);
 
   Console console(variableStore, fs);
 
@@ -98,6 +101,7 @@ int main() {
   console.registerCommand(std::make_shared<VersionCommand>());
   console.registerCommand(std::make_shared<EchoCommand>());
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));
+  console.registerCommand(std::make_shared<MemInfoCommand>());
   console.registerCommand(std::make_shared<SetCommand>(variableStore));
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
   console.registerCommand(std::make_shared<EnvCommand>(variableStore, console));
@@ -111,18 +115,24 @@ int main() {
   console.registerCommand(std::make_shared<ChangeDirCommand>(console));
   console.registerCommand(std::make_shared<MakeDirCommand>(console));
   console.registerCommand(std::make_shared<CatCommand>(console));
+  console.registerCommand(std::make_shared<ExecCommand>(console));
   console.registerCommand(std::make_shared<FSInfoCommand>(console));
+  console.registerCommand(std::make_shared<StoreCommand>(console));
 
   console.registerCommand(std::make_shared<ReadCommand>());
   console.registerCommand(std::make_shared<WriteCommand>());
 
   console.registerCommand(std::make_shared<MakeFilesystemCommand>(console));
+  console.registerCommand(std::make_shared<MemInfoCommand>());
 
+  variableStore.addVariable("init-script", "");
+  variableStore.addVariable("?", 0);
+  
   variableStore.addVariable("uart0.baud", 115200);
   variableStore.addVariable("uart0.format", "8n1");
   variableStore.addVariable("uart0.log", "none");
   output_distance = variableStore.addBoolVariable("distance", false);
-  distance = variableStore.addVariable("dist", 0.0f);
+  distance = variableStore.addVariable("var.dist", 0.0f);
 
   variableStore.registerCallback(
       "uart0.baud", [](const std::string &key, const std::string &value) {
@@ -169,6 +179,9 @@ int main() {
     std::cout << "Log changed to " << value << std::endl;
     return true;
   });
+
+  console.EnqueueCommand("env load");
+  console.EnqueueCommand("exec ${init-script}");
 
   mainloop.registerRegularTask([&]() {
     tud_task(); // TinyUSB task

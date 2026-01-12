@@ -219,6 +219,25 @@ public:
       bool write(const std::string& data);
       bool write(const std::vector<uint8_t>& data);
       bool write(const uint8_t* data, size_t size);
+
+      //! \brief Write Content to the file in chunks
+      /*!
+       * This method allows writing data to the file in multiple chunks.
+       * It is useful for writing large files that may not fit into memory all at once.
+       * \param data Pointer to the data to write
+       * \param size Size of the data to write (in bytes)
+       * \return true on success, false on failure
+       */
+       bool allocateContenSize(size_t size);
+       bool append(const std::string& data);
+       bool append(const std::vector<uint8_t>& data);
+       bool append(const uint8_t* data, size_t size);
+       bool finishContent();
+
+    private:
+      size_t _allocated_content_size = 0; //!< Allocated size for content
+      size_t _append_position = 0; //!< Current position for appending data
+      const FileContentHeader* _current_content_header = nullptr; //!< Current content header for appending data
   };
   class Directory : public std::enable_shared_from_this<Directory> {
     public:

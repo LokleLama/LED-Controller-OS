@@ -11,6 +11,8 @@
 
 #include "Flash/SPFS.h"
 
+class EditCommand;
+
 class Console : public ITask {
 public:
   Console(IVariableStore &variableStore, std::shared_ptr<SPFS> fs = nullptr) : 
@@ -36,6 +38,9 @@ public:
 
   std::shared_ptr<SPFS::Directory> currentDirectory;
 
+  void setEditCommand(EditCommand* editCmd) { _activeEditCommand = editCmd; }
+  EditCommand* getEditCommand() const { return _activeEditCommand; }
+
   void setFileSystem(std::shared_ptr<SPFS> fs) {
     _fs = fs;
     if(_fs != nullptr) {
@@ -51,6 +56,7 @@ private:
   std::shared_ptr<IVariable> resultVariable;
   std::vector<std::shared_ptr<ICommand>> commandList;
   bool isConnected = false;
+  EditCommand* _activeEditCommand = nullptr;
   std::string inputBuffer;
   char openingQuoteChar = '\0';
   std::queue<std::string> commandQueue;

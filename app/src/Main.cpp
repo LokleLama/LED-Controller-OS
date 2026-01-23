@@ -25,6 +25,7 @@
 #include "Commands/ChangeDirCommand.h"
 #include "Commands/MakeDirCommand.h"
 #include "Commands/CatCommand.h"
+#include "Commands/EditCommand.h"
 #include "Commands/ExecCommand.h"
 #include "Commands/FSInfoCommand.h"
 #include "Commands/StoreCommand.h"
@@ -115,6 +116,7 @@ int main() {
   console.registerCommand(std::make_shared<ChangeDirCommand>(console));
   console.registerCommand(std::make_shared<MakeDirCommand>(console));
   console.registerCommand(std::make_shared<CatCommand>(console));
+console.registerCommand(std::make_shared<EditCommand>(console));
   console.registerCommand(std::make_shared<ExecCommand>(console));
   console.registerCommand(std::make_shared<FSInfoCommand>(console));
   console.registerCommand(std::make_shared<StoreCommand>(console));

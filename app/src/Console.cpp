@@ -1,5 +1,6 @@
 #include "Console.h"
 #include "Config.h"
+#include "Commands/EditCommand.h"
 #include "hardware/clocks.h"
 #include "pico/stdlib.h"
 #include "tusb.h"
@@ -34,6 +35,19 @@ std::vector<std::string> Console::getCommandList() const {
 }
 
 bool Console::ExecuteLine(const std::string &line) {
+  // Check if we're in edit mode
+  if (_activeEditCommand && _activeEditCommand->isEditing()) {
+    auto result = _activeEditCommand->processEditLine(line);
+    if(resultVariable) {
+      resultVariable->set(result);
+    }
+    // Check if we exited edit mode
+    if (!_activeEditCommand->isEditing()) {
+      _activeEditCommand = nullptr;
+    }
+    return true;
+  }
+
   std::string processedLine = _variableStore.findAndReplaceVariables(line);
 
   // Process the command

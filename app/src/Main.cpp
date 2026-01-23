@@ -17,6 +17,7 @@
 #include "Commands/HelpCommand.h"
 #include "Commands/LedCommand.h"
 #include "Commands/SetCommand.h"
+#include "Commands/SleepCommand.h"
 #include "Commands/TimeCommand.h"
 #include "Commands/VersionCommand.h"
 #include "Commands/MemInfoCommand.h"
@@ -107,6 +108,7 @@ int main() {
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
   console.registerCommand(std::make_shared<EnvCommand>(variableStore, console));
   console.registerCommand(std::make_shared<HelpCommand>(console));
+  console.registerCommand(std::make_shared<SleepCommand>());
   console.registerCommand(std::make_shared<LedCommand>(pio0, 1));
   console.registerCommand(std::make_shared<LedCommand>(pio0, 2));
   console.registerCommand(std::make_shared<LedCommand>(pio0, 3));
@@ -116,7 +118,7 @@ int main() {
   console.registerCommand(std::make_shared<ChangeDirCommand>(console));
   console.registerCommand(std::make_shared<MakeDirCommand>(console));
   console.registerCommand(std::make_shared<CatCommand>(console));
-console.registerCommand(std::make_shared<EditCommand>(console));
+  console.registerCommand(std::make_shared<EditCommand>(console));
   console.registerCommand(std::make_shared<ExecCommand>(console));
   console.registerCommand(std::make_shared<FSInfoCommand>(console));
   console.registerCommand(std::make_shared<StoreCommand>(console));

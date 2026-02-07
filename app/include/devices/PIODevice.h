@@ -3,15 +3,15 @@
 #include "hardware/pio.h"
 #include "devices/IDevice.h"
 
-class PIOSM;
+#include <vector>
 
-class PIO : public IDevice {
+class PIODevice : public IDevice {
 public:
-    PIO(int number);
+    PIODevice(int number);
 
-    const std::string &getName() const override { return "PIO" + std::to_string(_number) + ".SM" + std::to_string(_sm_number); }
-    const std::string &getType() const override { return "PIO"; }
-    const std::string &getDetails() const override;
+    const std::string getName() const override { return "PIO" + std::to_string(_number) + ".SM" + std::to_string(_sm); }
+    const std::string getType() const override { return "PIO"; }
+    const std::string getDetails() const override;
 
     bool addProgram(const pio_program_t *program);
     int getProgramOffset() const { return _program_offset; }

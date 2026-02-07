@@ -1,8 +1,8 @@
-#include "devices/PIO.h"
+#include "devices/PIODevice.h"
 #include "hardware/dma.h"
 #include "hardware/irq.h"
 
-PIO::PIO(int number) : _number(number) {
+PIODevice::PIODevice(int number) : _number(number) {
     _program_offset = -1;
 
     if (number == 0) {
@@ -24,7 +24,7 @@ PIO::PIO(int number) : _number(number) {
     _status = DeviceStatus::Initialized;
 }
 
-bool PIO::addProgram(const pio_program_t *program) {
+bool PIODevice::addProgram(const pio_program_t *program) {
     if(_status != DeviceStatus::Assigned && _program_offset < 0) {
         return false;
     }
@@ -32,7 +32,7 @@ bool PIO::addProgram(const pio_program_t *program) {
     return _program_offset >= 0;
 }
 
-bool PIO::setProgramOffset(int offset) {
+bool PIODevice::setProgramOffset(int offset) {
     if(_status != DeviceStatus::Assigned && _program_offset < 0) {
         return false;
     }
@@ -40,7 +40,7 @@ bool PIO::setProgramOffset(int offset) {
     return true;
 }
 
-bool PIO::useDMA(uint transfer_count) {
+bool PIODevice::useDMA(uint transfer_count) {
     if(_status != DeviceStatus::Assigned) {
         return false;
     }
@@ -60,7 +60,7 @@ bool PIO::useDMA(uint transfer_count) {
     return true;
 }
 
-bool PIO::transfer(const uint32_t *data, size_t count) {
+bool PIODevice::transfer(const uint32_t *data, size_t count) {
     if(_status != DeviceStatus::Assigned) {
         return false;
     }
@@ -79,7 +79,7 @@ bool PIO::transfer(const uint32_t *data, size_t count) {
     return true;
 }
 
-const std::string &PIO::getDetails() const {
+const std::string PIODevice::getDetails() const {
     static std::string details;
     details = "PIO" + std::to_string(_number) + ".SM" + std::to_string(_sm) + "\n";
     details += "Program Offset: " + std::to_string(_program_offset) + "\n";

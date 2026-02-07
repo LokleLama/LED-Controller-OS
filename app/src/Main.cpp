@@ -34,6 +34,8 @@
 
 #include "Commands/MakeFilesystemCommand.h"
 
+#include "Commands/DeviceCommand.h"
+
 #include "HLKLogger.h"
 #include "HLKStack/HLKPackageFinder.h"
 #include "HexLogger.h"
@@ -124,6 +126,8 @@ int main() {
 
   console.registerCommand(std::make_shared<MakeFilesystemCommand>(console));
   console.registerCommand(std::make_shared<MemInfoCommand>());
+
+  console.registerCommand(std::make_shared<DeviceCommand>());
 
   variableStore.addVariable("init-script", "");
   variableStore.addVariable("?", 0);

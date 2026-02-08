@@ -3,6 +3,11 @@
 #include "hardware/clocks.h"
 #include "hardware/irq.h"
 
+Mainloop& Mainloop::getInstance() {
+    static Mainloop instance;
+    return instance;
+}
+
 Mainloop::Mainloop() : _running(false), _systickCounter(0) {}
 
 // Static callback function for the alarm

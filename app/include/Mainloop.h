@@ -11,7 +11,7 @@ class Mainloop {
 public:
   using Function = std::function<bool()>;
 
-  Mainloop();
+  static Mainloop& getInstance();
 
   // Register a function to be executed in every mainloop iteration
   void registerRegularTask(Function func) { _regularTasks.push_back(func); }
@@ -53,6 +53,8 @@ private:
 
   bool _running;
   uint32_t _systickCounter;
+
+  Mainloop();
 
   void onMillisecond();
 

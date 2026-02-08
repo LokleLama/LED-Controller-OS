@@ -7,6 +7,11 @@
 
 #include "ArduinoJson.h"
 
+VariableStore& VariableStore::getInstance() {
+  static VariableStore instance;
+  return instance;
+}
+
 bool VariableStore::setVariable(const std::string &key,
                                 const std::string &value) {
   if (callbacks.find(key) != callbacks.end()) {
@@ -163,6 +168,11 @@ std::string VariableStore::findAndReplaceVariables(const std::string &input) con
   std::string result = input;
   size_t pos = 0;
   while ((pos = result.find("${", pos)) != std::string::npos) {
+    if (pos > 0 && result[pos - 1] == '\\') {
+      result.erase(pos - 1, 1); // Remove escape character
+      pos += 1; // Move past the escaped variable
+      continue;
+    }
     size_t endPos = result.find("}", pos);
     if (endPos == std::string::npos) {
       break; // No closing parenthesis found
@@ -179,6 +189,11 @@ std::string VariableStore::findAndReplaceVariables(const std::string &input) con
   }
   pos = 0;
   while ((pos = result.find("$", pos)) != std::string::npos) {
+    if (pos > 0 && result[pos - 1] == '\\') {
+      result.erase(pos - 1, 1); // Remove escape character
+      pos += 1; // Move past the escaped variable
+      continue;
+    }
     size_t endPos = findVariableEnd(result, pos + 1);
     std::string varName = result.substr(pos + 1, endPos - pos - 1);
     auto var = getVariable(varName);

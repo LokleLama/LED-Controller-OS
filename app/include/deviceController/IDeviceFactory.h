@@ -15,6 +15,7 @@ public:
     Communication,
     Protocol,
     Logger,
+    UserInterface,
 
     // The 'All' category is only used for filtering and should not be returned by any factory
     All

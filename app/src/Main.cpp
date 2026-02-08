@@ -83,8 +83,8 @@ int main() {
   irq_set_enabled(UART0_IRQ, true);
   uart_set_irq_enables(uart0, true, false);
 
-  Mainloop mainloop;
-  VariableStore variableStore;
+  auto& mainloop = Mainloop::getInstance();
+  auto& variableStore = VariableStore::getInstance();
 
   auto fs = std::make_shared<SPFS>();
   auto rootDir = fs->searchFileSystem(SPFS_FLASH_OFFSET, SPFS_FLASH_OFFSET + SPFS_FLASH_SIZE);
@@ -131,7 +131,7 @@ int main() {
 
   variableStore.addVariable("init-script", "");
   variableStore.addVariable("?", 0);
-  
+
   variableStore.addVariable("lastCommand", "");
   
   variableStore.addVariable("uart0.baud", 115200);

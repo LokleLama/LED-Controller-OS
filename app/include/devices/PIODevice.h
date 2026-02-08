@@ -4,8 +4,8 @@
 #include "devices/IDevice.h"
 
 #include <vector>
-
-class PIODevice : public IDevice {
+#include <memory>
+class PIODevice : public IDevice, public std::enable_shared_from_this<PIODevice> {
 public:
     PIODevice(int number);
 
@@ -25,7 +25,12 @@ public:
     bool transfer(const uint32_t *data, size_t count);
 
     PIO getPIO() const { return _pio; }
+    int getPIONumber() const { return _number; }
     int getSM() const { return _sm; }
+
+    std::shared_ptr<PIODevice> getShared() {
+        return shared_from_this();
+    }
     
 private:
     int _number;

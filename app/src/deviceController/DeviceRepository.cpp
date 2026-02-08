@@ -1,6 +1,7 @@
 #include "deviceController/DeviceRepository.h"
 
 #include "deviceController/PIOFactory.h"
+#include "deviceController/LEDFactory.h"
 
 #include <algorithm>
 
@@ -11,6 +12,7 @@ DeviceRepository& DeviceRepository::getInstance() {
 
 DeviceRepository::DeviceRepository(){
     _factories.push_back(std::make_shared<PIOFactory>());
+    _factories.push_back(std::make_shared<LEDFactory>());
 }
 
 const std::vector<std::string> DeviceRepository::getAvailableDeviceNames(IDeviceFactory::Category category) const{

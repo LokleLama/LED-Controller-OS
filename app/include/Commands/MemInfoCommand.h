@@ -52,7 +52,7 @@ public:
     std::cout << std::endl;
     
     std::cout << "Heap:" << std::endl;
-    std::cout << "  Available:   " << std::setw(8) << heap_size << " bytes" << std::endl;
+    std::cout << "  Available:    " << std::setw(8) << heap_size << " bytes" << std::endl;
     std::cout << "  (Dynamic allocation tracking not available)" << std::endl;
     std::cout << std::endl;
     

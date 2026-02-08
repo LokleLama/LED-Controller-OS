@@ -8,7 +8,7 @@
 class DeviceCommand : public ICommand {
 public:
   // Constructor
-  DeviceCommand() {}
+  DeviceCommand(IVariableStore &store) : _store(store) {}
   // Returns the name of the command
   const std::string getName() const override { return "device"; }
 
@@ -18,7 +18,7 @@ public:
            "          list open                   - Lists all opened devices\n"
            "          param <name>                - Displays parameter information for the specified device\n"
            "          info <name>                 - Displays information about the specified device\n"
-           "          open <name> [parameters]    - Opens the specified device\n";
+           "          open <name> [parameters]    - Opens the specified device (opening a device will set the variable 'lastOpenedDevice')\n";
   }
 
   // Executes the command
@@ -44,6 +44,8 @@ public:
   }
 
 private:
+  IVariableStore &_store;
+  
   int executeList(const std::vector<std::string> &args) {
     if (args.size() > 2 && args[2] == "open") {
       auto devices = DeviceRepository::getInstance().getDevices();
@@ -112,6 +114,9 @@ private:
       return -1; // Return -1 to indicate failure
     }
     std::cout << "Device opened: " << device->getName() << std::endl;
+    if(!_store.setVariable("lastOpenedDevice", device->getName())) {
+      _store.addVariable("lastOpenedDevice", device->getName());
+    }
     return 0; // Return 0 to indicate success
   }
 };

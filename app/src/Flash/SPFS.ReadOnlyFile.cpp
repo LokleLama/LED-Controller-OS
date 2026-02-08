@@ -53,7 +53,7 @@ std::vector<uint8_t> SPFS::ReadOnlyFile::readBytes(size_t offset, size_t size) c
   if(_content_header == nullptr || offset >= _content_header->size) {
     return std::vector<uint8_t>();
   }
-  if(offset + size > _content_header->size) {
+  if(size == (size_t)-1 || offset + size > _content_header->size) {
     size = _content_header->size - offset;
   }
   std::vector<uint8_t> data_vector(size);

@@ -54,7 +54,7 @@ public:
         if (params.size() >= 6) {
             device_name = params[5];
         }else{
-            device_name = "WS2812-" + std::to_string(_number);
+            device_name = "WS2812." + std::to_string(_number);
         }
         _number++;
         auto led_device = std::make_shared<WS2812Device>(((PIODevice*)pio_device.get())->getShared(), pin, num_leds, bits_per_pixel, frequency, device_name);

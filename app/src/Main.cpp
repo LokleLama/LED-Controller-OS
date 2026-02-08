@@ -127,10 +127,12 @@ int main() {
   console.registerCommand(std::make_shared<MakeFilesystemCommand>(console));
   console.registerCommand(std::make_shared<MemInfoCommand>());
 
-  console.registerCommand(std::make_shared<DeviceCommand>());
+  console.registerCommand(std::make_shared<DeviceCommand>(variableStore));
 
   variableStore.addVariable("init-script", "");
   variableStore.addVariable("?", 0);
+  
+  variableStore.addVariable("lastCommand", "");
   
   variableStore.addVariable("uart0.baud", 115200);
   variableStore.addVariable("uart0.format", "8n1");

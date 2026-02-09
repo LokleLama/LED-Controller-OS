@@ -1,5 +1,4 @@
 #include "devices/PIODevice.h"
-#include "hardware/dma.h"
 #include "hardware/irq.h"
 
 PIODevice::PIODevice(int number) : _number(number) {
@@ -21,36 +20,36 @@ PIODevice::PIODevice(int number) : _number(number) {
         return;
     }
 
+    _transfer_count = 0;
+    _dma_channel = -1;
+
     _status = DeviceStatus::Initialized;
 }
 
 bool PIODevice::addProgram(const pio_program_t *program) {
-    if(_status != DeviceStatus::Assigned && _program_offset < 0) {
-        return false;
+    if(_program_offset < 0) {
+        _program_offset = pio_add_program(_pio, program);
+        return _program_offset >= 0;
     }
-    _program_offset = pio_add_program(_pio, program);
-    return _program_offset >= 0;
+    return false;
 }
 
 bool PIODevice::setProgramOffset(int offset) {
-    if(_status != DeviceStatus::Assigned && _program_offset < 0) {
-        return false;
+    if(_program_offset < 0) {
+        _program_offset = offset;
+        return true;
     }
-    _program_offset = offset;
-    return true;
+    return false;
 }
 
-bool PIODevice::useDMA(uint transfer_count) {
-    if(_status != DeviceStatus::Assigned) {
-        return false;
-    }
+bool PIODevice::useDMA(uint transfer_count, dma_channel_transfer_size_t size) {
     // Claim a DMA channel
     _dma_channel = dma_claim_unused_channel(false);
     if(_dma_channel < 0) {
         return false;
     }
     dma_channel_config dc = dma_channel_get_default_config(_dma_channel);
-    channel_config_set_transfer_data_size(&dc, DMA_SIZE_32);
+    channel_config_set_transfer_data_size(&dc, size);
     channel_config_set_read_increment(&dc, true);
     channel_config_set_write_increment(&dc, false);
     channel_config_set_dreq(&dc, pio_get_dreq(_pio, _sm, true));
@@ -58,6 +57,18 @@ bool PIODevice::useDMA(uint transfer_count) {
 
     _transfer_count = transfer_count;
     return true;
+}
+
+bool PIODevice::useDMA32(uint transfer_count) {
+    return useDMA(transfer_count, DMA_SIZE_32);
+}
+
+bool PIODevice::useDMA16(uint transfer_count) {
+    return useDMA(transfer_count, DMA_SIZE_16);
+}
+
+bool PIODevice::useDMA8(uint transfer_count) {
+    return useDMA(transfer_count, DMA_SIZE_8);
 }
 
 bool PIODevice::transfer(const uint32_t *data, size_t count) {

@@ -18,16 +18,25 @@ WS2812Device::WS2812Device(std::shared_ptr<PIODevice> pio, uint pin, uint num_le
       _bits_per_pixel(bits_per_pixel), _name(name) {
 
   // Load the PIO program into the PIO memory
-  uint offset = 0;
+  int offset = _program_offset_pio[_pio->getPIONumber()];
 
-  if (_program_offset_pio[_pio->getPIONumber()] == -1) {
-    _program_offset_pio[_pio->getPIONumber()] = _pio->addProgram(&led_program);
+  if (offset < 0) {
+    if(_pio->addProgram(&led_program)){
+      offset = _pio->getProgramOffset();
+    }
   }else{
-    _pio->setProgramOffset(_program_offset_pio[_pio->getPIONumber()]);
+    _pio->setProgramOffset(offset);
   }
-  offset = _program_offset_pio[_pio->getPIONumber()];
+  if(offset < 0) {
+    _status = DeviceStatus::Error;
+    return;
+  }
+  _program_offset_pio[_pio->getPIONumber()] = offset;
   if (_num_leds > DMA_THRESHOLD) {
-    _pio->useDMA(_num_leds * (_bits_per_pixel / 8));
+    if(!_pio->useDMA32(_num_leds)) {
+      _status = DeviceStatus::Error;
+      return;
+    }
   }
 
   led_program_init(_pio->getPIO(), _pio->getSM(), offset, _pin, freq, _bits_per_pixel);

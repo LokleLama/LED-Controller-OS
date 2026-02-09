@@ -1,6 +1,7 @@
 #pragma once
 
 #include "hardware/pio.h"
+#include "hardware/dma.h"
 #include "devices/IDevice.h"
 
 #include <vector>
@@ -17,7 +18,9 @@ public:
     int getProgramOffset() const { return _program_offset; }
     bool setProgramOffset(int offset);
 
-    bool useDMA(uint transfer_count);
+    bool useDMA32(uint transfer_count);
+    bool useDMA16(uint transfer_count);
+    bool useDMA8(uint transfer_count);
 
     // WARNING: when using DMA, make sure the data buffer remains valid until the transfer is complete
     // DMA transfer is not checked for completion in this method
@@ -40,4 +43,6 @@ private:
     int _program_offset;
     int _dma_channel;
     uint _transfer_count;
+
+    bool useDMA(uint transfer_count, dma_channel_transfer_size_t size);
 };

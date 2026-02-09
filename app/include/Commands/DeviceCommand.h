@@ -97,7 +97,9 @@ private:
       return -1; // Return -1 to indicate failure
     }
     std::cout << "Device name: " << device->getName() << std::endl;
-    std::cout << "Status: " << IDevice::DeviceStatusToString(device->getStatus()) << std::endl;
+    std::cout << "Status:      " << IDevice::DeviceStatusToString(device->getStatus()) << std::endl;
+    std::cout << "Type:        " << device->getType() << std::endl;
+    std::cout << "Details:     " << device->getDetails() << std::endl;
     return 0; // Return 0 to indicate success
   }
 

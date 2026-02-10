@@ -20,6 +20,16 @@ public:
     }
     std::shared_ptr<IDevice> getDeviceByName(const std::string& name) const;
 
+    // this template gets a device by name and casts it to the specified type, returns nullptr if the device is not found or cannot be cast to the specified type
+    template<typename T>
+    std::shared_ptr<T> getDevice(const std::string& expectedType, const std::string& name) const {
+        auto device = getDeviceByName(name);
+        if (!device || device->getType() != expectedType) {
+            return nullptr;
+        }
+        return ((T*)device.get())->getShared();
+    }
+
 private:
     std::vector<std::shared_ptr<IDevice>> _devices;
     std::vector<std::shared_ptr<IDeviceFactory>> _factories;

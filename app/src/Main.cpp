@@ -104,14 +104,13 @@ int main() {
   console.registerCommand(std::make_shared<EchoCommand>());
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));
   console.registerCommand(std::make_shared<MemInfoCommand>());
+  
   console.registerCommand(std::make_shared<SetCommand>(variableStore));
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
   console.registerCommand(std::make_shared<EnvCommand>(variableStore, console));
+
   console.registerCommand(std::make_shared<HelpCommand>(console));
-  console.registerCommand(std::make_shared<LedCommand>(pio0, 1));
-  console.registerCommand(std::make_shared<LedCommand>(pio0, 2));
-  console.registerCommand(std::make_shared<LedCommand>(pio0, 3));
-  console.registerCommand(std::make_shared<LedCommand>(pio0, 4));
+  console.registerCommand(std::make_shared<LedCommand>(console));
 
   console.registerCommand(std::make_shared<DirCommand>(console));
   console.registerCommand(std::make_shared<ChangeDirCommand>(console));

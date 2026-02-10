@@ -42,7 +42,7 @@ public:
         std::cout << "Error: No file is currently opened for appending. Use 'store --alloc <size>' to allocate a new content block." << std::endl;
         return -1;
       }
-      bool noNewLine = true;
+      bool newLine = true;
       bool decodeBase64 = false;
       bool decodeHex = false;
       for (size_t i = 2; i < args.size(); ++i) {
@@ -55,7 +55,7 @@ public:
           continue;
         }
         if (args[i] == "-n") {
-          noNewLine = false;
+          newLine = false;
           continue;
         }
         if (decodeBase64) {
@@ -76,7 +76,7 @@ public:
           decodeHex = false;
         } else {
           bool success = false;
-          if(!noNewLine) {
+          if(newLine) {
             success = _currentFile->append(args[i] + "\n");
           }else{
             success = _currentFile->append(args[i]);

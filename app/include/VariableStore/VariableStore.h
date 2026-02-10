@@ -10,6 +10,8 @@
 
 class VariableStore : public IVariableStore {
 public:
+  static VariableStore& getInstance();
+
   std::shared_ptr<IVariable> addVariable(const std::string &key,
                                          const std::string &value) override;
   std::shared_ptr<IVariable> addBoolVariable(const std::string &key,
@@ -40,6 +42,8 @@ public:
 private:
   std::unordered_map<std::string, std::shared_ptr<IVariable>> variables;
   std::unordered_map<std::string, IVariableStore::Callback> callbacks;
+
+  VariableStore() = default;
   
   size_t findVariableEnd(const std::string &input, size_t startPos) const;
 };

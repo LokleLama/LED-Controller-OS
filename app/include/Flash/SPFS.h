@@ -185,7 +185,7 @@ public:
 
       std::string readAsString() const;
       std::vector<uint8_t> readAsVector() const;
-      std::vector<uint8_t> readBytes(size_t offset, size_t size) const;
+      std::vector<uint8_t> readBytes(size_t offset = 0, size_t size = -1) const;
 
       const uint8_t* getMemoryMappedAddress() const;
 

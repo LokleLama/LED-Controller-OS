@@ -34,6 +34,8 @@
 
 #include "Commands/MakeFilesystemCommand.h"
 
+#include "Commands/DeviceCommand.h"
+
 #include "HLKLogger.h"
 #include "HLKStack/HLKPackageFinder.h"
 #include "HexLogger.h"
@@ -41,7 +43,6 @@
 
 #include "RTC/PicoTime.h"
 
-#include "LED/WS2812.h"
 #include "Mainloop.h"
 
 static void uart_task(void);
@@ -81,8 +82,8 @@ int main() {
   irq_set_enabled(UART0_IRQ, true);
   uart_set_irq_enables(uart0, true, false);
 
-  Mainloop mainloop;
-  VariableStore variableStore;
+  auto& mainloop = Mainloop::getInstance();
+  auto& variableStore = VariableStore::getInstance();
 
   auto fs = std::make_shared<SPFS>();
   auto rootDir = fs->searchFileSystem(SPFS_FLASH_OFFSET, SPFS_FLASH_OFFSET + SPFS_FLASH_SIZE);
@@ -102,14 +103,13 @@ int main() {
   console.registerCommand(std::make_shared<EchoCommand>());
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));
   console.registerCommand(std::make_shared<MemInfoCommand>());
+
   console.registerCommand(std::make_shared<SetCommand>(variableStore));
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
   console.registerCommand(std::make_shared<EnvCommand>(variableStore, console));
+
   console.registerCommand(std::make_shared<HelpCommand>(console));
-  console.registerCommand(std::make_shared<LedCommand>(pio0, 1));
-  console.registerCommand(std::make_shared<LedCommand>(pio0, 2));
-  console.registerCommand(std::make_shared<LedCommand>(pio0, 3));
-  console.registerCommand(std::make_shared<LedCommand>(pio0, 4));
+  console.registerCommand(std::make_shared<LedCommand>(console));
 
   console.registerCommand(std::make_shared<DirCommand>(console));
   console.registerCommand(std::make_shared<ChangeDirCommand>(console));
@@ -125,8 +125,12 @@ int main() {
   console.registerCommand(std::make_shared<MakeFilesystemCommand>(console));
   console.registerCommand(std::make_shared<MemInfoCommand>());
 
+  console.registerCommand(std::make_shared<DeviceCommand>(variableStore));
+
   variableStore.addVariable("init-script", "");
   variableStore.addVariable("?", 0);
+
+  variableStore.addVariable("lastCommand", "");
   
   variableStore.addVariable("uart0.baud", 115200);
   variableStore.addVariable("uart0.format", "8n1");

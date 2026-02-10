@@ -35,8 +35,7 @@ public:
     }
 
     auto stream = file->getInputStream();
-    std::string line;
-    while (std::getline(*stream, line)) {
+    for (std::string line; std::getline(*stream, line);) {
         // Process each line
         _console.EnqueueCommand(line);
     }

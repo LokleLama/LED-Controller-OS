@@ -92,7 +92,7 @@ bool SPFS::File::allocateContenSize(size_t size) {
 }
 
 bool SPFS::File::append(const std::string& data){
-  return append(reinterpret_cast<const uint8_t*>(data.data()), data.length() + 1);
+  return append(reinterpret_cast<const uint8_t*>(data.data()), data.length());
 }
 bool SPFS::File::append(const std::vector<uint8_t>& data){
   return append(data.data(), data.size());

@@ -12,12 +12,16 @@ public:
   const std::string getName() const override { return "store"; }
 
   const std::string getHelp() const override {
-    return "Usage: store <file> [-b64] <content>\n\n"
+    return "Usage: store <file> [-b64] <content>\n"
+           "\n"
            "       store <file> --alloc <size>\n"
-           "       store --append [-n] [-b64] <content>\n"
-           "       store --finish\n\n"
+           "       store --append [-n] [-b64 | -hex] <content>\n"
+           "       store --finish\n"
+           "\n"
            "       Stores content in the specified file\n"
-           "           -b64: when this flag has been set the content is encoded in Base64\n\n";
+           "           -b64: when this flag has been set the content is encoded in Base64\n"
+           "           -hex: when this flag has been set the content is encoded in hexadecimal\n"
+           "\n"
            "           --alloc <size>: allocates a new content block of the specified size (in bytes) for appending data\n"
            "                           after allocation, use --append to add data and --finish to finalize the content block\n"
            "           --append <content>: appends the specified content to the current content block\n"
@@ -40,9 +44,14 @@ public:
       }
       bool newLine = true;
       bool decodeBase64 = false;
+      bool decodeHex = false;
       for (size_t i = 2; i < args.size(); ++i) {
         if (args[i] == "-b64") {
           decodeBase64 = true;
+          continue;
+        }
+        if (args[i] == "-hex") {
+          decodeHex = true;
           continue;
         }
         if (args[i] == "-n") {
@@ -56,6 +65,15 @@ public:
             std::cout << "Error: Unable to append decoded content." << std::endl;
             return -1;
           }
+          decodeBase64 = false;
+        } else if (decodeHex) {
+          std::vector<uint8_t> decoded = Hexadecimal::decode(args[i]);
+          std::string decodedStr(decoded.begin(), decoded.end());
+          if (!_currentFile->append(decodedStr)) {
+            std::cout << "Error: Unable to append decoded content." << std::endl;
+            return -1;
+          }
+          decodeHex = false;
         } else {
           bool success = false;
           if(newLine) {
@@ -116,16 +134,28 @@ public:
     }
     
     bool decodeBase64 = false;
+    bool decodeHex = false;
     for (size_t i = 2; i < args.size(); ++i) {
       if (args[i] == "-b64") {
         decodeBase64 = true;
+        continue;
+      }
+      if (args[i] == "-hex") {
+        decodeHex = true;
         continue;
       }
       if (decodeBase64) {
         auto decoded = Base64::decode(args[i]);
         std::string decodedStr(decoded.begin(), decoded.end());
         file->write(decodedStr);
-      } else {
+        decodeBase64 = false;
+      } else if (decodeHex) {
+        std::vector<uint8_t> decoded = Hexadecimal::decode(args[i]);
+        std::string decodedStr(decoded.begin(), decoded.end());
+        file->write(decodedStr);
+        decodeHex = false;
+      }
+      else {
         file->write(args[i]);
       }
     }

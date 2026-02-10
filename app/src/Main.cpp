@@ -43,7 +43,6 @@
 
 #include "RTC/PicoTime.h"
 
-#include "LED/WS2812.h"
 #include "Mainloop.h"
 
 static void uart_task(void);
@@ -104,7 +103,7 @@ int main() {
   console.registerCommand(std::make_shared<EchoCommand>());
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));
   console.registerCommand(std::make_shared<MemInfoCommand>());
-  
+
   console.registerCommand(std::make_shared<SetCommand>(variableStore));
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
   console.registerCommand(std::make_shared<EnvCommand>(variableStore, console));

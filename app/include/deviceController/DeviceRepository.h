@@ -27,7 +27,7 @@ public:
         if (!device || device->getType() != expectedType) {
             return nullptr;
         }
-        return ((T*)device.get())->getShared();
+        return reinterpret_cast<T*>(device.get())->getShared();
     }
 
 private:

@@ -28,7 +28,7 @@ public:
       return -1; // Return -1 to indicate failure
     }
 
-    auto device = DeviceRepository::getInstance().getDevice<WS2812Device>("WS2812", args[1]);
+    auto device = DeviceRepository::getInstance().getDevice<WS2812>("WS2812", args[1]);
     if (!device) {
       std::cout << "Device not found: " << args[1] << std::endl;
       return -1; // Return -1 to indicate failure

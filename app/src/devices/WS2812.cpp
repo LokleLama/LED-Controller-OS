@@ -10,9 +10,9 @@
 #include <iostream>
 #include <vector>
 
-int WS2812Device::_program_offset_pio[2] = {-1, -1};
+int WS2812::_program_offset_pio[2] = {-1, -1};
 
-WS2812Device::WS2812Device(std::shared_ptr<PIODevice> pio, uint pin, uint num_leds, uint bits_per_pixel,
+WS2812::WS2812(std::shared_ptr<PIODevice> pio, uint pin, uint num_leds, uint bits_per_pixel,
          float freq, const std::string& name)
     : _pio(pio), _pin(pin), _num_leds(num_leds),
       _bits_per_pixel(bits_per_pixel), _name(name) {
@@ -44,13 +44,13 @@ WS2812Device::WS2812Device(std::shared_ptr<PIODevice> pio, uint pin, uint num_le
   _status = DeviceStatus::Initialized;
 }
 
-const std::string WS2812Device::getDetails() const {
+const std::string WS2812::getDetails() const {
   return "WS2812 LED strip on pin " + std::to_string(_pin) + 
          " with " + std::to_string(_num_leds) + " LEDs (" + 
          std::to_string(_bits_per_pixel) + " bits/pixel)";
 }
 
-bool WS2812Device::setPattern(const uint32_t* data, size_t count) {
+bool WS2812::setPattern(const uint32_t* data, size_t count) {
   if (count < _num_leds) {
     return false; 
   }

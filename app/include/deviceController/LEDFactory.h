@@ -35,8 +35,8 @@ public:
             return nullptr;
         }
         std::string pio_device_name = params[0];
-        auto pio_device = DeviceRepository::getInstance().getDeviceByName(pio_device_name);
-        if (!pio_device || pio_device->getStatus() != IDevice::DeviceStatus::Initialized || pio_device->getType() != "PIO") {
+        auto pio_device = DeviceRepository::getInstance().getDevice<PIODevice>("PIO", pio_device_name);
+        if (!pio_device || pio_device->getStatus() != IDevice::DeviceStatus::Initialized) {
             std::cout << "Invalid PIO device: " << pio_device_name << std::endl;
             return nullptr;
         }
@@ -57,7 +57,7 @@ public:
             device_name = "WS2812." + std::to_string(_number);
         }
         _number++;
-        auto led_device = std::make_shared<WS2812Device>(((PIODevice*)pio_device.get())->getShared(), pin, num_leds, bits_per_pixel, frequency, device_name);
+        auto led_device = std::make_shared<WS2812>(pio_device, pin, num_leds, bits_per_pixel, frequency, device_name);
         if (led_device->getStatus() != IDevice::DeviceStatus::Initialized) {
             std::cout << "Failed to initialize LED device: " << device_name << std::endl;
             return nullptr;

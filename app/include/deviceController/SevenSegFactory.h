@@ -4,6 +4,8 @@
 #include "devices/WS2812.h"
 #include "devices/SevenSeg.h"
 
+#include "VariableStore/VariableStore.h"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -21,9 +23,10 @@ public:
         return names;
     }
     const std::string& getParameterInfo() const override{
-        static std::string empty = "<WS2812DeviceName> [name]\n"
+        static std::string empty = "<WS2812DeviceName> [name] [start value]\n"
                                    "  WS2812DeviceName:  Name of the WS2812 device to use (e.g.: WS2812.0)\n"
-                                   "  name:              Optional unique name for the device (default: auto-generated)";
+                                   "  name:              Optional unique name for the device (default: auto-generated)\n"
+                                   "  start value:       Optional initial value for the 7-segment display (default: 00.00)";
         return empty;
     }
     std::shared_ptr<IDevice> createDevice(const std::string& name, const std::vector<std::string>& params) override {
@@ -41,8 +44,12 @@ public:
         } else {
             device_name = "7Seg." + std::to_string(_number);
         }
+        std::string start_value = "00.00";
+        if (params.size() >= 3) {
+            start_value = params[2];
+        }
         _number++;
-        auto seven_seg_device = std::make_shared<SevenSeg>(ws2812_device, device_name);
+        auto seven_seg_device = std::make_shared<SevenSeg>(ws2812_device, device_name, start_value);
         if (seven_seg_device->getStatus() != IDevice::DeviceStatus::Initialized) {
             std::cout << "Failed to initialize 7Seg device: " << device_name << std::endl;
             return nullptr;
@@ -51,9 +58,30 @@ public:
             std::cout << "Failed to assign WS2812 device to 7Seg device: " << device_name << std::endl;
             return nullptr;
         }
+        if(!setupVariable(seven_seg_device, start_value)){
+            std::cout << "Failed to setup variable for 7Seg device: " << device_name << std::endl;
+        }
         return seven_seg_device;
     }
 
 private:
     uint8_t _number = 0;
+
+    bool setupVariable(std::shared_ptr<SevenSeg> device, const std::string& defaultValue){
+        auto& variableStore = VariableStore::getInstance();
+
+        variableStore.addVariable(device->getName() + ".value", defaultValue);
+        variableStore.registerCallback(device->getName() + ".value", [device](const std::string& key, const std::string& value) {
+            device->setValue(value);
+            return true;
+        });
+
+        variableStore.addVariable(device->getName() + ".color", 0x03030303);
+        variableStore.registerCallback(device->getName() + ".color", [device](const std::string& key, const std::string& value) {
+            device->setColor(std::stoul(value, nullptr, 0));
+            return true;
+        });
+
+        return true;
+    }
 };

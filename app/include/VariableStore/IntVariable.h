@@ -34,7 +34,7 @@ public:
 
   // Set the value
   bool set(const std::string &value) override {
-    value_ = std::stoi(value, nullptr, 10);
+    value_ = std::stoi(value, nullptr, 0);
     return true;
   }
   bool set(float value) override {

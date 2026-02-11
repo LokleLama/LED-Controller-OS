@@ -4,11 +4,11 @@
 #include <iostream>
 #include <vector>
 
-SevenSeg::SevenSeg(std::shared_ptr<WS2812> led, const std::string& name)
+SevenSeg::SevenSeg(std::shared_ptr<WS2812> led, const std::string& name, const std::string& start)
     : _led(led), _name(name) {
 
-  _color = 0x01020304;
-  setValue("01.23");
+  _color = 0x03030303;
+  setValue(start);
 
   _status = DeviceStatus::Initialized;
 }
@@ -28,9 +28,9 @@ void SevenSeg::setValue(const std::string& value){
 
     // Handle the dot/double dot/blank in the middle
   if (value[2] == '.') {
-    *ledPtr = 0x00000000;
-    ledPtr++;
     *ledPtr = _color;
+    ledPtr++;
+    *ledPtr = 0x00000000;
     ledPtr++;
   } else if (value[2] == ':') {
     *ledPtr = _color;

@@ -15,7 +15,7 @@ public:
 
   // Executes the command
   int execute(const std::vector<std::string> &args) override {
-    std::cout << "Software Version: 1.0.0" << std::endl;
+    std::cout << "Software Version: 2.1.0" << std::endl;
     return 0; // Return 0 to indicate success
   }
 };

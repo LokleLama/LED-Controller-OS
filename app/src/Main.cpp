@@ -36,6 +36,8 @@
 
 #include "Commands/DeviceCommand.h"
 
+#include "Commands/StartCommand.h"
+
 #include "HLKLogger.h"
 #include "HLKStack/HLKPackageFinder.h"
 #include "HexLogger.h"
@@ -126,6 +128,8 @@ int main() {
   console.registerCommand(std::make_shared<MemInfoCommand>());
 
   console.registerCommand(std::make_shared<DeviceCommand>(variableStore));
+
+  console.registerCommand(std::make_shared<StartCommand>(picoTime));
 
   variableStore.addVariable("init-script", "");
   variableStore.addVariable("?", 0);

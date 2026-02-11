@@ -18,7 +18,7 @@ const std::string SevenSeg::getDetails() const {
 }
 
 void SevenSeg::setValue(const std::string& value){
-  if (value.length() != 5) {
+  if (value.length() < 5) {
     std::cerr << "Invalid value length for 7-segment display: " << value << std::endl;
     return;
   }

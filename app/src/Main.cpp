@@ -11,6 +11,8 @@
 
 #include "VariableStore/VariableStore.h"
 
+#include "Commands/BootCommand.h"
+
 #include "Commands/EchoCommand.h"
 #include "Commands/EnvCommand.h"
 #include "Commands/GetCommand.h"
@@ -101,6 +103,8 @@ int main() {
 
   picoTime = std::make_shared<PicoTime>();
 
+  console.registerCommand(std::make_shared<BootCommand>());
+  
   console.registerCommand(std::make_shared<VersionCommand>());
   console.registerCommand(std::make_shared<EchoCommand>());
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));

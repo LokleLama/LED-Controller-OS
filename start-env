@@ -3,12 +3,12 @@
 ENVFILE='.pico_env'
 BUILD_DIR='build.arm'
 
-
 cat << EOF > $ENVFILE
 
 . ~/.bashrc
 
 export PICO_SDK_PATH=~/pico-sdk
+export PS1="(pico-env) $PS1"
 
 mkdir -p $BUILD_DIR
 cd $BUILD_DIR

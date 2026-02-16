@@ -37,8 +37,9 @@
 #include "Commands/MakeFilesystemCommand.h"
 
 #include "Commands/DeviceCommand.h"
+#include "Commands/TaskCommand.h"
 
-#include "Commands/StartCommand.h"
+#include "BackgroundTasks/StartCommand.h"
 
 #include "HLKLogger.h"
 #include "HLKStack/HLKPackageFinder.h"
@@ -134,6 +135,7 @@ int main() {
   console.registerCommand(std::make_shared<DeviceCommand>(variableStore));
 
   console.registerCommand(std::make_shared<StartCommand>(picoTime));
+  console.registerCommand(std::make_shared<TaskCommand>());
 
   variableStore.addVariable("init-script", "");
   variableStore.addVariable("?", 0);
@@ -195,12 +197,12 @@ int main() {
   console.EnqueueCommand("env load");
   console.EnqueueCommand("exec ${init-script}");
 
-  mainloop.registerRegularTask([&]() {
+  mainloop.registerRegularTask("Tiny USB Task", [&]() {
     tud_task(); // TinyUSB task
     return true;
   });
   mainloop.registerRegularTask(&console); // Console task
-  mainloop.registerRegularTask([&]() {
+  mainloop.registerRegularTask("UART Task", [&]() {
     uart_task(); // UART task
     return true;
   });

@@ -4,43 +4,61 @@
 #include <iostream>
 
 #include "Mainloop.h"
+#include "ITask.h"
 #include "RTC/PicoTime.h"
 #include "VariableStore/VariableStore.h"
 
-class TimeTask {
+class TimeTask : public ITask {
 public:
   TimeTask(const std::string& variableName, std::shared_ptr<PicoTime> picoTime) : _timeVariable(variableName), _picoTime(picoTime) {
     std::tm timeInfo = _picoTime->getTimeInfo();
     _lastSetTime = timeInfo;
+    _taskRunning = true;
+    _timeout = 70;
     setTimeToVariable();
-    Mainloop::getInstance().registerTimedTask([this]() { return setterTask(); }, 1000);
+    Mainloop::getInstance().registerTimedTask(this, 1000);
   }
 
   void stop() {
     _taskRunning = false;
   }
 
-private:
-  std::string _timeVariable;
-  std::shared_ptr<PicoTime> _picoTime;
-  bool _taskRunning = true;
-  std::tm _lastSetTime;
-
-  bool setterTask(){
+  bool ExecuteTask() override {
     // Here you would add logic to set the specified variable to the current time every minute.
     // For demonstration purposes, we'll just print the current time.
     std::tm timeInfo = _picoTime->getTimeInfo();
-    if(timeInfo.tm_min == _lastSetTime.tm_min){
+    if(timeInfo.tm_min == _lastSetTime.tm_min && _timeout > 0){
+      _timeout--;
       return _taskRunning; // Only update once per minute
     }
     _lastSetTime = timeInfo;
+    if(_timeout <= 0){
+      std::cout << "Warning: Time Task had a timeout!\n";
+    }
+    _timeout = 70;
     setTimeToVariable();
     return _taskRunning;
   }
 
+  std::string getName() const override {
+    return "Time Display Task";
+  }
+
+private:
+  std::string _timeVariable;
+  std::shared_ptr<PicoTime> _picoTime;
+  bool _taskRunning;
+  int _timeout;
+  std::tm _lastSetTime;
+
   void setTimeToVariable(){
     std::string buffer(10, '\0');
     std::strftime(buffer.data(), buffer.size(), "%H:%M", &_lastSetTime);
+
+    if(buffer[0] == '0'){
+      buffer[0] = ' ';
+    }
+
     VariableStore::getInstance().setVariable(_timeVariable, buffer);
   }
 };

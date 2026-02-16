@@ -156,7 +156,7 @@ size_t VariableStore::findVariableEnd(const std::string &input,
   size_t pos = startPos;
   while (pos < input.length()) {
     char c = input[pos];
-    if (std::isspace(c) || std::ispunct(c)) {
+    if (std::iscntrl(c) || c == ' ' || c == '$') {
       break;
     }
     pos++;

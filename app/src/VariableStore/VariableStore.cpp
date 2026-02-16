@@ -180,7 +180,7 @@ std::string VariableStore::findAndReplaceVariables(const std::string &input) con
     std::string varName = result.substr(pos + 2, endPos - pos - 2);
     auto var = getVariable(varName);
     if(var){
-      std::string varValue = "\"" + var->asString() + "\"";
+      std::string varValue = "\"" + var->asValueString() + "\"";
       result.replace(pos, endPos - pos + 1, varValue);
       pos += varValue.length(); // Move past the replaced value
     }else{
@@ -198,7 +198,7 @@ std::string VariableStore::findAndReplaceVariables(const std::string &input) con
     std::string varName = result.substr(pos + 1, endPos - pos - 1);
     auto var = getVariable(varName);
     if(var){
-      std::string varValue = var->asString();
+      std::string varValue = var->asValueString();
       result.replace(pos, endPos - pos, varValue);
       pos += varValue.length(); // Move past the replaced value
     }else{

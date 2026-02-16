@@ -139,8 +139,6 @@ int main() {
 
   variableStore.addVariable("init-script", "");
   variableStore.addVariable("?", 0);
-
-  variableStore.addVariable("lastCommand", "");
   
   variableStore.addVariable("uart0.baud", 115200);
   variableStore.addVariable("uart0.format", "8n1");

@@ -13,6 +13,7 @@ public:
 
   // Convert to string
   virtual std::string asString() const = 0;
+  virtual std::string asValueString() const { return asString(); }
 
   // Convert to float
   virtual float asFloat() const = 0;

@@ -2,7 +2,16 @@
 
 #include "devices/IDevice.h"
 
-class IDisplayDevice : public IDevice, public IDeviceUser {
+#include <string>
+#include <cstdint>
+
+class IDisplayDevice : public IDevice {
 public:
     virtual void setValue(const std::string& value) = 0;
+    virtual void setColor(uint32_t color){
+        _color = color;
+    }
+
+protected:
+    uint32_t _color;
 };

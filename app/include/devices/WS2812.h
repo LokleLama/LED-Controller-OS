@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-class WS2812 : public IDevice, public IDeviceUser, public std::enable_shared_from_this<WS2812> {
+class WS2812 : public IDevice, public std::enable_shared_from_this<WS2812> {
 public:
   WS2812(std::shared_ptr<PIODevice> pio, uint pin, uint num_leds, uint bits_per_pixel = 24,
          float freq = 800000, const std::string& name = "WS2812");

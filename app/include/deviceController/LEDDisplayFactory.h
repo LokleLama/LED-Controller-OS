@@ -53,15 +53,11 @@ public:
 
         std::shared_ptr<IDisplayDevice> new_display_device;
         if(name == "7Seg") {
-            auto seven_seg_device = std::make_shared<SevenSeg>(ws2812_device, device_name, start_value);
-            if (seven_seg_device->getStatus() != IDevice::DeviceStatus::Initialized) {
+            new_display_device = std::make_shared<SevenSeg>(ws2812_device, device_name, start_value);
+            if (new_display_device->getStatus() != IDevice::DeviceStatus::Initialized) {
                 std::cout << "Failed to initialize 7Seg device: " << device_name << std::endl;
                 return nullptr;
             }
-            if(!setupVariable(seven_seg_device, start_value)){
-                std::cout << "Failed to setup variable for 7Seg device: " << device_name << std::endl;
-            }
-            new_display_device = seven_seg_device;
         }else if(name == "dotMatrix5x5"){
             new_display_device = std::make_shared<dotMatrix5x5>(ws2812_device, device_name, start_value);
             if (new_display_device->getStatus() != IDevice::DeviceStatus::Initialized) {
@@ -77,13 +73,17 @@ public:
             std::cout << "Failed to assign WS2812 device to " << name << " device: " << device_name << std::endl;
             return nullptr;
         }
+        
+        if(!setupVariable(new_display_device, start_value)){
+            std::cout << "Failed to setup variable for " << name << " device: " << device_name << std::endl;
+        }
         return new_display_device;
     }
 
 private:
     uint8_t _number = 0;
 
-    bool setupVariable(std::shared_ptr<SevenSeg> device, const std::string& defaultValue){
+    bool setupVariable(std::shared_ptr<IDisplayDevice> device, const std::string& defaultValue){
         auto& variableStore = VariableStore::getInstance();
 
         variableStore.addVariable(device->getName() + ".value", defaultValue);

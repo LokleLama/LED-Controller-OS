@@ -27,9 +27,6 @@ public:
   /// "12 34" will display "12 34"
   /// Returns true if the value was set successfully, false if the value was invalid or if the device is not ready
   void setValue(const std::string& value) override;
-  void setColor(uint32_t color){
-    _color = color;
-  }
 
   std::shared_ptr<SevenSeg> getShared() {
       return shared_from_this();

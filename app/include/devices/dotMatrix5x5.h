@@ -21,9 +21,6 @@ public:
   const std::string getDetails() const override;
 
   void setValue(const std::string& value) override;
-  void setColor(uint32_t color){
-    _color = color;
-  }
   void setScrollingSpeed(int speed);
 
   std::shared_ptr<dotMatrix5x5> getShared() {
@@ -33,7 +30,6 @@ public:
 private:
   std::shared_ptr<WS2812> _led;
   std::string _name;
-  uint32_t _color;
   Mainloop::TaskHandle _scrollingTask;
 
   std::vector<uint32_t> _ledData;

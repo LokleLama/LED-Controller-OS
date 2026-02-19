@@ -59,21 +59,34 @@ bool dotMatrix5x5::scrollText() {
   int endIndex = (_current_offset + 5) / 30;
 
   if(startIndex == endIndex) {
-    int bit_offset = startIndex * 30 - _current_offset;
+    int bit_offset = _current_offset - startIndex * 30;
     for (int col = 0; col < 5; col++) {
       uint32_t columnData = _ledData[startIndex + col * _total_columns] >> bit_offset;
       for (int row = 0; row < 5; row++) {
-        _currentFrame[row * 5 + col] = (columnData & 0x01) ? _color : 0x00000000;
+        _currentFrame[row + col * 5] = (columnData & 0x01) ? _color : 0x00000000;
         columnData >>= 1;
       }
     }
   }else{
-    
+    // Handle the case where the text spans across two columns
+    int bit_offset_start = _current_offset - startIndex * 30;
+    int bit_offset_end = 30 - bit_offset_start;
+
+    for (int col = 0; col < 5; col++) {
+      uint32_t columnDataStart = _ledData[startIndex + col * _total_columns] >> bit_offset_start;
+      uint32_t columnDataEnd = _ledData[endIndex + col * _total_columns] << bit_offset_end;
+      uint32_t columnData = columnDataStart | columnDataEnd;
+
+      for (int row = 0; row < 5; row++) {
+        _currentFrame[row + col * 5] = (columnData & 0x01) ? _color : 0x00000000;
+        columnData >>= 1;
+      }
+    }
   }
 
   _led->setPattern(_currentFrame);
   _current_offset++;
-  if (_current_offset >= _bit_vector_length) {
+  if ((_current_offset + 5) >= _bit_vector_length) {
     _current_offset = 0; // Loop back to the beginning
   }
   return true;

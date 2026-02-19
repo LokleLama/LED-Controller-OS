@@ -1,6 +1,6 @@
 #pragma once
 
-#include "devices/IDevice.h"
+#include "devices/IDisplayDevice.h"
 #include "devices/WS2812.h"
 
 #include <cstdint>
@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-class SevenSeg : public IDevice, public IDeviceUser, public std::enable_shared_from_this<SevenSeg> {
+class SevenSeg : public IDisplayDevice, public std::enable_shared_from_this<SevenSeg> {
 public:
   SevenSeg(std::shared_ptr<WS2812> led, const std::string& name = "7Seg", const std::string& start = "00.00");
 
@@ -26,7 +26,7 @@ public:
   /// "12:34" will display "12:34"
   /// "12 34" will display "12 34"
   /// Returns true if the value was set successfully, false if the value was invalid or if the device is not ready
-  void setValue(const std::string& value);
+  void setValue(const std::string& value) override;
   void setColor(uint32_t color){
     _color = color;
   }

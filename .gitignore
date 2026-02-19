@@ -13,3 +13,4 @@ github-id
 *.d
 fs-test/obj/
 fs-test/fs-test
+MatrixChar-test/matrix-text

@@ -2,7 +2,7 @@
 
 #include "deviceController/PIOFactory.h"
 #include "deviceController/LEDFactory.h"
-#include "deviceController/SevenSegFactory.h"
+#include "deviceController/LEDDisplayFactory.h"
 
 #include <algorithm>
 
@@ -14,7 +14,7 @@ DeviceRepository& DeviceRepository::getInstance() {
 DeviceRepository::DeviceRepository(){
     _factories.push_back(std::make_shared<PIOFactory>());
     _factories.push_back(std::make_shared<LEDFactory>());
-    _factories.push_back(std::make_shared<SevenSegFactory>());
+    _factories.push_back(std::make_shared<LEDDisplayFactory>());
 }
 
 const std::vector<std::string> DeviceRepository::getAvailableDeviceNames(IDeviceFactory::Category category) const{

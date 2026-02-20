@@ -8,7 +8,7 @@ dotMatrix5x5::dotMatrix5x5(std::shared_ptr<WS2812> led, const std::string& name,
     : _led(led), _name(name) {
 
   _color = 0x03030303;
-  setValue("Hello :)");
+  setValue(start);
 
   _currentFrame.resize(25, 0); // 5x5 matrix = 25 LEDs
 
@@ -27,20 +27,32 @@ void dotMatrix5x5::setValue(const std::string& value){
     return;
   }
 
-  _bit_vector_length = (value.length() + 2) * 6; // Each character is 5 columns wide + 1 spacer column
+  _bit_vector_length = (value.length() + 1) * 6; // Each character is 5 columns wide + 1 spacer column
   _current_offset = 0; // Start at the beginning of the LED data
 
   _total_columns = ((_bit_vector_length + 29) / 30);
 
   _ledData.resize(_total_columns * 5, 0); // Initialize all LEDs to off
+  memset(_ledData.data(), 0, _ledData.size() * sizeof(uint32_t)); // Clear the LED data
 
   const char* str = value.c_str();
   for (size_t i = 0; i < value.length(); i++) {
-    int data_index = (i + 1) / 5;
-    int bit_offset = ((i + 1) - (data_index * 5)) * 6;
+    int data_index = i / 5;
+    int bit_offset = (i - (data_index * 5)) * 6;
 
     const uint8_t* charData = MatricChar5x5::getChar(str[i]);
+    for (int col = 0; col < 5; col++) {
+      uint32_t columnData = charData[col];
+      columnData = (columnData & 0x1F) << bit_offset; // Shift to correct position in the LED data
 
+      _ledData[data_index + col * _total_columns] |= columnData; // Combine with existing data for this column
+    }
+  }
+  {
+    int data_index = value.length() / 5;
+    int bit_offset = (value.length() - (data_index * 5)) * 6;
+
+    const uint8_t* charData = MatricChar5x5::getChar(str[0]);
     for (int col = 0; col < 5; col++) {
       uint32_t columnData = charData[col];
       columnData = (columnData & 0x1F) << bit_offset; // Shift to correct position in the LED data
@@ -86,7 +98,7 @@ bool dotMatrix5x5::scrollText() {
 
   _led->setPattern(_currentFrame);
   _current_offset++;
-  if ((_current_offset + 5) >= _bit_vector_length) {
+  if ((_current_offset + 6) >= _bit_vector_length) {
     _current_offset = 0; // Loop back to the beginning
   }
   return true;

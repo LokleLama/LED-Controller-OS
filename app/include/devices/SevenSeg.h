@@ -10,7 +10,7 @@
 
 class SevenSeg : public IDisplayDevice, public std::enable_shared_from_this<SevenSeg> {
 public:
-  SevenSeg(std::shared_ptr<WS2812> led, const std::string& name = "7Seg", const std::string& start = "00.00");
+  SevenSeg(std::shared_ptr<WS2812> led, const std::string& name = "7Seg", const std::string& start = "00.00", uint32_t color = 0x03030303);
 
   const std::string getName() const override { return _name; }
   const std::string getType() const override { return "7Seg"; }

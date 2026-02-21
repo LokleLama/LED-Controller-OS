@@ -4,10 +4,9 @@
 #include <iostream>
 #include <vector>
 
-SevenSeg::SevenSeg(std::shared_ptr<WS2812> led, const std::string& name, const std::string& start)
-    : _led(led), _name(name) {
+SevenSeg::SevenSeg(std::shared_ptr<WS2812> led, const std::string& name, const std::string& start, uint32_t color)
+    : IDisplayDevice(color), _led(led), _name(name) {
 
-  _color = 0x03030303;
   setValue(start);
 
   _status = DeviceStatus::Initialized;

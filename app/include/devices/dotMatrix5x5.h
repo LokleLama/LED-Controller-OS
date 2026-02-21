@@ -14,7 +14,7 @@
 
 class dotMatrix5x5 : public IDisplayDevice, public std::enable_shared_from_this<dotMatrix5x5> {
 public:
-  dotMatrix5x5(std::shared_ptr<WS2812> led, const std::string& name = "dotMatrix5x5", const std::string& start = " ");
+  dotMatrix5x5(std::shared_ptr<WS2812> led, const std::string& name = "dotMatrix5x5", const std::string& start = " ", uint32_t color = 0x03030303);
 
   const std::string getName() const override { return _name; }
   const std::string getType() const override { return "dotMatrix5x5"; }

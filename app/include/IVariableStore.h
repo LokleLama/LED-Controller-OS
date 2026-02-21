@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <cstdint>
 
 #include "Flash/SPFS.h"
 
@@ -24,12 +25,18 @@ public:
   virtual std::shared_ptr<IVariable> addVariable(const std::string &key,
                                                  int value) = 0;
   virtual std::shared_ptr<IVariable> addVariable(const std::string &key,
+                                                 unsigned int value) = 0;
+  virtual std::shared_ptr<IVariable> addVariable(const std::string &key,
+                                                 uint32_t value) = 0;
+  virtual std::shared_ptr<IVariable> addVariable(const std::string &key,
                                                  float value) = 0;
 
   virtual bool setVariable(const std::string &key,
                            const std::string &value) = 0;
   virtual bool setBoolVariable(const std::string &key, bool value) = 0;
   virtual bool setVariable(const std::string &key, int value) = 0;
+  virtual bool setVariable(const std::string &key, unsigned int value) = 0;
+  virtual bool setVariable(const std::string &key, uint32_t value) = 0;
   virtual bool setVariable(const std::string &key, float value) = 0;
 
   virtual std::shared_ptr<IVariable>

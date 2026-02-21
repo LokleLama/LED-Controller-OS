@@ -70,6 +70,14 @@ bool VariableStore::setVariable(const std::string &key, int value) {
   return false;
 }
 
+bool VariableStore::setVariable(const std::string &key, unsigned int value) {
+  return setVariable(key, static_cast<int>(value));
+}
+
+bool VariableStore::setVariable(const std::string &key, uint32_t value) {
+  return setVariable(key, static_cast<int>(value));
+}
+
 std::shared_ptr<IVariable>
 VariableStore::addVariable(const std::string &key, const std::string &value) {
   if (callbacks.find(key) != callbacks.end()) {
@@ -140,6 +148,16 @@ std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
     return variables[key];
   }
   return nullptr;
+}
+
+std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
+                                                      unsigned int value) {
+  return addVariable(key, static_cast<int>(value));
+}
+
+std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
+                                                      uint32_t value) {
+  return addVariable(key, static_cast<int>(value));
 }
 
 std::shared_ptr<IVariable>

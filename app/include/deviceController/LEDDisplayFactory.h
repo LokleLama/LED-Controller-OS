@@ -6,6 +6,7 @@
 #include "devices/dotMatrix5x5.h"
 
 #include "VariableStore/VariableStore.h"
+#include "Utils/ValueConverter.h"
 
 #include <memory>
 #include <string>
@@ -55,7 +56,7 @@ public:
         std::shared_ptr<IDisplayDevice> new_display_device;
         uint32_t color = 0x03030303;
         if (params.size() >= 4) {
-            color = std::stoul(params[3], nullptr, 0);
+            color = ValueConverter::toInt(params[3]);
         }
         if(name == "7Seg") {
             new_display_device = std::make_shared<SevenSeg>(ws2812_device, device_name, start_value, color);

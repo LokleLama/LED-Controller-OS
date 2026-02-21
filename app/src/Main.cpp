@@ -11,6 +11,8 @@
 
 #include "VariableStore/VariableStore.h"
 
+#include "Commands/BootCommand.h"
+
 #include "Commands/EchoCommand.h"
 #include "Commands/EnvCommand.h"
 #include "Commands/GetCommand.h"
@@ -35,6 +37,9 @@
 #include "Commands/MakeFilesystemCommand.h"
 
 #include "Commands/DeviceCommand.h"
+#include "Commands/TaskCommand.h"
+
+#include "BackgroundTasks/StartCommand.h"
 
 #include "HLKLogger.h"
 #include "HLKStack/HLKPackageFinder.h"
@@ -99,6 +104,8 @@ int main() {
 
   picoTime = std::make_shared<PicoTime>();
 
+  console.registerCommand(std::make_shared<BootCommand>());
+  
   console.registerCommand(std::make_shared<VersionCommand>());
   console.registerCommand(std::make_shared<EchoCommand>());
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));
@@ -127,10 +134,11 @@ int main() {
 
   console.registerCommand(std::make_shared<DeviceCommand>(variableStore));
 
+  console.registerCommand(std::make_shared<StartCommand>(picoTime));
+  console.registerCommand(std::make_shared<TaskCommand>());
+
   variableStore.addVariable("init-script", "");
   variableStore.addVariable("?", 0);
-
-  variableStore.addVariable("lastCommand", "");
   
   variableStore.addVariable("uart0.baud", 115200);
   variableStore.addVariable("uart0.format", "8n1");
@@ -187,12 +195,12 @@ int main() {
   console.EnqueueCommand("env load");
   console.EnqueueCommand("exec ${init-script}");
 
-  mainloop.registerRegularTask([&]() {
+  mainloop.registerRegularTask("Tiny USB Task", [&]() {
     tud_task(); // TinyUSB task
     return true;
   });
   mainloop.registerRegularTask(&console); // Console task
-  mainloop.registerRegularTask([&]() {
+  mainloop.registerRegularTask("UART Task", [&]() {
     uart_task(); // UART task
     return true;
   });

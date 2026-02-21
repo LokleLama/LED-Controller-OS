@@ -43,6 +43,9 @@ bool PIODevice::setProgramOffset(int offset) {
 }
 
 bool PIODevice::useDMA(uint transfer_count, dma_channel_transfer_size_t size) {
+    if(_dma_channel >= 0) {
+        return false; // DMA already in use
+    }
     // Claim a DMA channel
     _dma_channel = dma_claim_unused_channel(false);
     if(_dma_channel < 0) {

@@ -20,6 +20,10 @@ public:
   std::shared_ptr<ICommand> findCommand(const std::string &name) const;
 
   bool ExecuteTask() override;
+  std::string getName() const override {
+    return "ConsoleTask";
+  }
+  
   void Stop() { running = false; }
 
   const std::shared_ptr<SPFS>& getFileSystem() const { return _fs; }

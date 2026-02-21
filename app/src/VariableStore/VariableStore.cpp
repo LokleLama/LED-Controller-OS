@@ -70,6 +70,14 @@ bool VariableStore::setVariable(const std::string &key, int value) {
   return false;
 }
 
+bool VariableStore::setVariable(const std::string &key, unsigned int value) {
+  return setVariable(key, static_cast<int>(value));
+}
+
+bool VariableStore::setVariable(const std::string &key, uint32_t value) {
+  return setVariable(key, static_cast<int>(value));
+}
+
 std::shared_ptr<IVariable>
 VariableStore::addVariable(const std::string &key, const std::string &value) {
   if (callbacks.find(key) != callbacks.end()) {
@@ -142,6 +150,16 @@ std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
   return nullptr;
 }
 
+std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
+                                                      unsigned int value) {
+  return addVariable(key, static_cast<int>(value));
+}
+
+std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
+                                                      uint32_t value) {
+  return addVariable(key, static_cast<int>(value));
+}
+
 std::shared_ptr<IVariable>
 VariableStore::getVariable(const std::string &key) const {
   auto it = variables.find(key);
@@ -156,7 +174,7 @@ size_t VariableStore::findVariableEnd(const std::string &input,
   size_t pos = startPos;
   while (pos < input.length()) {
     char c = input[pos];
-    if (std::isspace(c) || std::ispunct(c)) {
+    if (std::iscntrl(c) || c == ' ' || c == '$') {
       break;
     }
     pos++;
@@ -180,7 +198,7 @@ std::string VariableStore::findAndReplaceVariables(const std::string &input) con
     std::string varName = result.substr(pos + 2, endPos - pos - 2);
     auto var = getVariable(varName);
     if(var){
-      std::string varValue = "\"" + var->asString() + "\"";
+      std::string varValue = "\"" + var->asValueString() + "\"";
       result.replace(pos, endPos - pos + 1, varValue);
       pos += varValue.length(); // Move past the replaced value
     }else{
@@ -198,7 +216,7 @@ std::string VariableStore::findAndReplaceVariables(const std::string &input) con
     std::string varName = result.substr(pos + 1, endPos - pos - 1);
     auto var = getVariable(varName);
     if(var){
-      std::string varValue = var->asString();
+      std::string varValue = var->asValueString();
       result.replace(pos, endPos - pos, varValue);
       pos += varValue.length(); // Move past the replaced value
     }else{

@@ -27,6 +27,11 @@ public:
   std::shared_ptr<ICommand> findCommand(const std::string &name) const;
 
   bool ExecuteTask() override;
+
+  std::string getName() const override {
+    return "Console Task";
+  }
+
   bool EnqueueCommand(const std::string &command) {
     commandQueue.push(command);
     return true;

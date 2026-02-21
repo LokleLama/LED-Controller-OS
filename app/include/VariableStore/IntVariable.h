@@ -2,26 +2,33 @@
 
 #include <stdexcept>
 #include <string>
-#include <variant>
 
 #include "VariableStore/IVariable.h"
+#include "Utils/ValueConverter.h"
 
 class IntVariable : public IVariable {
 public:
   // Constructor
-  IntVariable(int value) : value_(value) {}
+  IntVariable(int value, IntegerStringFormat format = IntegerStringFormat::DECIMAL) : value_(value), format_(format) {}
 
-  IntVariable(const IntVariable &other) : value_(other.value_) {}
-  IntVariable(IntVariable &&other) noexcept : value_(std::move(other.value_)) {}
+  IntVariable(const IntVariable &other) : value_(other.value_), format_(other.format_) {}
+  IntVariable(IntVariable &&other) noexcept : value_(std::move(other.value_)), format_(std::move(other.format_)) {}
   IntVariable &operator=(const IntVariable &other) {
     if (this != &other) {
       value_ = other.value_;
+      format_ = other.format_;
     }
     return *this;
   }
 
   // Convert to string
-  std::string asString() const override { return std::to_string(value_); }
+  std::string asString() const override {
+    return ValueConverter::toString(value_, format_);
+  }
+
+  std::string asValueString() const override {
+    return std::to_string(value_);
+  }
 
   // Convert to float
   float asFloat() const override { return static_cast<float>(value_); };
@@ -34,7 +41,7 @@ public:
 
   // Set the value
   bool set(const std::string &value) override {
-    value_ = std::stoi(value, nullptr, 10);
+    value_ = ValueConverter::toInt(value, &format_);
     return true;
   }
   bool set(float value) override {
@@ -55,4 +62,5 @@ public:
 
 private:
   int value_;
+  IntegerStringFormat format_;
 };

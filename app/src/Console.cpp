@@ -39,13 +39,25 @@ bool Console::ExecuteLine(const std::string &line) {
   // Process the command
   std::vector<std::string> tokens;
   std::string token;
+  bool EscapeNext = false;
   bool inQuotes = false;
   char quoteChar = '\0';
   
   for (size_t i = 0; i < processedLine.length(); i++) {
     char c = processedLine[i];
     
-    if (!inQuotes && (c == '"' || c == '\'')) {
+    if (EscapeNext) {
+      if(c == 'n') {
+        token += '\n';
+      } else if(c == 't') {
+        token += '\t';
+      } else {
+        token += c;
+      }
+      EscapeNext = false;
+    } else if (c == '\\' && i + 1 < processedLine.length()){
+      EscapeNext = true;
+    } else if (!inQuotes && (c == '"' || c == '\'')) {
       // Start of quoted string
       inQuotes = true;
       quoteChar = c;

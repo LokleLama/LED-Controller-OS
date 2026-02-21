@@ -4,9 +4,14 @@
 #include <string>
 #include <memory>
 
-class IDeviceUser;
+class IDeviceUser {
+public:
+  virtual ~IDeviceUser() = default;
 
-class IDevice {
+  virtual const std::string getName() const = 0;
+};
+
+class IDevice : public IDeviceUser {
 public:
   enum class DeviceStatus {
     Unknown,
@@ -42,7 +47,6 @@ public:
 
   virtual ~IDevice() = default;
 
-  virtual const std::string getName() const = 0;
   virtual const std::string getType() const = 0;
   virtual DeviceStatus getStatus() const { return _status; };
   virtual const std::string& getStatusString() const{
@@ -63,11 +67,4 @@ public:
 protected:
   std::shared_ptr<IDeviceUser> _user;
   DeviceStatus _status{DeviceStatus::Unknown};
-};
-
-class IDeviceUser {
-public:
-  virtual ~IDeviceUser() = default;
-
-  virtual const std::string getName() const = 0;
 };

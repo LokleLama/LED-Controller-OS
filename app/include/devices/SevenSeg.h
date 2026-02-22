@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-class SevenSeg : public IDisplayDevice, public std::enable_shared_from_this<SevenSeg> {
+class SevenSeg : public ICreateSharedFromThis<SevenSeg>, public IDisplayDevice {
 public:
   SevenSeg(std::shared_ptr<WS2812> led, const std::string& name = "7Seg", const std::string& start = "00.00", uint32_t color = 0x03030303);
 
@@ -27,10 +27,6 @@ public:
   /// "12 34" will display "12 34"
   /// Returns true if the value was set successfully, false if the value was invalid or if the device is not ready
   void setValue(const std::string& value) override;
-
-  std::shared_ptr<SevenSeg> getShared() {
-      return shared_from_this();
-  }
 
 private:
   // 7-segment display lookup table: maps ASCII characters to segment codes

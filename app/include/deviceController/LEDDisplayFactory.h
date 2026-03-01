@@ -100,7 +100,7 @@ private:
 
         variableStore.addVariable(device->getName() + ".color", defaultColor);
         variableStore.registerCallback(device->getName() + ".color", [device](const std::string& key, const std::string& value) {
-            device->setColor(std::stoul(value, nullptr, 0));
+            device->setColor(ValueConverter::toInt(value));
             return true;
         });
 

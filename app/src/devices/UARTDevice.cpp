@@ -36,8 +36,8 @@ bool UARTDevice::setBaudRate(uint baudRate) {
     if (_status != DeviceStatus::Initialized) {
         return false;
     }
-    uart_set_baudrate(_uart, baudRate);
-    _baud_rate = baudRate;
+    uint realrate = uart_set_baudrate(_uart, baudRate);
+    _baud_rate = realrate;
     return true;
 }
 

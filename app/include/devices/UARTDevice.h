@@ -18,6 +18,7 @@ public:
     const std::string getDetails() const override;
 
     bool setBaudRate(uint baudRate);
+    uint getBaudRate() const { return _baud_rate; }
     bool setFormat(int bits, int stopBits, int parity);
 
     int send(const uint8_t* data, size_t length) override;

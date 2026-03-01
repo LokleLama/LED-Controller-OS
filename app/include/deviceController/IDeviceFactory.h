@@ -24,7 +24,7 @@ public:
 public:
     virtual ~IDeviceFactory() = default;
 
-    virtual const Category getCategory() const { return Category::Unknown;}
+    virtual const Category getCategory() const { return Category::Unknown; }
     virtual const std::vector<std::string> getDeviceNames() const = 0;
     virtual const std::string& getParameterInfo() const{
         static std::string empty = "(no parameters)";

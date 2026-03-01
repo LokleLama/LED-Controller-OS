@@ -1,5 +1,6 @@
 #include "deviceController/DeviceRepository.h"
 
+#include "deviceController/UARTFactory.h"
 #include "deviceController/PIOFactory.h"
 #include "deviceController/LEDFactory.h"
 #include "deviceController/LEDDisplayFactory.h"
@@ -15,6 +16,7 @@ DeviceRepository::DeviceRepository(){
     _factories.push_back(std::make_shared<PIOFactory>());
     _factories.push_back(std::make_shared<LEDFactory>());
     _factories.push_back(std::make_shared<LEDDisplayFactory>());
+    _factories.push_back(std::make_shared<UARTFactory>());
 }
 
 const std::vector<std::string> DeviceRepository::getAvailableDeviceNames(IDeviceFactory::Category category) const{

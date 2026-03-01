@@ -86,7 +86,7 @@ arm-none-eabi-size -B -d "$ELF_FILE" | tail -n 1 | awk -v total_flash=$PROGRAM_F
 
 echo ""
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║  Note: Heap size is dynamic and shares space with stack   ║"
-echo "║  Actual heap/stack split depends on runtime usage         ║"
+echo "║  Note: Heap size is dynamic and shares space with stack    ║"
+echo "║  Actual heap/stack split depends on runtime usage          ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""

@@ -45,8 +45,6 @@ public:
     }
   }
 
-  virtual ~IDevice() = default;
-
   virtual const std::string getType() const = 0;
   virtual DeviceStatus getStatus() const { return _status; };
   virtual const std::string& getStatusString() const{

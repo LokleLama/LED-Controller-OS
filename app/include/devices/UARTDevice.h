@@ -22,6 +22,7 @@ public:
     bool setFormat(int bits, int stopBits, int parity);
 
     int send(const uint8_t* data, size_t length) override;
+    int dataAvailable() override;
     int receive(uint8_t* buffer, size_t length) override;
 
 private:

@@ -95,9 +95,9 @@ private:
 
             int parityValue = 0;
             switch (parity) {
-                case 'n': parityValue = 0; break;
-                case 'e': parityValue = 1; break;
-                case 'o': parityValue = 2; break;
+                case 'n': parityValue = UART_PARITY_NONE; break;
+                case 'e': parityValue = UART_PARITY_EVEN; break;
+                case 'o': parityValue = UART_PARITY_ODD; break;
                 default:
                     std::cout << "Invalid format value" << std::endl;
                     return false;

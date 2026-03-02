@@ -28,39 +28,30 @@ UARTDevice::UARTDevice(int uart_number, uint8_t tx_pin, uint8_t rx_pin, uint bau
     gpio_set_function(_tx_pin, GPIO_FUNC_UART);
     gpio_set_function(_rx_pin, GPIO_FUNC_UART);
 
-    uart_init(_uart, _baud_rate);
+    _baud_rate = uart_init(_uart, _baud_rate);
     _status = DeviceStatus::Initialized;
 }
 
 bool UARTDevice::setBaudRate(uint baudRate) {
-    if (_status != DeviceStatus::Initialized) {
-        return false;
-    }
-    uint realrate = uart_set_baudrate(_uart, baudRate);
-    _baud_rate = realrate;
+    _baud_rate = uart_set_baudrate(_uart, baudRate);
     return true;
 }
 
 bool UARTDevice::setFormat(int bits, int stopBits, int parity) {
-    if (_status != DeviceStatus::Initialized) {
-        return false;
-    }
     uart_set_format(_uart, bits, stopBits, (uart_parity_t)parity);
     return true;
 }
 
 int UARTDevice::send(const uint8_t* data, size_t length) {
-    if (_status != DeviceStatus::Initialized) {
-        return -1;
-    }
     uart_write_blocking(_uart, data, length);
     return length;
 }
 
+int UARTDevice::dataAvailable() {
+    return uart_is_readable(_uart) ? 1 : 0;
+}
+
 int UARTDevice::receive(uint8_t* buffer, size_t length) {
-    if (_status != DeviceStatus::Initialized) {
-        return -1;
-    }
     uart_read_blocking(_uart, buffer, length);
     return length;
 }

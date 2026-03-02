@@ -13,17 +13,23 @@ int ValueConverter::toInt(const std::string& str, IntegerStringFormat* format) {
         *format = IntegerStringFormat::OCTAL;
       }
     }
+    long long result = 0;
     switch(*format){
       case IntegerStringFormat::BINARY:
-        return std::stoi(str.substr(2), nullptr, 2);
+        result = std::stoll(str.substr(2), nullptr, 2);
+        break;
       case IntegerStringFormat::OCTAL:
-        return std::stoi(str.substr(2), nullptr, 8);
+        result = std::stoll(str.substr(2), nullptr, 8);
+        break;
       case IntegerStringFormat::HEX:
-        return std::stoi(str.substr(2), nullptr, 16);
+        result = std::stoll(str.substr(2), nullptr, 16);
+        break;
       case IntegerStringFormat::DECIMAL:
       default:
-        return std::stoi(str, nullptr, 10);
+        result = std::stoll(str, nullptr, 10);
+        break;
     }
+    return static_cast<int>(result);
 }
 
 std::string ValueConverter::toString(int value, IntegerStringFormat format) {

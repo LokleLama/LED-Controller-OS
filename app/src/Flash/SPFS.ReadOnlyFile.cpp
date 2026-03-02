@@ -62,12 +62,15 @@ std::vector<uint8_t> SPFS::ReadOnlyFile::readBytes(size_t offset, size_t size) c
   return data_vector;
 }
 
-std::shared_ptr<SPFS::ReadOnlyFile> SPFS::ReadOnlyFile::openVersion(size_t version) const{
-  if(version >= _content_version) {
+std::shared_ptr<const SPFS::ReadOnlyFile> SPFS::ReadOnlyFile::openVersion(size_t version) const{
+  if(version > _content_version) {
     return nullptr;
   }
+  if(version > _content_version) {
+    return shared_from_this();
+  }
   if(version == 0) {
-    return std::make_shared<SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, nullptr, 0);
+    return std::make_shared<const SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, nullptr, 0);
   }
 
   const FileContentHeader* content_header = nullptr;
@@ -83,7 +86,7 @@ std::shared_ptr<SPFS::ReadOnlyFile> SPFS::ReadOnlyFile::openVersion(size_t versi
     }
     next_block = content_header->next_version;
   }
-  return std::make_shared<SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, content_header, version);
+  return std::make_shared<const SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, content_header, version);
 }
 
 std::unique_ptr<std::istream> SPFS::ReadOnlyFile::getInputStream() const {

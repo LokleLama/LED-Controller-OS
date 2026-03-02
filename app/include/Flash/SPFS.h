@@ -158,7 +158,7 @@ public:
     size_t _pos;
   };
 
-  class ReadOnlyFile{
+  class ReadOnlyFile : public std::enable_shared_from_this<ReadOnlyFile>{
     friend class Directory;
 
     protected:
@@ -181,7 +181,7 @@ public:
       
       size_t getVersion() const { return _content_version; }
 
-      std::shared_ptr<ReadOnlyFile> openVersion(size_t version) const;
+      std::shared_ptr<const ReadOnlyFile> openVersion(size_t version) const;
 
       std::string readAsString() const;
       std::vector<uint8_t> readAsVector() const;

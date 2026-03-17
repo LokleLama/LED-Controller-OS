@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "VariableStore/VariableStore.h"
+#include "deviceController/DeviceRepository.h"
 
 #include "Commands/BootCommand.h"
 
@@ -101,6 +102,7 @@ int main() {
   variableStore.addVariable("var.fs_size", SPFS_FLASH_SIZE);
 
   Console console(variableStore, fs);
+  DeviceRepository deviceRepo(console);
 
   picoTime = std::make_shared<PicoTime>();
 
@@ -115,7 +117,7 @@ int main() {
   console.registerCommand(std::make_shared<EnvCommand>(variableStore, console));
 
   console.registerCommand(std::make_shared<HelpCommand>(console));
-  console.registerCommand(std::make_shared<LedCommand>(console));
+  console.registerCommand(std::make_shared<LedCommand>(console, deviceRepo));
 
   console.registerCommand(std::make_shared<DirCommand>(console));
   console.registerCommand(std::make_shared<ChangeDirCommand>(console));
@@ -131,7 +133,7 @@ int main() {
   console.registerCommand(std::make_shared<MakeFilesystemCommand>(console));
   console.registerCommand(std::make_shared<MemInfoCommand>());
 
-  console.registerCommand(std::make_shared<DeviceCommand>(variableStore));
+  console.registerCommand(std::make_shared<DeviceCommand>(variableStore, deviceRepo));
 
   console.registerCommand(std::make_shared<StartCommand>(picoTime));
   console.registerCommand(std::make_shared<TaskCommand>());

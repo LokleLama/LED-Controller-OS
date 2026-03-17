@@ -13,6 +13,9 @@ int ValueConverter::toInt(const std::string& str, IntegerStringFormat* format) {
         *format = IntegerStringFormat::OCTAL;
       }
     }
+    if(str[0] == '#' && str.size() > 1){
+      *format = IntegerStringFormat::HEX;
+    }
     long long result = 0;
     switch(*format){
       case IntegerStringFormat::BINARY:
@@ -22,7 +25,11 @@ int ValueConverter::toInt(const std::string& str, IntegerStringFormat* format) {
         result = std::stoll(str.substr(2), nullptr, 8);
         break;
       case IntegerStringFormat::HEX:
-        result = std::stoll(str.substr(2), nullptr, 16);
+        if(str[0] == '#'){
+          result = std::stoll(str.substr(1), nullptr, 16);
+        } else {
+          result = std::stoll(str.substr(2), nullptr, 16);
+        }
         break;
       case IntegerStringFormat::DECIMAL:
       default:

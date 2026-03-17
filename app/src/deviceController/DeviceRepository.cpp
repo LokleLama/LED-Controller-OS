@@ -4,19 +4,16 @@
 #include "deviceController/PIOFactory.h"
 #include "deviceController/LEDFactory.h"
 #include "deviceController/LEDDisplayFactory.h"
+#include "deviceController/LEDStatusFactory.h"
 
 #include <algorithm>
 
-DeviceRepository& DeviceRepository::getInstance() {
-    static DeviceRepository instance;
-    return instance;
-}
-
-DeviceRepository::DeviceRepository(){
+DeviceRepository::DeviceRepository(const Console& console) {
     _factories.push_back(std::make_shared<PIOFactory>());
-    _factories.push_back(std::make_shared<LEDFactory>());
-    _factories.push_back(std::make_shared<LEDDisplayFactory>());
     _factories.push_back(std::make_shared<UARTFactory>());
+    _factories.push_back(std::make_shared<LEDFactory>(*this));
+    _factories.push_back(std::make_shared<LEDDisplayFactory>(*this));
+    _factories.push_back(std::make_shared<LEDStatusFactory>(*this, console));
 }
 
 const std::vector<std::string> DeviceRepository::getAvailableDeviceNames(IDeviceFactory::Category category) const{

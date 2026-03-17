@@ -13,7 +13,7 @@
 
 class LEDFactory : public IDeviceFactory {
 public:
-    LEDFactory() = default;
+    LEDFactory(DeviceRepository& deviceRepo) : _deviceRepo(deviceRepo) {}
     
     const Category getCategory() const override { return Category::Communication; }
     const std::vector<std::string> getDeviceNames() const override {
@@ -35,7 +35,7 @@ public:
             return nullptr;
         }
         std::string pio_device_name = params[0];
-        auto pio_device = DeviceRepository::getInstance().getDevice<PIODevice>("PIO", pio_device_name);
+        auto pio_device = _deviceRepo.getDevice<PIODevice>("PIO", pio_device_name);
         if (!pio_device || pio_device->getStatus() != IDevice::DeviceStatus::Initialized) {
             std::cout << "Invalid PIO device: " << pio_device_name << std::endl;
             return nullptr;
@@ -54,7 +54,7 @@ public:
         if (params.size() >= 6) {
             device_name = params[5];
         }else{
-            device_name = "WS2812." + std::to_string(_number);
+            device_name = "WS2812-" + std::to_string(_number);
         }
         _number++;
         auto led_device = std::make_shared<WS2812>(pio_device, pin, num_leds, bits_per_pixel, frequency, device_name);
@@ -70,5 +70,6 @@ public:
     }
 
 private:
+    DeviceRepository& _deviceRepo;
     uint8_t _number = 0;
 };

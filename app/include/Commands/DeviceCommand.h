@@ -8,7 +8,7 @@
 class DeviceCommand : public ICommand {
 public:
   // Constructor
-  DeviceCommand(IVariableStore &store) : _store(store) {}
+  DeviceCommand(IVariableStore &store, DeviceRepository &deviceRepo) : _store(store), _deviceRepo(deviceRepo) {}
   // Returns the name of the command
   const std::string getName() const override { return "device"; }
 
@@ -45,10 +45,11 @@ public:
 
 private:
   IVariableStore &_store;
+  DeviceRepository &_deviceRepo;
   
   int executeList(const std::vector<std::string> &args) {
     if (args.size() > 2 && args[2] == "open") {
-      auto devices = DeviceRepository::getInstance().getDevices();
+      auto devices = _deviceRepo.getDevices();
       std::cout << "Opened devices:" << std::endl;
       for (const auto& device : devices) {
         std::cout << "  " << device->getName();
@@ -61,7 +62,7 @@ private:
       return 0; // Return 0 to indicate success
     }
     
-    auto deviceNames = DeviceRepository::getInstance().getAvailableDeviceNames();
+    auto deviceNames = _deviceRepo.getAvailableDeviceNames();
     std::cout << "Available devices:" << std::endl;
     int count = 0;
     for (const auto& name : deviceNames) {
@@ -81,7 +82,7 @@ private:
       std::cout << getHelp() << std::endl;
       return -1; // Return -1 to indicate failure
     }
-    auto paramInfo = DeviceRepository::getInstance().getParameterInfo(args[2]);
+    auto paramInfo = _deviceRepo.getParameterInfo(args[2]);
     std::cout << "Parameter info for " << args[2] << ": " << paramInfo << std::endl;
     return 0; // Return 0 to indicate success
   }
@@ -91,7 +92,7 @@ private:
       std::cout << getHelp() << std::endl;
       return -1; // Return -1 to indicate failure
     }
-    auto device = DeviceRepository::getInstance().getDeviceByName(args[2]);
+    auto device = _deviceRepo.getDeviceByName(args[2]);
     if (!device) {
       std::cout << "Device not found: " << args[2] << std::endl;
       return -1; // Return -1 to indicate failure
@@ -110,7 +111,7 @@ private:
     }
     std::string deviceName = args[2];
     std::vector<std::string> params(args.begin() + 3, args.end());
-    auto device = DeviceRepository::getInstance().createDevice(deviceName, params);
+    auto device = _deviceRepo.createDevice(deviceName, params);
     if (!device) {
       std::cout << "Failed to open device: " << deviceName << std::endl;
       return -1; // Return -1 to indicate failure

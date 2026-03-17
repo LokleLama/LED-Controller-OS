@@ -27,6 +27,8 @@ public:
   }
   bool setPattern(const uint32_t* data, size_t count);
 
+  uint getLEDCount() const { return _num_leds; }
+
 private:
   std::shared_ptr<PIODevice> _pio;
   uint8_t _pin;

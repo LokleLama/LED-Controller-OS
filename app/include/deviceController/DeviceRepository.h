@@ -2,14 +2,15 @@
 
 #include "deviceController/IDeviceFactory.h"
 #include "devices/IDevice.h"
+#include "Console.h"
 
 #include <memory>
 #include <string>
 #include <vector>
 
 class DeviceRepository {
-public:   
-    static DeviceRepository& getInstance();
+public:
+    DeviceRepository(const Console& console);
 
     const std::vector<std::string> getAvailableDeviceNames(IDeviceFactory::Category category = IDeviceFactory::Category::All) const;
     const std::string getParameterInfo(const std::string& name) const;

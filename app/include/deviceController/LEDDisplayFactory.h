@@ -17,7 +17,7 @@
 
 class LEDDisplayFactory : public IDeviceFactory {
 public:
-    LEDDisplayFactory() = default;
+    LEDDisplayFactory(DeviceRepository& deviceRepo) : _deviceRepo(deviceRepo) {}
     
     const Category getCategory() const override { return Category::UserInterface; }
     const std::vector<std::string> getDeviceNames() const override {
@@ -36,7 +36,7 @@ public:
         if (params.size() < 1) {
             return nullptr;
         }
-        auto ws2812_device = DeviceRepository::getInstance().getDevice<WS2812>("WS2812", params[0]);
+        auto ws2812_device = _deviceRepo.getDevice<WS2812>("WS2812", params[0]);
         if (!ws2812_device || ws2812_device->getStatus() != IDevice::DeviceStatus::Initialized) {
             std::cout << "Invalid WS2812 device: " << params[0] << std::endl;
             return nullptr;
@@ -45,7 +45,7 @@ public:
         if (params.size() >= 2) {
             device_name = params[1];
         } else {
-            device_name = "disp." + std::to_string(_number);
+            device_name = "disp-" + std::to_string(_number);
         }
         _number++;
         std::string start_value = "00.00";
@@ -87,6 +87,7 @@ public:
     }
 
 private:
+    DeviceRepository& _deviceRepo;
     uint8_t _number = 0;
 
     bool setupVariable(std::shared_ptr<IDisplayDevice> device, const std::string& defaultValue, uint32_t defaultColor) {

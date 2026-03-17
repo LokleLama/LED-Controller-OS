@@ -14,14 +14,19 @@ public:
   using TaskHandle = int;
 
 private:
-  class RegularTask : public ITask {
-  public:
-    RegularTask(const std::string &name, Function func) : _name(name), _func(func) {}
-    bool ExecuteTask() override { return _func(); }
-    std::string getName() const override { return _name; }
-  private:
-    Function _func;
-    std::string _name;
+  struct RegularTaskInfo {
+    TaskHandle handle;
+    std::string name;
+    Function func;
+  };
+
+  struct TimedTaskInfo {
+    TaskHandle handle;
+    std::string name;
+    Function func;
+    bool execute;
+    int32_t intervalMs;
+    uint32_t nextExecution;
   };
 
 public:
@@ -29,13 +34,15 @@ public:
 
   // Register a function to be executed in every mainloop iteration
   TaskHandle registerRegularTask(const std::string &name, Function func) {
-    _regularTasks.push_back(new RegularTask(name, func));
-    return _nextTaskHandle++;
+    TaskHandle handle = _nextTaskHandle++;
+    _regularTasks.push_back({handle, name, func});
+    return handle;
   }
 
   TaskHandle registerRegularTask(ITask *task) {
-    _regularTasks.push_back(task);
-    return _nextTaskHandle++;
+    TaskHandle handle = _nextTaskHandle++;
+    _regularTasks.push_back({handle, task->getName(), [task]() { return task->ExecuteTask(); }});
+    return handle;
   }
 
   TaskHandle registerTimedTask(ITask *task, int32_t intervalMs) {
@@ -80,27 +87,20 @@ public:
 
   void OuptutTaskInformation() {
     std::cout << "Regular Tasks:" << std::endl;
+    std::cout << " PID - Name" << std::endl;
     for (auto task : _regularTasks) {
-      std::cout << "  - " << task->getName() << std::endl;
+      std::cout << " " << task.handle <<" - " << task.name << std::endl;
     }
 
-    std::cout << "Timed Tasks:" << std::endl;
+    std::cout << std::endl << "Timed Tasks:" << std::endl;
+    std::cout << " PID - Name" << std::endl;
     for (auto &task : _timedTasks) {
-      std::cout << "  - " << task.name << " (next execution in " << (task.nextExecution - _systickCounter) << " ms)" << std::endl;
+      std::cout << " " << task.handle <<" - " << task.name << " (next execution in " << (task.nextExecution - _systickCounter) << " ms)" << std::endl;
     }
   }
 
 private:
-  struct TimedTaskInfo {
-    TaskHandle handle;
-    std::string name;
-    Function func;
-    bool execute;
-    int32_t intervalMs;
-    uint32_t nextExecution;
-  };
-
-  std::vector<ITask*> _regularTasks;
+  std::vector<RegularTaskInfo> _regularTasks;
   std::vector<TimedTaskInfo> _timedTasks;
 
   bool _running;

@@ -39,7 +39,7 @@ void Mainloop::start() {
 
     // Execute regular tasks
     for (auto task : _regularTasks) {
-      task->ExecuteTask();
+      task.func();
     }
 
     // Remove completed timed tasks

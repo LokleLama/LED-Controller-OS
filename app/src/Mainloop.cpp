@@ -35,6 +35,7 @@ void Mainloop::start() {
         if(!task.info.func()){
           task.intervalMs = -1; // mark the Task for removal
         }
+        calculateStatistics(task.info);
         task.execute = false;
         task.nextExecution = _systickCounter + task.intervalMs;
       }
@@ -44,6 +45,7 @@ void Mainloop::start() {
     for (auto &task : _regularTasks) {
       task.startTime = time_us_64();
       task.func();
+      calculateStatistics(task);
     }
 
     // Remove completed timed tasks
@@ -59,6 +61,19 @@ void Mainloop::start() {
   cancel_repeating_timer(&timer);
 }
 
+
+void Mainloop::calculateStatistics(struct TaskInfo &task){
+  uint64_t stopTime = time_us_64();
+  if(task.startTime > stopTime){
+    return;
+  }
+  uint32_t executionTime = stopTime - task.startTime;
+  task.meanTime = (task.meanTime + executionTime) / 2;
+  if(executionTime > task.maxTime){
+    task.maxTime = executionTime;
+  }
+}
+
 // Function to be called every millisecond
 void Mainloop::onMillisecond() {
   _systickCounter++;
@@ -67,4 +82,24 @@ void Mainloop::onMillisecond() {
       task.execute = true;
     }
   }
+}
+
+void Mainloop::OuptutTaskInformation() {
+  std::cout << "Regular Tasks:" << std::endl;
+  std::cout << " PID - Name (Mean Time / Max Time)" << std::endl;
+  for (const auto &task : _regularTasks) {
+    OuptutTaskInformation(task);
+    std::cout << std::endl;
+  }
+
+  std::cout << std::endl << "Timed Tasks:" << std::endl;
+  std::cout << " PID - Name (Mean Time / Max Time)" << std::endl;
+  for (const auto &task : _timedTasks) {
+    OuptutTaskInformation(task.info);
+    std::cout << " [Interval: " << task.intervalMs << " ms, next execution in " << (task.nextExecution - _systickCounter) << " ms]" << std::endl;
+    std::cout << std::endl;
+  }
+}
+void Mainloop::OuptutTaskInformation(const struct TaskInfo &task) {
+  std::cout << " " << task.handle <<" - " << task.name << " (" << task.meanTime << " us / " << task.maxTime << " us)";
 }

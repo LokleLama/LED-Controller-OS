@@ -20,6 +20,8 @@ private:
     Function func;
 
     uint64_t startTime;
+    uint32_t meanTime;
+    uint32_t maxTime;
   };
 
   struct TimedTaskInfo {
@@ -36,7 +38,7 @@ public:
   // Register a function to be executed in every mainloop iteration
   TaskHandle registerRegularTask(const std::string &name, Function func) {
     TaskHandle handle = _nextTaskHandle++;
-    _regularTasks.push_back({handle, name, func, 0});
+    _regularTasks.push_back({handle, name, func, 0, 0, 0});
     return handle;
   }
 
@@ -51,7 +53,7 @@ public:
   // Register a function to be executed every x ms
   TaskHandle registerTimedTask(const std::string &name, Function func, int32_t intervalMs, int32_t initialDelayMs = 0) {
     TaskHandle handle = _nextTaskHandle++;
-    TimedTaskInfo taskInfo{{handle, name, func, 0}, false, intervalMs, getSysTick() + initialDelayMs};
+    TimedTaskInfo taskInfo{{handle, name, func, 0, 0, 0}, initialDelayMs == 0, intervalMs, _systickCounter + initialDelayMs};
     _timedTasks.push_back(taskInfo);
     return handle;
   }
@@ -81,31 +83,21 @@ public:
   // Simulated SysTick functions
   uint32_t getSysTick() { return _systickCounter; }
 
-  void OuptutTaskInformation() {
-    std::cout << "Regular Tasks:" << std::endl;
-    std::cout << " PID - Name" << std::endl;
-    for (auto task : _regularTasks) {
-      std::cout << " " << task.handle <<" - " << task.name << std::endl;
-    }
-
-    std::cout << std::endl << "Timed Tasks:" << std::endl;
-    std::cout << " PID - Name" << std::endl;
-    for (auto &task : _timedTasks) {
-      std::cout << " " << task.info.handle <<" - " << task.info.name << " (next execution in " << (task.nextExecution - _systickCounter) << " ms)" << std::endl;
-    }
-  }
+  void OuptutTaskInformation();
 
 private:
   std::vector<TaskInfo> _regularTasks;
   std::vector<TimedTaskInfo> _timedTasks;
 
   bool _running;
-  uint32_t _systickCounter;
+  uint32_t _systickCounter = 0;
   TaskHandle _nextTaskHandle = 0;
 
   Mainloop();
 
   void onMillisecond();
+  void calculateStatistics(struct TaskInfo &task);
+  void OuptutTaskInformation(const struct TaskInfo &task);
 
   static bool alarm_callback(repeating_timer *rt);
 };

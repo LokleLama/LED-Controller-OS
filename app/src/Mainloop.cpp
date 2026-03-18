@@ -3,6 +3,8 @@
 #include "hardware/clocks.h"
 #include "hardware/irq.h"
 
+#include <time.h>
+
 Mainloop& Mainloop::getInstance() {
     static Mainloop instance;
     return instance;
@@ -29,7 +31,8 @@ void Mainloop::start() {
     // Execute timed tasks
     for (auto &task : _timedTasks) {
       if (task.execute) {
-        if(!task.func()){
+        task.info.startTime = time_us_64();
+        if(!task.info.func()){
           task.intervalMs = -1; // mark the Task for removal
         }
         task.execute = false;
@@ -38,13 +41,14 @@ void Mainloop::start() {
     }
 
     // Execute regular tasks
-    for (auto task : _regularTasks) {
+    for (auto &task : _regularTasks) {
+      task.startTime = time_us_64();
       task.func();
     }
 
     // Remove completed timed tasks
     for (int n = 0; n < _timedTasks.size(); n++) {
-      if (_timedTasks[n].intervalMs == 0) {
+      if (_timedTasks[n].intervalMs < 0) {
         _timedTasks.erase(_timedTasks.begin() + n);
         n--;
       }

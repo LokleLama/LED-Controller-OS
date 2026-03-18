@@ -14,16 +14,17 @@ public:
   using TaskHandle = int;
 
 private:
-  struct RegularTaskInfo {
+  struct TaskInfo {
     TaskHandle handle;
     std::string name;
     Function func;
+
+    uint64_t startTime;
   };
 
   struct TimedTaskInfo {
-    TaskHandle handle;
-    std::string name;
-    Function func;
+    struct TaskInfo info;
+
     bool execute;
     int32_t intervalMs;
     uint32_t nextExecution;
@@ -35,39 +36,34 @@ public:
   // Register a function to be executed in every mainloop iteration
   TaskHandle registerRegularTask(const std::string &name, Function func) {
     TaskHandle handle = _nextTaskHandle++;
-    _regularTasks.push_back({handle, name, func});
+    _regularTasks.push_back({handle, name, func, 0});
     return handle;
   }
 
   TaskHandle registerRegularTask(ITask *task) {
-    TaskHandle handle = _nextTaskHandle++;
-    _regularTasks.push_back({handle, task->getName(), [task]() { return task->ExecuteTask(); }});
-    return handle;
+    return registerRegularTask(task->getName(), [task]() { return task->ExecuteTask(); });
   }
 
-  TaskHandle registerTimedTask(ITask *task, int32_t intervalMs) {
-    TaskHandle handle = _nextTaskHandle++;
-    _timedTasks.push_back({handle, task->getName(), [task]() { return task->ExecuteTask(); }, false, intervalMs, _systickCounter + intervalMs});
-    return handle;
+  TaskHandle registerTimedTask(ITask *task, int32_t intervalMs, int32_t initialDelayMs = 0) {
+    return registerTimedTask(task->getName(), [task]() { return task->ExecuteTask(); }, intervalMs, initialDelayMs);
   }
 
   // Register a function to be executed every x ms
-  TaskHandle registerTimedTask(const std::string &name, Function func, int32_t intervalMs) {
+  TaskHandle registerTimedTask(const std::string &name, Function func, int32_t intervalMs, int32_t initialDelayMs = 0) {
     TaskHandle handle = _nextTaskHandle++;
-    _timedTasks.push_back({handle, name, func, false, intervalMs, _systickCounter + intervalMs});
+    TimedTaskInfo taskInfo{{handle, name, func, 0}, false, intervalMs, getSysTick() + initialDelayMs};
+    _timedTasks.push_back(taskInfo);
     return handle;
   }
 
   // Register a function to be executed once after y ms
   TaskHandle registerDelayedTask(const std::string &name, Function func, int32_t delayMs) {
-    TaskHandle handle = _nextTaskHandle++;
-    _timedTasks.push_back({handle, name, func, false, -1, _systickCounter + delayMs});
-    return handle;
+    return registerTimedTask(name, func, -1, delayMs);
   }
 
   bool modifyTimedTaskInterval(TaskHandle handle, int32_t newIntervalMs) {
     for (auto &task : _timedTasks) {
-      if (task.handle == handle) {
+      if (task.info.handle == handle) {
         task.nextExecution = task.nextExecution - task.intervalMs + newIntervalMs;
         task.intervalMs = newIntervalMs;
         return true;
@@ -95,12 +91,12 @@ public:
     std::cout << std::endl << "Timed Tasks:" << std::endl;
     std::cout << " PID - Name" << std::endl;
     for (auto &task : _timedTasks) {
-      std::cout << " " << task.handle <<" - " << task.name << " (next execution in " << (task.nextExecution - _systickCounter) << " ms)" << std::endl;
+      std::cout << " " << task.info.handle <<" - " << task.info.name << " (next execution in " << (task.nextExecution - _systickCounter) << " ms)" << std::endl;
     }
   }
 
 private:
-  std::vector<RegularTaskInfo> _regularTasks;
+  std::vector<TaskInfo> _regularTasks;
   std::vector<TimedTaskInfo> _timedTasks;
 
   bool _running;

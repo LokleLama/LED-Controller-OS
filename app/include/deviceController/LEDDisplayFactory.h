@@ -4,6 +4,7 @@
 #include "devices/WS2812.h"
 #include "devices/SevenSeg.h"
 #include "devices/dotMatrix5x5.h"
+#include "devices/dotMatrix8x8.h"
 
 #include "VariableStore/VariableStore.h"
 #include "Utils/ValueConverter.h"
@@ -21,7 +22,7 @@ public:
     
     const Category getCategory() const override { return Category::UserInterface; }
     const std::vector<std::string> getDeviceNames() const override {
-        static std::vector<std::string> names = {"7Seg", "dotMatrix5x5"};
+        static std::vector<std::string> names = {"7Seg", "dotMatrix5x5", "dotMatrix8x8"};
         return names;
     }
     const std::string& getParameterInfo() const override{
@@ -68,6 +69,12 @@ public:
             new_display_device = std::make_shared<dotMatrix5x5>(ws2812_device, device_name, start_value, color);
             if (new_display_device->getStatus() != IDevice::DeviceStatus::Initialized) {
                 std::cout << "Failed to initialize dotMatrix5x5 device: " << device_name << std::endl;
+                return nullptr;
+            }
+        }else if(name == "dotMatrix8x8"){
+            new_display_device = std::make_shared<dotMatrix8x8>(ws2812_device, device_name, start_value, color);
+            if (new_display_device->getStatus() != IDevice::DeviceStatus::Initialized) {
+                std::cout << "Failed to initialize dotMatrix8x8 device: " << device_name << std::endl;
                 return nullptr;
             }
         }else{

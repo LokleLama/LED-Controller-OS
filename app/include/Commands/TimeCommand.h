@@ -2,6 +2,7 @@
 
 #include "ICommand.h"
 #include "RTC/PicoTime.h"
+#include <algorithm>
 #include <ctime>
 #include <iostream>
 #include <memory>

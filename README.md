@@ -22,10 +22,17 @@ git clone https://github.com/raspberrypi/pico-sdk.git --recursive
 
 ## Prepare build files (Pico SDK from git)
 
+By default builds for RP2040 (Pico). To build for **RP2350 (Pico 2)**, add `-DPICO_BOARD=pico2`.
+
 ```bash
 mkdir build
 cd build
+
+# RP2040 (default)
 cmake -DPICO_SDK_FETCH_FROM_GIT=ON ..
+
+# RP2350
+cmake -DPICO_SDK_FETCH_FROM_GIT=ON -DPICO_BOARD=pico2 ..
 
 make -j4
 ```
@@ -45,7 +52,20 @@ Otherwise use:
 ```bash
 mkdir build
 cd build
+
+# RP2040 (default)
 cmake -DPICO_SDK_PATH=/path/to/pico-sdk ..
+
+# RP2350
+cmake -DPICO_SDK_PATH=/path/to/pico-sdk -DPICO_BOARD=pico2 ..
+```
+
+# Set flash memory size
+
+If your board has more flash memory than the default 2MB, you can specify the flash size in bytes using the `PICO_FLASH_SIZE_BYTES` variable. For example, if your rp2350 board has 16MB of flash memory, you can set it like this:
+
+```bash
+cmake -DPICO_SDK_PATH=/path/to/pico-sdk/ -DPICO_BOARD=pico2 -DPICO_FLASH_SIZE_BYTES=16777216 ..
 ```
 
 ## Build

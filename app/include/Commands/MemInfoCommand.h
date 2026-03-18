@@ -37,8 +37,8 @@ public:
     size_t heap_limit = reinterpret_cast<size_t>(&__HeapLimit);
     size_t heap_size = heap_limit - heap_base;
     
-    // Calculate total RAM size (RP2040 has 264KB)
-    size_t total_ram = reinterpret_cast<size_t>(&__StackTop) - 0x20000000;
+    // Total RAM from build configuration
+    size_t total_ram = TOTAL_RAM_BYTES;
 
     std::cout << "=== Memory Information ===" << std::endl;
     std::cout << std::endl;

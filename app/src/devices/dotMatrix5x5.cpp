@@ -11,7 +11,7 @@ dotMatrix5x5::dotMatrix5x5(std::shared_ptr<WS2812> led, const std::string& name,
 
   _currentFrame.resize(25, 0); // 5x5 matrix = 25 LEDs
 
-  _scrollingTask = Mainloop::getInstance().registerTimedTask("dotMatrixTextScrolling", [this]() { return scrollText(); }, 100);
+  _scrollingTask = Mainloop::getInstance().registerTimedTask(name + ".TextScrolling", [this]() { return scrollText(); }, 100);
 
   _status = DeviceStatus::Initialized;
 }

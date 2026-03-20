@@ -7,9 +7,13 @@
 dotMatrix8x8::dotMatrix8x8(std::shared_ptr<WS2812> led, const std::string& name, const std::string& start, uint32_t color)
     : IDisplayDevice(color), _led(led), _name(name) {
 
+  // Derive display width from the WS2812 LED count (8 rows per module)
+  _num_columns = _led->getNumLeds() / 8;
+  if (_num_columns < 8) _num_columns = 8;
+
   setValue(start);
 
-  _currentFrame.resize(64, 0); // 8x8 matrix = 64 LEDs
+  _currentFrame.resize(_num_columns * 8, 0);
 
   _scrollingTask = Mainloop::getInstance().registerTimedTask("dotMatrixTextScrolling", [this]() { return scrollText(); }, 100);
 
@@ -17,7 +21,7 @@ dotMatrix8x8::dotMatrix8x8(std::shared_ptr<WS2812> led, const std::string& name,
 }
 
 const std::string dotMatrix8x8::getDetails() const {
-  return "dotMatrix8x8 device with 64 LEDs (8x8 matrix) using WS2812 device: " + _led->getName();
+  return "dotMatrix8x8 device with " + std::to_string(_num_columns * 8) + " LEDs (8x" + std::to_string(_num_columns) + " matrix) using WS2812 device: " + _led->getName();
 }
 
 void dotMatrix8x8::setValue(const std::string& value){
@@ -31,34 +35,25 @@ void dotMatrix8x8::setValue(const std::string& value){
 
   _total_columns = ((_bit_vector_length + 26) / 27);
 
-  _ledData.resize(_total_columns * 8, 0); // Initialize all LEDs to off
-  memset(_ledData.data(), 0, _ledData.size() * sizeof(uint32_t)); // Clear the LED data
+  _ledData.resize(_total_columns * 8, 0); // 8 row strips × _total_columns uint32_t each
+  memset(_ledData.data(), 0, _ledData.size() * sizeof(uint32_t));
 
   const char* str = value.c_str();
+  auto packChar = [&](size_t charIndex, const uint8_t* charData) {
+    int data_index = charIndex / 3;
+    int bit_offset = (charIndex - (data_index * 3)) * 9;
+
+    // Pack each row's column bits directly into its row strip (font is row-major)
+    for (int row = 0; row < 8; row++) {
+      _ledData[data_index + row * _total_columns] |= ((uint32_t)charData[row] << bit_offset);
+    }
+  };
+
   for (size_t i = 0; i < value.length(); i++) {
-    int data_index = i / 3;
-    int bit_offset = (i - (data_index * 3)) * 9;
-
-    const uint8_t* charData = MatrixChar8x8::getChar(str[i]);
-    for (int col = 0; col < 8; col++) {
-      uint32_t columnData = charData[col];
-      columnData = (columnData & 0xFF) << bit_offset; // Shift to correct position in the LED data
-
-      _ledData[data_index + col * _total_columns] |= columnData; // Combine with existing data for this column
-    }
+    packChar(i, MatrixChar8x8::getChar(str[i]));
   }
-  {
-    int data_index = value.length() / 3;
-    int bit_offset = (value.length() - (data_index * 3)) * 9;
-
-    const uint8_t* charData = MatrixChar8x8::getChar(str[0]);
-    for (int col = 0; col < 8; col++) {
-      uint32_t columnData = charData[col];
-      columnData = (columnData & 0xFF) << bit_offset; // Shift to correct position in the LED data
-
-      _ledData[data_index + col * _total_columns] |= columnData; // Combine with existing data for this column
-    }
-  }
+  // Copy first character at the end for seamless wrapping
+  packChar(value.length(), MatrixChar8x8::getChar(str[0]));
 }
 
 void dotMatrix8x8::setScrollingSpeed(int speed) {
@@ -66,39 +61,28 @@ void dotMatrix8x8::setScrollingSpeed(int speed) {
 }
 
 bool dotMatrix8x8::scrollText() {
-  int startIndex = _current_offset / 27;
-  int endIndex = (_current_offset + 7) / 27;
-
-  if(startIndex == endIndex) {
-    int bit_offset = _current_offset - startIndex * 27;
-    for (int col = 0; col < 8; col++) {
-      uint32_t columnData = _ledData[startIndex + col * _total_columns] >> bit_offset;
-      for (int row = 0; row < 8; row++) {
-        _currentFrame[row + col * 8] = (columnData & 0x01) ? _color : 0x00000000;
-        columnData >>= 1;
-      }
+  for (int display_col = 0; display_col < _num_columns; display_col++) {
+    int col_offset = _current_offset + display_col;
+    if (col_offset >= _bit_vector_length) {
+      col_offset -= _bit_vector_length;
     }
-  }else{
-    // Handle the case where the text spans across two columns
-    int bit_offset_start = _current_offset - startIndex * 27;
-    int bit_offset_end = 27 - bit_offset_start;
 
-    for (int col = 0; col < 8; col++) {
-      uint32_t columnDataStart = _ledData[startIndex + col * _total_columns] >> bit_offset_start;
-      uint32_t columnDataEnd = _ledData[endIndex + col * _total_columns] << bit_offset_end;
-      uint32_t columnData = columnDataStart | columnDataEnd;
+    int dataIndex = col_offset / 27;
+    int bitOffset = col_offset - dataIndex * 27;
 
-      for (int row = 0; row < 8; row++) {
-        _currentFrame[row + col * 8] = (columnData & 0x01) ? _color : 0x00000000;
-        columnData >>= 1;
-      }
+    for (int row = 0; row < 8; row++) {
+      uint32_t bit = (_ledData[dataIndex + row * _total_columns] >> bitOffset) & 0x01;
+      // Zigzag correction: odd columns are wired bottom-to-top on WS2812 8x8 modules
+      int led_row = (display_col & 1) ? (7 - row) : row;
+      _currentFrame[led_row + display_col * 8] = bit ? _color : 0x00000000;
     }
   }
 
+
   _led->setPattern(_currentFrame);
   _current_offset++;
-  if ((_current_offset + 8) >= _bit_vector_length) {
-    _current_offset = 0; // Loop back to the beginning
+  if ((_current_offset + _num_columns) >= _bit_vector_length) {
+    _current_offset = 0;
   }
   return true;
 }

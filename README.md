@@ -78,3 +78,40 @@ make -j$(nproc)
 
 - Press BOOTSEL button on the Pico board and reset the board
 - Copy the `build/ChristmasClock.uf2` file to the Pico board
+
+## Testing
+
+Unit tests use [Google Test](https://github.com/google/googletest) and run on the host (no hardware required). App logic is compiled against mock Pico SDK headers so everything builds with your regular host compiler.
+
+### Build tests
+
+```bash
+mkdir build-test
+cd build-test
+cmake -DBUILD_TESTS=ON ..
+make -j$(nproc)
+```
+
+### Run all tests
+
+```bash
+./test/test_all
+```
+
+### Run individual test suites
+
+```bash
+./test/test_utils
+./test/test_variable_store
+./test/test_spfs
+./test/test_dot_matrix
+```
+
+### Filter specific tests
+
+Google Test supports `--gtest_filter` for running a subset:
+
+```bash
+./test/test_all --gtest_filter='DotMatrixTest.*'
+./test/test_dot_matrix --gtest_filter='DotMatrix8xNTest.TwoModules_ScrollHi'
+```

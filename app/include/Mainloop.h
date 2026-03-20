@@ -54,6 +54,9 @@ public:
   TaskHandle registerTimedTask(const std::string &name, Function func, int32_t intervalMs, int32_t initialDelayMs = 0) {
     TaskHandle handle = _nextTaskHandle++;
     TimedTaskInfo taskInfo{{handle, name, func, 0, 0, 0}, initialDelayMs == 0, intervalMs, _systickCounter + initialDelayMs};
+    if(initialDelayMs == 0){
+      taskInfo.nextExecution += intervalMs;
+    }
     _timedTasks.push_back(taskInfo);
     return handle;
   }

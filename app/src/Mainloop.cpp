@@ -37,7 +37,6 @@ void Mainloop::start() {
         }
         calculateStatistics(task.info);
         task.execute = false;
-        task.nextExecution = _systickCounter + task.intervalMs;
       }
     }
 
@@ -80,6 +79,7 @@ void Mainloop::onMillisecond() {
   for (auto &task : _timedTasks) {
     if (_systickCounter == task.nextExecution) {
       task.execute = true;
+      task.nextExecution += task.intervalMs;
     }
   }
 }

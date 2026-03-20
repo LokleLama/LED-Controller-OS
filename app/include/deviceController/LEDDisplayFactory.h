@@ -55,24 +55,30 @@ public:
         }
 
         std::shared_ptr<IDisplayDevice> new_display_device;
+        std::shared_ptr<IDisplayScrolling> scrolling_device;
         uint32_t color = 0x03030303;
         if (params.size() >= 4) {
             color = ValueConverter::toInt(params[3]);
         }
         if(name == "7Seg") {
             new_display_device = std::make_shared<SevenSeg>(ws2812_device, device_name, start_value, color);
+            scrolling_device = nullptr;
             if (new_display_device->getStatus() != IDevice::DeviceStatus::Initialized) {
                 std::cout << "Failed to initialize 7Seg device: " << device_name << std::endl;
                 return nullptr;
             }
         }else if(name == "dotMatrix5x5"){
-            new_display_device = std::make_shared<dotMatrix5x5>(ws2812_device, device_name, start_value, color);
+            auto dotMatrix5x5_device = std::make_shared<dotMatrix5x5>(ws2812_device, device_name, start_value, color);
+            new_display_device = dotMatrix5x5_device;
+            scrolling_device = dotMatrix5x5_device;
             if (new_display_device->getStatus() != IDevice::DeviceStatus::Initialized) {
                 std::cout << "Failed to initialize dotMatrix5x5 device: " << device_name << std::endl;
                 return nullptr;
             }
         }else if(name == "dotMatrix8x8"){
-            new_display_device = std::make_shared<dotMatrix8x8>(ws2812_device, device_name, start_value, color);
+            auto dotMatrix8x8_device = std::make_shared<dotMatrix8x8>(ws2812_device, device_name, start_value, color);
+            new_display_device = dotMatrix8x8_device;
+            scrolling_device = dotMatrix8x8_device;
             if (new_display_device->getStatus() != IDevice::DeviceStatus::Initialized) {
                 std::cout << "Failed to initialize dotMatrix8x8 device: " << device_name << std::endl;
                 return nullptr;
@@ -87,8 +93,11 @@ public:
             return nullptr;
         }
         
-        if(!setupVariable(new_display_device, start_value, color)){
+        if(!setupVariable(device_name, new_display_device, start_value, color)){
             std::cout << "Failed to setup variable for " << name << " device: " << device_name << std::endl;
+        }
+        if(scrolling_device &&!setupScrollingSpeedVariable(device_name, scrolling_device, 100)){
+            std::cout << "Failed to setup scrolling speed variable for " << name << " device: " << device_name << std::endl;
         }
         return new_display_device;
     }
@@ -96,18 +105,30 @@ public:
 private:
     uint8_t _number = 0;
 
-    bool setupVariable(std::shared_ptr<IDisplayDevice> device, const std::string& defaultValue, uint32_t defaultColor) {
+    bool setupVariable(const std::string& variablePrefix, std::shared_ptr<IDisplayDevice> device, const std::string& defaultValue, uint32_t defaultColor) {
         auto& variableStore = VariableStore::getInstance();
 
-        variableStore.addVariable(device->getName() + ".value", defaultValue);
-        variableStore.registerCallback(device->getName() + ".value", [device](const std::string& key, const std::string& value) {
+        variableStore.addVariable(variablePrefix + ".value", defaultValue);
+        variableStore.registerCallback(variablePrefix + ".value", [device](const std::string& key, const std::string& value) {
             device->setValue(value);
             return true;
         });
 
-        variableStore.addVariable(device->getName() + ".color", defaultColor);
-        variableStore.registerCallback(device->getName() + ".color", [device](const std::string& key, const std::string& value) {
+        variableStore.addVariable(variablePrefix + ".color", defaultColor);
+        variableStore.registerCallback(variablePrefix + ".color", [device](const std::string& key, const std::string& value) {
             device->setColor(std::stoul(value, nullptr, 0));
+            return true;
+        });
+
+        return true;
+    }
+
+    bool setupScrollingSpeedVariable(const std::string& variablePrefix, std::shared_ptr<IDisplayScrolling> scrollingDevice, int defaultSpeed) {
+        auto& variableStore = VariableStore::getInstance();
+
+        variableStore.addVariable(variablePrefix + ".speed", defaultSpeed);
+        variableStore.registerCallback(variablePrefix + ".speed", [scrollingDevice](const std::string& key, const std::string& value) {
+            scrollingDevice->setScrollingSpeed(std::stoi(value));
             return true;
         });
 

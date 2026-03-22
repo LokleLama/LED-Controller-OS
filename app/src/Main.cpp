@@ -1,7 +1,5 @@
 #include "Config.h"
 #include "Console.h"
-#include "hardware/irq.h"
-#include "hardware/uart.h"
 #include "pico/stdlib.h"
 #include "tusb.h"
 #include <iostream>
@@ -72,23 +70,6 @@ int main() {
   stdio_init_all();
 
   tusb_init();
-
-  gpio_init(0);
-  gpio_set_dir(0, GPIO_OUT);
-  gpio_put(0, 1);
-
-  gpio_init(1);
-  gpio_set_dir(1, GPIO_IN);
-  gpio_pull_up(1);
-
-  uart_init(uart0, 115000);
-  uart_set_hw_flow(uart0, false, false);
-  gpio_set_function(0, GPIO_FUNC_UART);
-  gpio_set_function(1, GPIO_FUNC_UART);
-  // Enable UART interrupts
-  irq_set_exclusive_handler(UART0_IRQ, on_uart_rx);
-  irq_set_enabled(UART0_IRQ, true);
-  uart_set_irq_enables(uart0, true, false);
 
   auto& mainloop = Mainloop::getInstance();
   auto& variableStore = VariableStore::getInstance();

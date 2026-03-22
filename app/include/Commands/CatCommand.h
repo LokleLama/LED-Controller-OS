@@ -4,6 +4,7 @@
 #include "Console.h"
 #include <iostream>
 #include <sstream>
+#include <iomanip>
 
 class CatCommand : public ICommand {
 public:

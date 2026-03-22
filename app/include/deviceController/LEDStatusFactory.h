@@ -108,6 +108,5 @@ private:
             std::cout << "Failed to open status colors file: " << filename << std::endl;
             return;
         }
-
     }
 };

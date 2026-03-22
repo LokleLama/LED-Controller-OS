@@ -51,20 +51,11 @@
 
 #include "Mainloop.h"
 
-static void uart_task(void);
 static std::shared_ptr<IComLogger> logger;
 static std::shared_ptr<IVariable> output_distance;
 static std::shared_ptr<IVariable> distance;
 static std::shared_ptr<PicoTime> picoTime;
 static HLKPackageFinder package_finder;
-static IRQFifo uart_fifo(128);
-
-// UART interrupt handler
-void on_uart_rx() {
-  while (uart_is_readable(uart0)) {
-    uart_fifo.push(uart_getc(uart0));
-  }
-}
 
 int main() {
   stdio_init_all();

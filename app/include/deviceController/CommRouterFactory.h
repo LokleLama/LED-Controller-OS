@@ -16,7 +16,7 @@ class CommRouterFactory : public IDeviceFactory {
 public:
     CommRouterFactory(DeviceRepository& deviceRepo) : _deviceRepo(deviceRepo) {}
     
-    const Category getCategory() const override { return Category::UserInterface; }
+    const Category getCategory() const override { return Category::Communication; }
     const std::vector<std::string> getDeviceNames() const override {
         static std::vector<std::string> names = {"Loopback"};
         return names;

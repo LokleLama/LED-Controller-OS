@@ -12,9 +12,9 @@
 #include <cstdint>
 #include <iostream>
 
-class LoopbackFactory : public IDeviceFactory {
+class CommRouterFactory : public IDeviceFactory {
 public:
-    LoopbackFactory(DeviceRepository& deviceRepo) : _deviceRepo(deviceRepo) {}
+    CommRouterFactory(DeviceRepository& deviceRepo) : _deviceRepo(deviceRepo) {}
     
     const Category getCategory() const override { return Category::UserInterface; }
     const std::vector<std::string> getDeviceNames() const override {

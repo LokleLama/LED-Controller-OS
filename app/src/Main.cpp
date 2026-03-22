@@ -42,6 +42,8 @@
 
 #include "BackgroundTasks/StartCommand.h"
 
+#include "devices/USBUARTDevice.h"
+
 #include "HLKLogger.h"
 #include "HLKStack/HLKPackageFinder.h"
 #include "HexLogger.h"
@@ -104,6 +106,8 @@ int main() {
   Console console(variableStore, fs);
   DeviceRepository deviceRepo(console);
 
+  deviceRepo.addDevice(std::make_shared<USBUARTDevice>(UART_INTERFACE_NUMBER));
+
   picoTime = std::make_shared<PicoTime>();
 
   console.registerCommand(std::make_shared<BootCommand>());
@@ -138,10 +142,10 @@ int main() {
   console.registerCommand(std::make_shared<StartCommand>(picoTime));
   console.registerCommand(std::make_shared<TaskCommand>());
 
-  variableStore.addVariable("init-script", "");
+  variableStore.addVariable("init-script", "startup.sh");
   variableStore.addVariable("?", 0);
   
-  variableStore.addVariable("uart0.baud", 115200);
+  /*variableStore.addVariable("uart0.baud", 115200);
   variableStore.addVariable("uart0.format", "8n1");
   variableStore.addVariable("uart0.log", "none");
   output_distance = variableStore.addBoolVariable("distance", false);
@@ -191,27 +195,19 @@ int main() {
     }
     std::cout << "Log changed to " << value << std::endl;
     return true;
-  });
+  });*/
 
   console.EnqueueCommand("env load");
   console.EnqueueCommand("exec ${init-script}");
 
-  mainloop.registerRegularTask("Tiny USB Task", [&]() {
-    tud_task(); // TinyUSB task
-    return true;
-  });
-  mainloop.registerRegularTask(&console); // Console task
-  mainloop.registerRegularTask("UART Task", [&]() {
-    uart_task(); // UART task
-    return true;
-  });
+  mainloop.registerRegularTask(&console);
 
   mainloop.start();
 
   return 0;
 }
 
-static void uart_task(void) {
+/*static void uart_task(void) {
   if (tud_cdc_n_available(UART_INTERFACE_NUMBER)) {
     uint8_t buf[64];
 
@@ -241,4 +237,4 @@ static void uart_task(void) {
     }
     tud_cdc_n_write_flush(UART_INTERFACE_NUMBER);
   }
-}
+}*/

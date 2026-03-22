@@ -32,6 +32,13 @@ private:
     uint32_t nextExecution;
   };
 
+  struct SignalTaskInfo {
+    struct TaskInfo info;
+
+    uint32_t signal;
+    bool execute;
+  };
+
 public:
   static Mainloop& getInstance();
 
@@ -77,6 +84,24 @@ public:
     return false;
   }
 
+  TaskHandle registerSignalTask(ITask *task, uint32_t signal) {
+    return registerSignalTask(task->getName(), [task]() { return task->ExecuteTask(); }, signal);
+  }
+
+  TaskHandle registerSignalTask(const std::string &name, Function func, uint32_t signal) {
+    TaskHandle handle = _nextTaskHandle++;
+    _signalTasks.push_back({{handle, name, func, 0, 0, 0}, signal, false});
+    return handle;
+  }
+
+  void triggerSignal(uint32_t signal) {
+    for (auto &task : _signalTasks) {
+      if (task.signal == signal) {
+        task.execute = true;
+      }
+    }
+  }
+
   // Start the mainloop
   void start();
 
@@ -91,6 +116,7 @@ public:
 private:
   std::vector<TaskInfo> _regularTasks;
   std::vector<TimedTaskInfo> _timedTasks;
+  std::vector<SignalTaskInfo> _signalTasks;
 
   bool _running;
   uint32_t _systickCounter = 0;

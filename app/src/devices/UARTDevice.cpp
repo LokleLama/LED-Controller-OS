@@ -3,10 +3,12 @@
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 
+UARTDevice* UARTDevice::_instances[2] = {nullptr, nullptr};
+
 UARTDevice::UARTDevice(int uart_number, uint8_t tx_pin, uint8_t rx_pin, uint baud_rate) : 
     _uart_number(uart_number), _tx_pin(tx_pin), _rx_pin(rx_pin), _baud_rate(baud_rate) 
 {
-    if (_uart_number >= 2) {
+    if (_uart_number >= 2 || _instances[_uart_number] != nullptr) {
         _status = DeviceStatus::Error;
         return;
     }
@@ -29,6 +31,19 @@ UARTDevice::UARTDevice(int uart_number, uint8_t tx_pin, uint8_t rx_pin, uint bau
     gpio_set_function(_rx_pin, GPIO_FUNC_UART);
 
     _baud_rate = uart_init(_uart, _baud_rate);
+
+    // Enable UART interrupts
+    if(_uart_number == 0){
+        _instances[0] = this;
+        irq_set_exclusive_handler(UART0_IRQ, on_uart0_rx);
+        irq_set_enabled(UART0_IRQ, true);
+    } else {
+        _instances[1] = this;
+        irq_set_exclusive_handler(UART1_IRQ, on_uart1_rx);
+        irq_set_enabled(UART1_IRQ, true);
+    }
+    uart_set_irq_enables(_uart, true, false);
+
     _status = DeviceStatus::Initialized;
 }
 
@@ -69,3 +84,22 @@ bool UARTDevice::isPinValid(uint8_t pin, int pinType) const {
 const std::string UARTDevice::getDetails() const {
     return "UART Device " + std::to_string(_uart_number) + " (TX: " + std::to_string(_tx_pin) + ", RX: " + std::to_string(_rx_pin) + ", Baud: " + std::to_string(_baud_rate) + ")";
 }
+
+void UARTDevice::handleIRQ() {
+    if(dataAvailable() && _irq_signal != 0) {
+        Mainloop::getInstance().triggerSignal(_irq_signal);
+    }
+}
+
+void UARTDevice::on_uart0_rx() {
+    if(_instances[0]) {
+        _instances[0]->handleIRQ();
+    }
+}
+
+void UARTDevice::on_uart1_rx() {
+    if(_instances[1]) {
+        _instances[1]->handleIRQ();
+    }
+}
+

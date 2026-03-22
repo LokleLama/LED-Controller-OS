@@ -3,6 +3,8 @@
 #include "hardware/clocks.h"
 #include "hardware/irq.h"
 
+#include "Utils/ValueConverter.h"
+
 #include <time.h>
 
 Mainloop& Mainloop::getInstance() {
@@ -40,6 +42,15 @@ void Mainloop::start() {
       }
     }
 
+    for (auto &task : _signalTasks) {
+      if (task.execute) {
+        task.info.startTime = time_us_64();
+        task.info.func();
+        calculateStatistics(task.info);
+        task.execute = false;
+      }
+    }
+
     // Execute regular tasks
     for (auto &task : _regularTasks) {
       task.startTime = time_us_64();
@@ -59,7 +70,6 @@ void Mainloop::start() {
   // Cancel the timer when the loop stops
   cancel_repeating_timer(&timer);
 }
-
 
 void Mainloop::calculateStatistics(struct TaskInfo &task){
   uint64_t stopTime = time_us_64();
@@ -97,9 +107,16 @@ void Mainloop::OuptutTaskInformation() {
   for (const auto &task : _timedTasks) {
     OuptutTaskInformation(task.info);
     std::cout << " [Interval: " << task.intervalMs << " ms, next execution in " << (task.nextExecution - _systickCounter) << " ms]" << std::endl;
-    std::cout << std::endl;
+  }
+
+  std::cout << std::endl << "Signal waiting Tasks:" << std::endl;
+  std::cout << " PID - Name (Mean Time / Max Time)" << std::endl;
+  for (const auto &task : _signalTasks) {
+    OuptutTaskInformation(task.info);
+    std::cout << " [Signal: " << ValueConverter::toString(task.signal, IntegerStringFormat::HEX) << "]" << std::endl;
   }
 }
+
 void Mainloop::OuptutTaskInformation(const struct TaskInfo &task) {
   std::cout << " " << task.handle <<" - " << task.name << " (" << task.meanTime << " us / " << task.maxTime << " us)";
 }

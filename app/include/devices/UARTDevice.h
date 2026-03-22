@@ -25,12 +25,32 @@ public:
     int dataAvailable() override;
     int receive(uint8_t* buffer, size_t length) override;
 
+    bool registerDataReceivedCallback(Mainloop::Function func, uint32_t signal = 0) override {
+        if(_irq_signal != 0) {
+            return false;
+        }
+        if(signal == 0) {
+            signal = 0x55415254 + _uart_number;
+        }
+        _irq_signal = signal;
+        Mainloop::getInstance().registerSignalTask(getName() + ".DataReceived", func, _irq_signal);
+        return true;
+    }
+
 private:
     int _uart_number;
     uart_inst_t* _uart;
     uint8_t _tx_pin;
     uint8_t _rx_pin;
     uint _baud_rate;
+
+    uint32_t _irq_signal = 0;
+
+    static UARTDevice* _instances[2];
+    static void on_uart0_rx();
+    static void on_uart1_rx();
+
+    void handleIRQ();
 
     bool isPinValid(uint8_t pin, int pinType) const;
 

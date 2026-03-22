@@ -28,7 +28,7 @@ public:
 
   bool ExecuteTask() override;
 
-  std::string getName() const override {
+  const std::string getName() const override {
     return "Console Task";
   }
 

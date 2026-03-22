@@ -20,7 +20,7 @@ public:
   std::shared_ptr<ICommand> findCommand(const std::string &name) const;
 
   bool ExecuteTask() override;
-  std::string getName() const override {
+  const std::string getName() const override {
     return "ConsoleTask";
   }
   

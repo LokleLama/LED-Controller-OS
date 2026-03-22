@@ -31,11 +31,11 @@ public:
         return reinterpret_cast<T*>(device.get())->getShared();
     }
 
+    void addDevice(std::shared_ptr<IDevice> device);
+
 private:
     std::vector<std::shared_ptr<IDevice>> _devices;
     std::vector<std::shared_ptr<IDeviceFactory>> _factories;
 
     DeviceRepository();
-
-    void addDevice(std::shared_ptr<IDevice> device);
 };

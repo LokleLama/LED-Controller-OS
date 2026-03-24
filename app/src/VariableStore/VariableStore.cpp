@@ -70,15 +70,9 @@ bool VariableStore::setVariable(const std::string &key, int value) {
   return false;
 }
 
-bool VariableStore::setVariable(const std::string &key, unsigned int value) {
-  return setVariable(key, static_cast<int>(value));
-}
-
-#if PICO_ON_DEVICE
 bool VariableStore::setVariable(const std::string &key, uint32_t value) {
   return setVariable(key, static_cast<int>(value));
 }
-#endif
 
 std::shared_ptr<IVariable>
 VariableStore::addVariable(const std::string &key, const std::string &value) {
@@ -153,16 +147,9 @@ std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
 }
 
 std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
-                                                      unsigned int value) {
-  return addVariable(key, static_cast<int>(value));
-}
-
-#if PICO_ON_DEVICE
-std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
                                                       uint32_t value) {
   return addVariable(key, static_cast<int>(value));
 }
-#endif
 
 std::shared_ptr<IVariable>
 VariableStore::getVariable(const std::string &key) const {

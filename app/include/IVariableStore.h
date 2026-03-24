@@ -11,9 +11,7 @@
 
 #include "IVariable.h"
 
-// On ARM (Pico), uint32_t is unsigned long — distinct from unsigned int.
-// On x86-64 Linux, uint32_t IS unsigned int, so separate overloads would conflict.
-// Guard with PICO_ON_DEVICE to only declare uint32_t overloads on the target.
+
 
 class IVariableStore {
 public:
@@ -29,11 +27,7 @@ public:
   virtual std::shared_ptr<IVariable> addVariable(const std::string &key,
                                                  int value) = 0;
   virtual std::shared_ptr<IVariable> addVariable(const std::string &key,
-                                                 unsigned int value) = 0;
-#if PICO_ON_DEVICE
-  virtual std::shared_ptr<IVariable> addVariable(const std::string &key,
                                                  uint32_t value) = 0;
-#endif
   virtual std::shared_ptr<IVariable> addVariable(const std::string &key,
                                                  float value) = 0;
 
@@ -41,10 +35,7 @@ public:
                            const std::string &value) = 0;
   virtual bool setBoolVariable(const std::string &key, bool value) = 0;
   virtual bool setVariable(const std::string &key, int value) = 0;
-  virtual bool setVariable(const std::string &key, unsigned int value) = 0;
-#if PICO_ON_DEVICE
   virtual bool setVariable(const std::string &key, uint32_t value) = 0;
-#endif
   virtual bool setVariable(const std::string &key, float value) = 0;
 
   virtual std::shared_ptr<IVariable>

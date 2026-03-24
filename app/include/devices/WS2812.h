@@ -27,7 +27,7 @@ public:
   }
   bool setPattern(const uint32_t* data, size_t count);
 
-  uint getNumLeds() const { return _num_leds; }
+  uint getLEDCount() const { return _num_leds; }
 
   std::shared_ptr<WS2812> getShared() {
       return shared_from_this();

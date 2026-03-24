@@ -8,7 +8,7 @@ dotMatrix8x8::dotMatrix8x8(std::shared_ptr<WS2812> led, const std::string& name,
     : IDisplayDevice(color), _led(led), _name(name) {
 
   // Derive display width from the WS2812 LED count (8 rows per module)
-  _num_columns = _led->getNumLeds() / 8;
+  _num_columns = _led->getLEDCount() / 8;
   if (_num_columns < 8) _num_columns = 8;
 
   setValue(start);

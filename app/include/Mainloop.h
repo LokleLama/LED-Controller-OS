@@ -78,6 +78,41 @@ public:
   // Simulated SysTick functions
   uint32_t getSysTick() { return _systickCounter; }
 
+#if !PICO_ON_DEVICE
+  // Advance simulated time and execute due tasks (for host-side testing)
+  void tick(uint32_t ms = 1) {
+    for (uint32_t i = 0; i < ms; i++) {
+      onMillisecond();
+    }
+    for (auto &task : _timedTasks) {
+      if (task.execute) {
+        if (!task.func()) {
+          task.intervalMs = 0;
+        }
+        task.execute = false;
+        task.nextExecution = _systickCounter + task.intervalMs;
+      }
+    }
+    // Remove completed one-shot tasks
+    for (int n = 0; n < (int)_timedTasks.size(); n++) {
+      if (_timedTasks[n].intervalMs == 0) {
+        _timedTasks.erase(_timedTasks.begin() + n);
+        n--;
+      }
+    }
+  }
+
+  // Clear all tasks and reset state (for test isolation)
+  void reset() {
+    for (auto task : _regularTasks) delete task;
+    _regularTasks.clear();
+    _timedTasks.clear();
+    _systickCounter = 0;
+    _nextTaskHandle = 0;
+    _running = false;
+  }
+#endif
+
   void OuptutTaskInformation() {
     std::cout << "Regular Tasks:" << std::endl;
     for (auto task : _regularTasks) {

@@ -4,6 +4,7 @@
 #include "devices/UARTDevice.h"
 #include "devices/USBUARTDevice.h"
 #include "devices/Loopback.h"
+#include "devices/Passthrough.h"
 
 #include <memory>
 #include <string>
@@ -18,26 +19,87 @@ public:
     
     const Category getCategory() const override { return Category::Communication; }
     const std::vector<std::string> getDeviceNames() const override {
-        static std::vector<std::string> names = {"Loopback"};
+        static std::vector<std::string> names = {"Loopback", "Passthrough"};
         return names;
     }
     const std::string& getParameterInfo() const override{
-        static std::string empty = "<ICommDeviceName> [name] [buffer-size]\n"
-                                   "  ICommDeviceName:    Name of the IComm device to use (e.g.: USBUART-0)\n"
-                                   "  name:               Optional unique name for the device (default: auto-generated)\n"
-                                   "  buffer-size:        Optional buffer size for the loopback (default: 64)\n";
+        static std::string description = "Loopback <ICommDeviceName> [name] [buffer-size]\n"
+                                         "  ICommDeviceName:    Name of the IComm device to use (e.g.: USBUART-0)\n"
+                                         "  name:               Optional unique name for the device (default: auto-generated)\n"
+                                         "  buffer-size:        Optional buffer size for the loopback (default: 64)\n\n"
+                                         "Passthrough <ICommDeviceNameA> <ICommDeviceNameB> [name] [buffer-size]\n"
+                                         "  ICommDeviceNameA:   Name of the first IComm device to use (e.g.: USBUART-0)\n"
+                                         "  ICommDeviceNameB:   Name of the second IComm device to use (e.g.: UART-1)\n"
+                                         "  name:               Optional unique name for the device (default: auto-generated)\n"
+                                         "  buffer-size:        Optional buffer size for the passthrough (default: 128)";
 
-        return empty;
+        return description;
     }
     std::shared_ptr<IDevice> createDevice(const std::string& name, const std::vector<std::string>& params) override {
+        if (name == "Loopback") {
+            return createLoopback(name, params);
+        } else if (name == "Passthrough") {
+            return createPassthrough(name, params);
+        }
+
+        return nullptr;
+    }
+
+private:
+    DeviceRepository& _deviceRepo;
+    uint8_t _number = 0;
+
+    std::shared_ptr<IDevice> createPassthrough(const std::string& name, const std::vector<std::string>& params) {
+        if (params.size() < 2) {
+            return nullptr;
+        }
+        std::shared_ptr<ICommDevice> comm_device_a = findCommDevice(params[0]);
+        if (!comm_device_a) {
+            std::cout << "Invalid IComm device: " << params[0] << std::endl;
+            return nullptr;
+        }
+        std::shared_ptr<ICommDevice> comm_device_b = findCommDevice(params[1]);
+        if (!comm_device_b) {
+            std::cout << "Invalid IComm device: " << params[1] << std::endl;
+            return nullptr;
+        }
+        std::string device_name;
+        if (params.size() >= 3) {
+            device_name = params[2];
+        } else {
+            device_name = "Passthrough-" + std::to_string(_number);
+        }
+        _number++;
+        int buffer_size = 128;
+        if (params.size() >= 4) {
+            buffer_size = std::stoi(params[3]);
+        }
+
+        auto passthrough_device = std::make_shared<Passthrough>(comm_device_a, comm_device_b, device_name, buffer_size);
+        if (passthrough_device->getStatus() != IDevice::DeviceStatus::Initialized) {
+            std::cout << "Failed to initialize Passthrough device: " << device_name << std::endl;
+            return nullptr;
+        }
+
+        if(!comm_device_a->assignToUser(passthrough_device)){
+            std::cout << "Failed to assign " << comm_device_a->getName() << " to Passthrough device: " << device_name << std::endl;
+            return nullptr;
+        }
+        
+        if(!comm_device_b->assignToUser(passthrough_device)){
+            std::cout << "Failed to assign " << comm_device_b->getName() << " to Passthrough device: " << device_name << std::endl;
+            return nullptr;
+        }
+
+        return passthrough_device;
+    }
+
+    std::shared_ptr<IDevice> createLoopback(const std::string& name, const std::vector<std::string>& params) {
         if (params.size() < 1) {
             return nullptr;
         }
-        std::shared_ptr<ICommDevice> comm_device = _deviceRepo.getDevice<UARTDevice>("UART", params[0]);
-        if(!comm_device) {
-            comm_device = _deviceRepo.getDevice<USBUARTDevice>("USBUART", params[0]);
-        }
-        if (!comm_device || comm_device->getStatus() != IDevice::DeviceStatus::Initialized) {
+        std::shared_ptr<ICommDevice> comm_device = findCommDevice(params[0]);
+        if (!comm_device) {
             std::cout << "Invalid IComm device: " << params[0] << std::endl;
             return nullptr;
         }
@@ -59,10 +121,23 @@ public:
             return nullptr;
         }
 
+        if(!comm_device->assignToUser(loopback_device)){
+            std::cout << "Failed to assign " << comm_device->getName() << " to Loopback device: " << device_name << std::endl;
+            return nullptr;
+        }
+
         return loopback_device;
     }
 
-private:
-    DeviceRepository& _deviceRepo;
-    uint8_t _number = 0;
+    std::shared_ptr<ICommDevice> findCommDevice(const std::string& name) {
+        auto uart_device = _deviceRepo.getDevice<UARTDevice>("UART", name);
+        if (uart_device && uart_device->getStatus() == IDevice::DeviceStatus::Initialized) {
+            return uart_device;
+        }
+        auto usb_uart_device = _deviceRepo.getDevice<USBUARTDevice>("USBUART", name);
+        if (usb_uart_device && usb_uart_device->getStatus() == IDevice::DeviceStatus::Initialized) {
+            return usb_uart_device;
+        }
+        return nullptr;
+    }
 };

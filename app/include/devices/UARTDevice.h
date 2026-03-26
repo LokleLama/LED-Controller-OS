@@ -4,6 +4,8 @@
 #include "hardware/dma.h"
 #include "devices/ICommDevice.h"
 
+#include "Utils/IRQFifo.h"
+
 #include <vector>
 #include <memory>
 #include <string>
@@ -11,7 +13,7 @@
 
 class UARTDevice : public ICreateSharedFromThis<UARTDevice>, public ICommDevice {
 public:
-    UARTDevice(int uart_number, uint8_t tx_pin, uint8_t rx_pin, uint baud_rate = 115200);
+    UARTDevice(int uart_number, uint8_t tx_pin, uint8_t rx_pin, uint baud_rate = 115200, int buffersize = 32);
 
     const std::string getName() const override { return "UART" + std::to_string(_uart_number); }
     const std::string getType() const override { return "UART"; }
@@ -23,14 +25,16 @@ public:
 
     int send(const uint8_t* data, size_t length) override;
     int dataAvailable() override;
-    int receive(uint8_t* buffer, size_t length) override;
+    int receive(uint8_t* buffer, size_t length) override{
+        return _rx_fifo.readAvailable(buffer, length);
+    }
 
     bool registerDataReceivedCallback(Mainloop::Function func, uint32_t signal = 0) override {
         if(_irq_signal != 0) {
             return false;
         }
         if(signal == 0) {
-            signal = 0x55415254 + _uart_number;
+            signal = 0x41525430 + _uart_number;
         }
         _irq_signal = signal;
         Mainloop::getInstance().registerSignalTask(getName() + ".DataReceived", func, _irq_signal);
@@ -43,6 +47,7 @@ private:
     uint8_t _tx_pin;
     uint8_t _rx_pin;
     uint _baud_rate;
+    IRQFifo _rx_fifo;
 
     uint32_t _irq_signal = 0;
 

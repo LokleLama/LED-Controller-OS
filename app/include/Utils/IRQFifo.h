@@ -1,9 +1,8 @@
 #pragma once
 
-#include "IDataStream.h"
 #include <cstdint>
 
-class IRQFifo : public IDataStream {
+class IRQFifo {
 public:
   IRQFifo(uint32_t size) {
     _bufferSize = size;
@@ -24,6 +23,24 @@ public:
     }
   }
 
+  int writeAvailable(const uint8_t *buffer, uint32_t size) {
+    int available = _bufferSize - count();
+    if (available == 0) {
+      return 0;
+    }
+    if (available > size) {
+      available = size;
+    }
+    for (int i = 0; i < available; i++) {
+      *_head = buffer[i];
+      _head++;
+      if (_head == _end) {
+        _head = _buffer; // Wrap around
+      }
+    }
+    return available;
+  }
+
   int readAvailable(uint8_t *buffer, uint32_t size) {
     int available = count();
     if (available == 0) {
@@ -42,8 +59,34 @@ public:
     return available;
   }
 
-  int writeAvailable(const uint8_t *buffer, uint32_t size) override {
-    return -1;
+  int peakAvailable(uint8_t *buffer, uint32_t size) const {
+    int available = count();
+    if (available == 0) {
+      return 0;
+    }
+    if (available > size) {
+      available = size;
+    }
+    uint8_t *tempTail = _tail;
+    for (int i = 0; i < available; i++) {
+      buffer[i] = *tempTail;
+      tempTail++;
+      if (tempTail == _end) {
+        tempTail = _buffer; // Wrap around
+      }
+    }
+    return available;
+  }
+
+  void remove(uint32_t size) {
+    int available = count();
+    if (size > available) {
+      size = available;
+    }
+    _tail += size;
+    if (_tail >= _end) {
+      _tail -= _bufferSize; // Wrap around
+    }
   }
 
   bool isEmpty() const { return count() == 0; }

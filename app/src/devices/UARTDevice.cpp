@@ -2,11 +2,12 @@
 #include "hardware/irq.h"
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
+#include <iostream>
 
 UARTDevice* UARTDevice::_instances[2] = {nullptr, nullptr};
 
-UARTDevice::UARTDevice(int uart_number, uint8_t tx_pin, uint8_t rx_pin, uint baud_rate) : 
-    _uart_number(uart_number), _tx_pin(tx_pin), _rx_pin(rx_pin), _baud_rate(baud_rate) 
+UARTDevice::UARTDevice(int uart_number, uint8_t tx_pin, uint8_t rx_pin, uint baud_rate, int buffersize) :
+    _uart_number(uart_number), _tx_pin(tx_pin), _rx_pin(rx_pin), _baud_rate(baud_rate), _rx_fifo(buffersize)
 {
     if (_uart_number >= 2 || _instances[_uart_number] != nullptr) {
         _status = DeviceStatus::Error;
@@ -14,7 +15,21 @@ UARTDevice::UARTDevice(int uart_number, uint8_t tx_pin, uint8_t rx_pin, uint bau
     }
     _uart = (_uart_number == 0) ? uart0 : uart1;
 
-    if (!isTXPinValid(_tx_pin) || !isRXPinValid(_rx_pin)) {
+    if (!isTXPinValid(_tx_pin)) {
+        std::cerr << "Invalid TX pin " << static_cast<int>(_tx_pin) << " for UART" << _uart_number << ", possible pins are: ";
+        for (int i = UART_PIN_TX; i < 16; i += UART_PIN_COUNT) {
+            std::cerr << static_cast<int>((_uart_number == 0 ? _uart0_pins : _uart1_pins)[i]) << " ";
+        }
+        std::cerr << std::endl;
+        _status = DeviceStatus::Error;
+        return;
+    }
+    if (!isRXPinValid(_rx_pin)) {
+        std::cerr << "Invalid RX pin " << static_cast<int>(_rx_pin) << " for UART" << _uart_number << ", possible pins are: ";
+        for (int i = UART_PIN_RX; i < 16; i += UART_PIN_COUNT) {
+            std::cerr << static_cast<int>((_uart_number == 0 ? _uart0_pins : _uart1_pins)[i]) << " ";
+        }
+        std::cerr << std::endl;
         _status = DeviceStatus::Error;
         return;
     }
@@ -43,6 +58,7 @@ UARTDevice::UARTDevice(int uart_number, uint8_t tx_pin, uint8_t rx_pin, uint bau
         irq_set_enabled(UART1_IRQ, true);
     }
     uart_set_irq_enables(_uart, true, false);
+    uart_set_fifo_enabled(_uart, true);
 
     _status = DeviceStatus::Initialized;
 }
@@ -63,12 +79,7 @@ int UARTDevice::send(const uint8_t* data, size_t length) {
 }
 
 int UARTDevice::dataAvailable() {
-    return uart_is_readable(_uart) ? 1 : 0;
-}
-
-int UARTDevice::receive(uint8_t* buffer, size_t length) {
-    uart_read_blocking(_uart, buffer, length);
-    return length;
+    return _rx_fifo.count();
 }
 
 bool UARTDevice::isPinValid(uint8_t pin, int pinType) const {
@@ -86,8 +97,13 @@ const std::string UARTDevice::getDetails() const {
 }
 
 void UARTDevice::handleIRQ() {
-    if(dataAvailable() && _irq_signal != 0) {
-        Mainloop::getInstance().triggerSignal(_irq_signal);
+    if(uart_is_readable(_uart) != 0) {
+        while(uart_is_readable(_uart) != 0 && !_rx_fifo.isFull()) {
+            _rx_fifo.push(uart_getc(_uart));
+        }
+        if(_irq_signal != 0) {
+            Mainloop::getInstance().triggerSignal(_irq_signal);
+        }
     }
 }
 

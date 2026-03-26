@@ -45,9 +45,9 @@ void Mainloop::start() {
     for (auto &task : _signalTasks) {
       if (task.execute) {
         task.info.startTime = time_us_64();
-        task.info.func();
+        auto rerun = task.info.func();
         calculateStatistics(task.info);
-        task.execute = false;
+        task.execute = rerun;
       }
     }
 

@@ -18,7 +18,9 @@ bool USBUARTDevice::ExecuteTask() {
 }
 
 int USBUARTDevice::send(const uint8_t* data, size_t length) {
-    return tud_cdc_n_write(_interface_number, data, length);
+    auto ret = tud_cdc_n_write(_interface_number, data, length);
+    tud_cdc_n_write_flush(_interface_number);
+    return ret;
 }
 
 int USBUARTDevice::dataAvailable() {

@@ -9,14 +9,15 @@ Loopback::Loopback(std::shared_ptr<ICommDevice> commDevice, const std::string& n
 }
 
 bool Loopback::ExecuteTask() {
-  std::vector<uint8_t> buffer(_buffersize);
+  uint8_t buffer[_buffersize];
   while(_commDevice->dataAvailable() > 0){
-    int readBytes = _commDevice->receive(buffer.data(), _buffersize);
-    if(readBytes > 0) {
-      _commDevice->send(buffer.data(), readBytes);
+    int readBytes = _commDevice->receive(buffer, _buffersize);
+    int writtenBytes = 0;
+    while(writtenBytes < readBytes) {
+      writtenBytes += _commDevice->send(buffer + writtenBytes, readBytes - writtenBytes);
     }
   };
-  return true;
+  return false;
 }
 
 const std::string Loopback::getDetails() const{

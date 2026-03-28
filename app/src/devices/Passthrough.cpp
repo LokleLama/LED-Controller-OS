@@ -50,17 +50,17 @@ bool Passthrough::SignalTask() {
 bool Passthrough::ExecuteTask() {
   uint8_t buffer[_junkSize];
   if(_fifoAtoB.count() > 0) {
-    int bytesToSend = _fifoAtoB.readAvailable(buffer, _junkSize);
-    int writtenBytes = 0;
-    while(writtenBytes < bytesToSend) {
-      writtenBytes += _commDeviceB->send(buffer + writtenBytes, bytesToSend - writtenBytes);
+    int bytesToSend = _fifoAtoB.peekAvailable(buffer, _junkSize);
+    if(bytesToSend > 0) {
+      int writtenBytes = _commDeviceB->send(buffer, bytesToSend);
+      _fifoAtoB.remove(writtenBytes);
     }
   }
   if(_fifoBtoA.count() > 0) {
-    int bytesToSend = _fifoBtoA.readAvailable(buffer, _junkSize);
-    int writtenBytes = 0;
-    while(writtenBytes < bytesToSend) {
-      writtenBytes += _commDeviceA->send(buffer + writtenBytes, bytesToSend - writtenBytes);
+    int bytesToSend = _fifoBtoA.peekAvailable(buffer, _junkSize);
+    if(bytesToSend > 0) {
+      int writtenBytes = _commDeviceA->send(buffer, bytesToSend);
+      _fifoBtoA.remove(writtenBytes);
     }
   }
   return true;

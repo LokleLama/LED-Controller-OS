@@ -74,7 +74,12 @@ bool UARTDevice::setFormat(int bits, int stopBits, int parity) {
 }
 
 int UARTDevice::send(const uint8_t* data, size_t length) {
-    uart_write_blocking(_uart, data, length);
+    for (size_t i = 0; i < length; i++) {
+        if(!uart_is_writable(_uart)) {
+            return i; // Return number of bytes sent so far
+        }
+        uart_get_hw(_uart)->dr = data[i];
+    }
     return length;
 }
 

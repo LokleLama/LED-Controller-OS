@@ -59,7 +59,7 @@ public:
     return available;
   }
 
-  int peakAvailable(uint8_t *buffer, uint32_t size) const {
+  int peekAvailable(uint8_t *buffer, uint32_t size) const {
     int available = count();
     if (available == 0) {
       return 0;

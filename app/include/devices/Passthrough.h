@@ -22,7 +22,6 @@ private:
     std::shared_ptr<ICommDevice> _commDeviceA;
     std::shared_ptr<ICommDevice> _commDeviceB;
     std::string _name;
-    int _buffersize;
     int _junkSize;
 
     IRQFifo _fifoAtoB;

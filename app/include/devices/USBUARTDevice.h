@@ -24,6 +24,10 @@ public:
 
     bool registerDataReceivedCallback(Mainloop::Function func, uint32_t signal = 0) override;
 
+    int getBufferSize() const override {
+        return 64;
+    }
+
 private:
     int _interface_number;
     uint32_t _irq_signal = 0;

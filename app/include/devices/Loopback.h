@@ -2,6 +2,7 @@
 
 #include "devices/IDevice.h"
 #include "devices/ICommDevice.h"
+#include "Utils/IRQFifo.h"
 
 #include <cstdint>
 #include <string>
@@ -11,7 +12,8 @@
 
 class Loopback : public ICreateSharedFromThis<Loopback>, public IDevice {
 public:
-  Loopback(std::shared_ptr<ICommDevice> commDevice, const std::string& name = "Loopback", int buffersize = 64);
+  Loopback(std::shared_ptr<ICommDevice> commDevice, const std::string& name = "Loopback");
+  Loopback(std::shared_ptr<ICommDevice> commDevice, const std::string& name, int buffersize);
 
   const std::string getName() const override { return _name; }
   const std::string getType() const override { return "Loopback"; }
@@ -20,7 +22,7 @@ public:
 private:
     std::shared_ptr<ICommDevice> _commDevice;
     std::string _name;
-    int _buffersize;
+    IRQFifo _fifo;
 
     bool ExecuteTask();
 };

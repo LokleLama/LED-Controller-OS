@@ -41,6 +41,10 @@ public:
         return true;
     }
 
+    int getBufferSize() const override {
+        return _rx_fifo.capacity();
+    }
+
 private:
     int _uart_number;
     uart_inst_t* _uart;

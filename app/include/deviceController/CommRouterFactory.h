@@ -26,12 +26,12 @@ public:
         static std::string description = "Loopback <ICommDeviceName> [name] [buffer-size]\n"
                                          "  ICommDeviceName:    Name of the IComm device to use (e.g.: USBUART-0)\n"
                                          "  name:               Optional unique name for the device (default: auto-generated)\n"
-                                         "  buffer-size:        Optional buffer size for the loopback (default: 64)\n\n"
+                                         "  buffer-size:        Optional buffer size for the loopback (default: 4x IComm device buffer size)\n\n"
                                          "Passthrough <ICommDeviceNameA> <ICommDeviceNameB> [name] [buffer-size]\n"
                                          "  ICommDeviceNameA:   Name of the first IComm device to use (e.g.: USBUART-0)\n"
                                          "  ICommDeviceNameB:   Name of the second IComm device to use (e.g.: UART-1)\n"
                                          "  name:               Optional unique name for the device (default: auto-generated)\n"
-                                         "  buffer-size:        Optional buffer size for the passthrough (default: 128)";
+                                         "  buffer-size:        Optional buffer size for the passthrough (default: 4x IComm device buffer size)\n";
 
         return description;
     }
@@ -70,9 +70,14 @@ private:
             device_name = "Passthrough-" + std::to_string(_number);
         }
         _number++;
-        int buffer_size = 128;
+        int buffer_size = comm_device_a->getBufferSize() * 4;
         if (params.size() >= 4) {
             buffer_size = std::stoi(params[3]);
+        }else{
+            int buffer_size_b = comm_device_b->getBufferSize() * 4;
+            if(buffer_size_b > buffer_size) {
+                buffer_size = buffer_size_b;
+            }
         }
 
         auto passthrough_device = std::make_shared<Passthrough>(comm_device_a, comm_device_b, device_name, buffer_size);
@@ -110,7 +115,7 @@ private:
             device_name = "Loopback-" + std::to_string(_number);
         }
         _number++;
-        int buffer_size = 64;
+        int buffer_size = comm_device->getBufferSize() * 4;
         if (params.size() >= 3) {
             buffer_size = std::stoi(params[2]);
         }

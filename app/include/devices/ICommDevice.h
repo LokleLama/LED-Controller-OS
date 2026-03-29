@@ -16,4 +16,6 @@ public:
     virtual int dataAvailable() = 0;
     virtual int receive(uint8_t* buffer, size_t length) = 0;
     virtual bool registerDataReceivedCallback(Mainloop::Function func, uint32_t signal = 0) = 0;
+
+    virtual int getBufferSize() const = 0;
 };

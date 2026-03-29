@@ -91,7 +91,7 @@ public:
 
   bool isEmpty() const { return count() == 0; }
   bool isFull() const { return count() == _bufferSize; }
-  uint32_t size() const { return _bufferSize; }
+  uint32_t capacity() const { return _bufferSize; }
   uint32_t count() const {
     if (_head >= _tail) {
       return _head - _tail;

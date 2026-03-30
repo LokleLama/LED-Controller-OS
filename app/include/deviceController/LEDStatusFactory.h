@@ -10,6 +10,8 @@
 #include "Console.h"
 #include "Flash/SPFS.h"
 
+#include "ArduinoJson.h"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -107,6 +109,22 @@ private:
         if (!file) {
             std::cout << "Failed to open status colors file: " << filename << std::endl;
             return;
+        }
+
+        std::string fileContent = file->readAsString();
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, fileContent);
+        if (error) {
+            std::cout << "Failed to parse status colors file: " << filename << " - " << error.c_str() << std::endl;
+            return;
+        }
+
+        device->ClearMap();
+        for (JsonPair kv : doc.as<JsonObject>()) {
+            const std::string key = kv.key().c_str();
+            uint32_t color = ValueConverter::toInt(kv.value().as<std::string>());
+
+            device->AddStatusColor(key, color);
         }
     }
 };

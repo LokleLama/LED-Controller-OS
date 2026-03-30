@@ -1,10 +1,10 @@
 #pragma once
 
 #include "deviceController/DeviceRepository.h"
-#include "devices/UARTDevice.h"
-#include "devices/USBUARTDevice.h"
+#include "devices/ICommDevice.h"
 #include "devices/Loopback.h"
 #include "devices/Passthrough.h"
+#include "deviceController/Helper/ICommDeviceHelper.h"
 
 #include <memory>
 #include <string>
@@ -53,12 +53,12 @@ private:
         if (params.size() < 2) {
             return nullptr;
         }
-        std::shared_ptr<ICommDevice> comm_device_a = findCommDevice(params[0]);
+        std::shared_ptr<ICommDevice> comm_device_a = ICommDeviceHelper::findCommDevice(params[0], _deviceRepo);
         if (!comm_device_a) {
             std::cout << "Invalid IComm device: " << params[0] << std::endl;
             return nullptr;
         }
-        std::shared_ptr<ICommDevice> comm_device_b = findCommDevice(params[1]);
+        std::shared_ptr<ICommDevice> comm_device_b = ICommDeviceHelper::findCommDevice(params[1], _deviceRepo);
         if (!comm_device_b) {
             std::cout << "Invalid IComm device: " << params[1] << std::endl;
             return nullptr;
@@ -103,7 +103,7 @@ private:
         if (params.size() < 1) {
             return nullptr;
         }
-        std::shared_ptr<ICommDevice> comm_device = findCommDevice(params[0]);
+        std::shared_ptr<ICommDevice> comm_device = ICommDeviceHelper::findCommDevice(params[0], _deviceRepo);
         if (!comm_device) {
             std::cout << "Invalid IComm device: " << params[0] << std::endl;
             return nullptr;
@@ -132,17 +132,5 @@ private:
         }
 
         return loopback_device;
-    }
-
-    std::shared_ptr<ICommDevice> findCommDevice(const std::string& name) {
-        auto uart_device = _deviceRepo.getDevice<UARTDevice>("UART", name);
-        if (uart_device && uart_device->getStatus() == IDevice::DeviceStatus::Initialized) {
-            return uart_device;
-        }
-        auto usb_uart_device = _deviceRepo.getDevice<USBUARTDevice>("USBUART", name);
-        if (usb_uart_device && usb_uart_device->getStatus() == IDevice::DeviceStatus::Initialized) {
-            return usb_uart_device;
-        }
-        return nullptr;
     }
 };

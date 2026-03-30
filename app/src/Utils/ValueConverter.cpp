@@ -14,7 +14,7 @@ int ValueConverter::toInt(const std::string& str, IntegerStringFormat* format) {
       }
     }
     if(str[0] == '#' && str.size() > 1){
-      *format = IntegerStringFormat::HEX;
+      *format = IntegerStringFormat::HEX_COLOR;
     }
     long long result = 0;
     switch(*format){
@@ -25,11 +25,10 @@ int ValueConverter::toInt(const std::string& str, IntegerStringFormat* format) {
         result = std::stoll(str.substr(2), nullptr, 8);
         break;
       case IntegerStringFormat::HEX:
-        if(str[0] == '#'){
-          result = std::stoll(str.substr(1), nullptr, 16);
-        } else {
-          result = std::stoll(str.substr(2), nullptr, 16);
-        }
+        result = std::stoll(str.substr(2), nullptr, 16);
+        break;
+      case IntegerStringFormat::HEX_COLOR:
+        result = std::stoll(str.substr(1), nullptr, 16);
         break;
       case IntegerStringFormat::DECIMAL:
       default:
@@ -63,6 +62,11 @@ std::string ValueConverter::toString(int value, IntegerStringFormat format) {
       case IntegerStringFormat::HEX: {
         std::ostringstream oss;
         oss << "0x" << std::hex << value;
+        return oss.str();
+      }
+      case IntegerStringFormat::HEX_COLOR: {
+        std::ostringstream oss;
+        oss << "#" << std::hex << std::setw(6) << std::setfill('0') << (value & 0xFFFFFF);
         return oss.str();
       }
       case IntegerStringFormat::DECIMAL:

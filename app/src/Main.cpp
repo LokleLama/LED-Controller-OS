@@ -7,9 +7,6 @@
 #include <sys/types.h>
 #include <vector>
 
-#include "VariableStore/VariableStore.h"
-#include "deviceController/DeviceRepository.h"
-
 #include "Commands/BootCommand.h"
 
 #include "Commands/EchoCommand.h"
@@ -40,22 +37,16 @@
 
 #include "BackgroundTasks/StartCommand.h"
 
-#include "devices/USBUARTDevice.h"
+#include "VariableStore/VariableStore.h"
+#include "deviceController/DeviceRepository.h"
 
-#include "HLKLogger.h"
-#include "HLKStack/HLKPackageFinder.h"
-#include "HexLogger.h"
-#include "IRQFifo.h"
+#include "devices/USBUARTDevice.h"
 
 #include "RTC/PicoTime.h"
 
 #include "Mainloop.h"
 
-static std::shared_ptr<IComLogger> logger;
-static std::shared_ptr<IVariable> output_distance;
-static std::shared_ptr<IVariable> distance;
 static std::shared_ptr<PicoTime> picoTime;
-static HLKPackageFinder package_finder;
 
 int main() {
   stdio_init_all();
@@ -116,58 +107,6 @@ int main() {
 
   variableStore.addVariable("init-script", "startup.sh");
   variableStore.addVariable("?", 0);
-  
-  /*variableStore.addVariable("uart0.baud", 115200);
-  variableStore.addVariable("uart0.format", "8n1");
-  variableStore.addVariable("uart0.log", "none");
-  output_distance = variableStore.addBoolVariable("distance", false);
-  distance = variableStore.addVariable("var.dist", 0.0f);
-
-  variableStore.registerCallback(
-      "uart0.baud", [](const std::string &key, const std::string &value) {
-        int baudRate = std::stoi(value, nullptr, 10);
-        int actual = uart_set_baudrate(uart0, baudRate);
-        std::cout << "Baud rate changed to " << actual
-                  << " (requested: " << baudRate << ")" << std::endl;
-        return true;
-      });
-  variableStore.registerCallback(
-      "uart0.format", [](const std::string &key, const std::string &value) {
-        if (value.size() < 3) {
-          std::cout << "Invalid format value" << std::endl;
-          return false;
-        }
-        int bits = value[0] - '0';
-        char parity = value[1];
-        int stopBits = value[2] - '0';
-
-        if (bits < 5 || bits > 8 ||
-            (parity != 'n' && parity != 'o' && parity != 'e') ||
-            (stopBits != 1 && stopBits != 2)) {
-          std::cout << "Invalid format value" << std::endl;
-          return false;
-        }
-        // Implement UART0 format change logic here
-        // Example: UART0.setFormat(bits, parity, stopBits);
-        std::cout << "Format changed to " << bits << parity << stopBits
-                  << " (not implemented yet)" << std::endl;
-        return false;
-      });
-  variableStore.registerCallback("uart0.log", [](const std::string &key,
-                                                 const std::string &value) {
-    if (value == "none") {
-      logger.reset();
-    } else if (value == "hex") {
-      logger = std::make_shared<HexLogger>();
-    } else if (value == "hlk") {
-      logger = std::make_shared<HLKLogger>();
-    } else {
-      std::cout << "Invalid log value, use 'none', 'hex' or 'hlk'" << std::endl;
-      return false;
-    }
-    std::cout << "Log changed to " << value << std::endl;
-    return true;
-  });*/
 
   console.EnqueueCommand("env load");
   console.EnqueueCommand("exec ${init-script}");
@@ -178,35 +117,3 @@ int main() {
 
   return 0;
 }
-
-/*static void uart_task(void) {
-  if (tud_cdc_n_available(UART_INTERFACE_NUMBER)) {
-    uint8_t buf[64];
-
-    uint32_t count = tud_cdc_n_read(UART_INTERFACE_NUMBER, buf, sizeof(buf));
-
-    if (logger) {
-      logger->Transmitting(buf, count);
-    }
-
-    uart_write_blocking(uart0, buf, count);
-  }
-  if (!uart_fifo.isEmpty()) {
-    uint8_t buf[64];
-    int count = uart_fifo.readAvailable(buf, sizeof(buf));
-    if (count > 0) {
-      auto pack = package_finder.fastDistanceFinder(buf, count);
-      if (pack) {
-        distance->set(pack->getDistance());
-        if (output_distance->asBool()) {
-          std::cout << pack->toString() << std::endl;
-        }
-      }
-      if (logger) {
-        logger->Receiving(buf, count);
-      }
-      tud_cdc_n_write(UART_INTERFACE_NUMBER, buf, count);
-    }
-    tud_cdc_n_write_flush(UART_INTERFACE_NUMBER);
-  }
-}*/

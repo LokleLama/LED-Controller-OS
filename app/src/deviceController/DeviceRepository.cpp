@@ -6,6 +6,7 @@
 #include "deviceController/LEDDisplayFactory.h"
 #include "deviceController/LEDStatusFactory.h"
 #include "deviceController/CommRouterFactory.h"
+#include "deviceController/HLKFactory.h"
 
 #include <algorithm>
 
@@ -16,6 +17,7 @@ DeviceRepository::DeviceRepository(const Console& console) {
     _factories.push_back(std::make_shared<LEDDisplayFactory>(*this));
     _factories.push_back(std::make_shared<LEDStatusFactory>(*this, console));
     _factories.push_back(std::make_shared<CommRouterFactory>(*this));
+    _factories.push_back(std::make_shared<HLKFactory>(*this));
 }
 
 const std::vector<std::string> DeviceRepository::getAvailableDeviceNames(IDeviceFactory::Category category) const{

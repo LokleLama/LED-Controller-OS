@@ -37,6 +37,12 @@ public:
       if (_head == _end) {
         _head = _buffer; // Wrap around
       }
+      if(_head == _tail) {
+        _tail++; // Move tail to make space if head catches up
+        if (_tail == _end) {
+          _tail = _buffer; // Wrap around
+        }
+      }
     }
     return available;
   }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "devices/IDevice.h"
 #include "devices/IDisplayDevice.h"
 #include "devices/WS2812.h"
 
@@ -12,7 +13,7 @@
 #include <memory>
 #include <string>
 
-class dotMatrix5x5 : public IDisplayDevice, public std::enable_shared_from_this<dotMatrix5x5> {
+class dotMatrix5x5 : public ICreateSharedFromThis<dotMatrix5x5>, public IDisplayDevice {
 public:
   dotMatrix5x5(std::shared_ptr<WS2812> led, const std::string& name = "dotMatrix5x5", const std::string& start = " ", uint32_t color = 0x03030303);
 
@@ -22,10 +23,6 @@ public:
 
   void setValue(const std::string& value) override;
   void setScrollingSpeed(int speed);
-
-  std::shared_ptr<dotMatrix5x5> getShared() {
-      return shared_from_this();
-  }
 
 private:
   std::shared_ptr<WS2812> _led;

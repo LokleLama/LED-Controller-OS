@@ -9,7 +9,7 @@
 class LedCommand : public ICommand {
 public:
   // Constructor
-  LedCommand(const Console &console) : _console(console) {}
+  LedCommand(const Console &console, DeviceRepository &deviceRepo) : _console(console), _deviceRepo(deviceRepo) {}
 
   // Returns the name of the command
   const std::string getName() const override {
@@ -28,7 +28,7 @@ public:
       return -1; // Return -1 to indicate failure
     }
 
-    auto device = DeviceRepository::getInstance().getDevice<WS2812>("WS2812", args[1]);
+    auto device = _deviceRepo.getDevice<WS2812>("WS2812", args[1]);
     if (!device) {
       std::cout << "Device not found: " << args[1] << std::endl;
       return -1; // Return -1 to indicate failure
@@ -55,4 +55,5 @@ public:
 
 private:
   const Console &_console; // Reference to the console object
+  DeviceRepository &_deviceRepo; // Reference to the device repository
 };

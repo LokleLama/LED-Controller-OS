@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-class WS2812 : public IDevice, public std::enable_shared_from_this<WS2812> {
+class WS2812 : public ICreateSharedFromThis<WS2812>, public IDevice {
 public:
   WS2812(std::shared_ptr<PIODevice> pio, uint pin, uint num_leds, uint bits_per_pixel = 24,
          float freq = 800000, const std::string& name = "WS2812");
@@ -27,9 +27,7 @@ public:
   }
   bool setPattern(const uint32_t* data, size_t count);
 
-  std::shared_ptr<WS2812> getShared() {
-      return shared_from_this();
-  }
+  uint getLEDCount() const { return _num_leds; }
 
 private:
   std::shared_ptr<PIODevice> _pio;

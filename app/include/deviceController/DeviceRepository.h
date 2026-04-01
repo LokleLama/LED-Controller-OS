@@ -2,14 +2,15 @@
 
 #include "deviceController/IDeviceFactory.h"
 #include "devices/IDevice.h"
+#include "Console.h"
 
 #include <memory>
 #include <string>
 #include <vector>
 
 class DeviceRepository {
-public:   
-    static DeviceRepository& getInstance();
+public:
+    DeviceRepository(const Console& console);
 
     const std::vector<std::string> getAvailableDeviceNames(IDeviceFactory::Category category = IDeviceFactory::Category::All) const;
     const std::string getParameterInfo(const std::string& name) const;
@@ -30,11 +31,11 @@ public:
         return reinterpret_cast<T*>(device.get())->getShared();
     }
 
+    void addDevice(std::shared_ptr<IDevice> device);
+
 private:
     std::vector<std::shared_ptr<IDevice>> _devices;
     std::vector<std::shared_ptr<IDeviceFactory>> _factories;
 
     DeviceRepository();
-
-    void addDevice(std::shared_ptr<IDevice> device);
 };

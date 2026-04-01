@@ -11,6 +11,6 @@ github-id
 *.uf2
 *.o
 *.d
-fs-test/obj/
-fs-test/fs-test
-MatrixChar-test/matrix-text
+TestPrograms/fs-test/obj/
+TestPrograms/fs-test/fs-test
+TestPrograms/MatrixChar-test/matrix-text

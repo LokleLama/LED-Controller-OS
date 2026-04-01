@@ -40,7 +40,7 @@ public:
     return _taskRunning;
   }
 
-  std::string getName() const override {
+  const std::string getName() const override {
     return "Time Display Task";
   }
 

@@ -45,8 +45,6 @@ public:
     }
   }
 
-  virtual ~IDevice() = default;
-
   virtual const std::string getType() const = 0;
   virtual DeviceStatus getStatus() const { return _status; };
   virtual const std::string& getStatusString() const{
@@ -67,4 +65,12 @@ public:
 protected:
   std::shared_ptr<IDeviceUser> _user;
   DeviceStatus _status{DeviceStatus::Unknown};
+};
+
+template<class IDeviceType>
+class ICreateSharedFromThis : public std::enable_shared_from_this<IDeviceType> {
+public:
+    std::shared_ptr<IDeviceType> getShared() {
+        return this->shared_from_this();
+    }
 };

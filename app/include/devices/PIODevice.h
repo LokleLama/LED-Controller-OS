@@ -6,7 +6,9 @@
 
 #include <vector>
 #include <memory>
-class PIODevice : public IDevice, public std::enable_shared_from_this<PIODevice> {
+
+
+class PIODevice : public ICreateSharedFromThis<PIODevice>, public IDevice {
 public:
     PIODevice(int number);
 
@@ -30,10 +32,6 @@ public:
     PIO getPIO() const { return _pio; }
     int getPIONumber() const { return _number; }
     int getSM() const { return _sm; }
-
-    std::shared_ptr<PIODevice> getShared() {
-        return shared_from_this();
-    }
     
 private:
     int _number;

@@ -13,17 +13,29 @@ int ValueConverter::toInt(const std::string& str, IntegerStringFormat* format) {
         *format = IntegerStringFormat::OCTAL;
       }
     }
+    if(str[0] == '#' && str.size() > 1){
+      *format = IntegerStringFormat::HEX_COLOR;
+    }
+    long long result = 0;
     switch(*format){
       case IntegerStringFormat::BINARY:
-        return std::stoi(str.substr(2), nullptr, 2);
+        result = std::stoll(str.substr(2), nullptr, 2);
+        break;
       case IntegerStringFormat::OCTAL:
-        return std::stoi(str.substr(2), nullptr, 8);
+        result = std::stoll(str.substr(2), nullptr, 8);
+        break;
       case IntegerStringFormat::HEX:
-        return std::stoi(str.substr(2), nullptr, 16);
+        result = std::stoll(str.substr(2), nullptr, 16);
+        break;
+      case IntegerStringFormat::HEX_COLOR:
+        result = std::stoll(str.substr(1), nullptr, 16);
+        break;
       case IntegerStringFormat::DECIMAL:
       default:
-        return std::stoi(str, nullptr, 10);
+        result = std::stoll(str, nullptr, 10);
+        break;
     }
+    return static_cast<int>(result);
 }
 
 std::string ValueConverter::toString(int value, IntegerStringFormat format) {
@@ -50,6 +62,11 @@ std::string ValueConverter::toString(int value, IntegerStringFormat format) {
       case IntegerStringFormat::HEX: {
         std::ostringstream oss;
         oss << "0x" << std::hex << value;
+        return oss.str();
+      }
+      case IntegerStringFormat::HEX_COLOR: {
+        std::ostringstream oss;
+        oss << "#" << std::hex << std::setw(6) << std::setfill('0') << (value & 0xFFFFFF);
         return oss.str();
       }
       case IntegerStringFormat::DECIMAL:

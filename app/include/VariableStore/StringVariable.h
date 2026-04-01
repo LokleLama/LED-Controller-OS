@@ -52,7 +52,11 @@ public:
     return true;
   }
   bool set(bool value) override {
-    value_ = std::to_string(value);
+    if(value) {
+      value_ = "true";
+    } else {
+      value_ = "false";
+    }
     return true;
   }
 

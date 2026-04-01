@@ -3,7 +3,7 @@
 #include <string>
 #include <cstdint>
 
-enum class IntegerStringFormat { UNKNOWN, BINARY, OCTAL, DECIMAL, HEX };
+enum class IntegerStringFormat { UNKNOWN, BINARY, OCTAL, DECIMAL, HEX, HEX_COLOR};
 
 class ValueConverter {
 public:

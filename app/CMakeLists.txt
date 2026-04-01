@@ -29,6 +29,11 @@ add_executable(
     ${SRC}
 )
 
+# Suppress GCC psABI compatibility notes (e.g., iterator parameter passing changed in GCC 7.1).
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(${OUTPUT_NAME} PRIVATE -Wno-psabi)
+endif()
+
 # Define flash layout
 if(NOT DEFINED PICO_FLASH_SIZE_BYTES)
     set(PICO_FLASH_SIZE_BYTES 2097152)  # 2MB default

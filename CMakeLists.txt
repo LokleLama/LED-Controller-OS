@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.13)
 
+# Select target board: "pico" (RP2040) or "pico2" (RP2350)
+# Override with: cmake -DPICO_BOARD=pico2 ..
+if(NOT DEFINED PICO_BOARD)
+    set(PICO_BOARD pico CACHE STRING "Target board (pico or pico2)")
+endif()
+
 include(pico_sdk_import.cmake)
 
 project(LEDController C CXX ASM)

@@ -1,11 +1,20 @@
 #!/bin/bash
-# Memory analysis script for RP2040
+# Memory analysis script for RP2040 and RP2350
 
 ELF_FILE="$1"
 PROGRAM_FLASH_SIZE="$2"
+TARGET_CHIP="${3:-rp2040}"
 
 # RP2040 has 264 KB of RAM
 TOTAL_RAM=270336
+# Set RAM size based on chip
+if [ "$TARGET_CHIP" = "rp2350" ]; then
+    TOTAL_RAM=532480   # RP2350: 520 KB
+    RAM_LABEL="RP2350: 520 KB total"
+else
+    TOTAL_RAM=270336   # RP2040: 264 KB
+    RAM_LABEL="RP2040: 264 KB total"
+fi
 
 echo ""
 echo "╔════════════════════════════════════════════════════════════╗"
@@ -26,7 +35,7 @@ echo "Reserved SPFS:  262144 bytes (256 KB)"
 echo ""
 
 # RAM Memory Layout
-echo "=== RAM Memory Layout (RP2040: 264 KB total) ==="
+echo "=== RAM Memory Layout ($RAM_LABEL) ==="
 arm-none-eabi-nm --size-sort -S --radix=d "$ELF_FILE" | awk -v total_ram=$TOTAL_RAM '
 BEGIN {
     bss = 0

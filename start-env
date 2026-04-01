@@ -1,18 +1,26 @@
 #!/bin/bash
 
 ENVFILE='.pico_env'
-BUILD_DIR='build.arm'
+BUILD_DIR='build.rp2040'
+BUILD_ENV='rp2040'
+CMAKE_OPTS='-DPICO_BOARD=pico'
+
+if [ "$1" = "rp2350" ] || [ "$1" = "pico2" ]; then
+    BUILD_DIR='build.rp2350'
+    BUILD_ENV='rp2350'
+    CMAKE_OPTS='-DPICO_BOARD=pico2'
+fi
 
 cat << EOF > $ENVFILE
 
 . ~/.bashrc
 
 export PICO_SDK_PATH=~/pico-sdk
-export PS1="(pico-env) $PS1"
+export PS1="(pico-${BUILD_ENV}) $PS1"
 
 mkdir -p $BUILD_DIR
 cd $BUILD_DIR
-cmake ..
+cmake $CMAKE_OPTS ..
 
 EOF
 

@@ -4,7 +4,7 @@
 #include "devices/IDisplayScrolling.h"
 #include "devices/WS2812.h"
 
-#include "devices/MatrixChar5x5.h"
+#include "devices/MatrixChar8x8.h"
 
 #include "Mainloop.h"
 
@@ -13,12 +13,12 @@
 #include <memory>
 #include <string>
 
-class dotMatrix5x5 : public ICreateSharedFromThis<dotMatrix5x5>, public IDisplayDevice, public IDisplayScrolling {
+class dotMatrix8xN : public IDisplayDevice, public IDisplayScrolling, public std::enable_shared_from_this<dotMatrix8xN> {
 public:
-  dotMatrix5x5(std::shared_ptr<WS2812> led, const std::string& name = "dotMatrix5x5", const std::string& start = " ", uint32_t color = 0x03030303);
+  dotMatrix8xN(std::shared_ptr<WS2812> led, const std::string& name = "dotMatrix8xN", const std::string& start = " ", uint32_t color = 0x03030303);
 
   const std::string getName() const override { return _name; }
-  const std::string getType() const override { return "dotMatrix5x5"; }
+  const std::string getType() const override { return "dotMatrix8xN"; }
   const std::string getDetails() const override;
 
   void setValue(const std::string& value) override;
@@ -29,11 +29,11 @@ private:
   std::string _name;
   Mainloop::TaskHandle _scrollingTask;
 
-  std::vector<uint32_t> _ledData;
+  std::vector<uint8_t> _ledData;
   std::vector<uint32_t> _currentFrame;
-  int _total_columns;
+  
   int _current_offset;
-  int _bit_vector_length;
 
   bool scrollText();
+  bool staticText();
 };

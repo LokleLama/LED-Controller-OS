@@ -4,6 +4,7 @@
 #include "devices/WS2812.h"
 #include "devices/SevenSeg.h"
 #include "devices/dotMatrix5x5.h"
+#include "devices/dotMatrix8xN.h"
 
 #include "VariableStore/VariableStore.h"
 #include "Utils/ValueConverter.h"
@@ -21,7 +22,7 @@ public:
     
     const Category getCategory() const override { return Category::UserInterface; }
     const std::vector<std::string> getDeviceNames() const override {
-        static std::vector<std::string> names = {"7Seg", "dotMatrix5x5"};
+        static std::vector<std::string> names = {"7Seg", "dotMatrix5x5", "dotMatrix8xN"};
         return names;
     }
     const std::string& getParameterInfo() const override{
@@ -54,6 +55,7 @@ public:
         }
 
         std::shared_ptr<IDisplayDevice> new_display_device;
+        std::shared_ptr<IDisplayScrolling> scrolling_device = nullptr;
         uint32_t color = 0x03030303;
         if (params.size() >= 4) {
             color = ValueConverter::toInt(params[3]);
@@ -65,9 +67,19 @@ public:
                 return nullptr;
             }
         }else if(name == "dotMatrix5x5"){
-            new_display_device = std::make_shared<dotMatrix5x5>(ws2812_device, device_name, start_value, color);
+            auto dotMatrix5x5_device = std::make_shared<dotMatrix5x5>(ws2812_device, device_name, start_value, color);
+            new_display_device = dotMatrix5x5_device;
+            scrolling_device = dotMatrix5x5_device;
             if (new_display_device->getStatus() != IDevice::DeviceStatus::Initialized) {
                 std::cout << "Failed to initialize dotMatrix5x5 device: " << device_name << std::endl;
+                return nullptr;
+            }
+        }else if(name == "dotMatrix8xN"){
+            auto dotMatrix8xN_device = std::make_shared<dotMatrix8xN>(ws2812_device, device_name, start_value, color);
+            new_display_device = dotMatrix8xN_device;
+            scrolling_device = dotMatrix8xN_device;
+            if (new_display_device->getStatus() != IDevice::DeviceStatus::Initialized) {
+                std::cout << "Failed to initialize dotMatrix8xN device: " << device_name << std::endl;
                 return nullptr;
             }
         }else{
@@ -82,6 +94,9 @@ public:
         
         if(!setupVariable(new_display_device, start_value, color)){
             std::cout << "Failed to setup variable for " << name << " device: " << device_name << std::endl;
+        }
+        if(scrolling_device && !setupScrollingSpeedVariable(device_name, scrolling_device, 100)){
+            std::cout << "Failed to setup scrolling speed variable for " << name << " device: " << device_name << std::endl;
         }
         return new_display_device;
     }
@@ -102,6 +117,18 @@ private:
         variableStore.addVariable(device->getName() + ".color", defaultColor);
         variableStore.registerCallback(device->getName() + ".color", [device](const std::string& key, const std::string& value) {
             device->setColor(ValueConverter::toInt(value));
+            return true;
+        });
+
+        return true;
+    }
+
+    bool setupScrollingSpeedVariable(const std::string& deviceName, std::shared_ptr<IDisplayScrolling> scrollingDevice, int defaultSpeed) {
+        auto& variableStore = VariableStore::getInstance();
+
+        variableStore.addVariable(deviceName + ".speed", defaultSpeed);
+        variableStore.registerCallback(deviceName + ".speed", [scrollingDevice](const std::string& key, const std::string& value) {
+            scrollingDevice->setScrollingSpeed(ValueConverter::toInt(value));
             return true;
         });
 

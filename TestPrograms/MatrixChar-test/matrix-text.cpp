@@ -1,12 +1,16 @@
 
 #include "MatrixChar5x5.h"
+#include "MatrixChar8x8.h"
 #include <iostream>
 #include <vector>
+#include <iomanip>
 
 int _bit_vector_length;
 int _total_columns;
 int _current_offset;
 std::vector<uint32_t> _ledData;
+
+std::vector<uint8_t> _led8Data;
 
 void setValue(const std::string& value){
   if (value.length() < 1) {
@@ -37,6 +41,24 @@ void setValue(const std::string& value){
   }
 }
 
+void setValue8(const std::string& value) {
+    _led8Data.clear();
+    for (char c : value) {
+        const uint8_t* charData = MatricChar8x8::getChar(c);
+        _led8Data.insert(_led8Data.end(), charData, charData + 8);
+    }
+}
+
+void showContent8(const uint8_t* content, int length) {
+    for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < length; col++) {
+            uint8_t columnData = content[col];
+            std::cout << ((columnData & (1 << row)) ? '#' : ' ');
+        }
+        std::cout << "\n";
+    }
+}
+
 int main() {
     for(int c = ' '; c <= '~'; c++) {
         const uint8_t* charData = MatricChar5x5::getChar(c);
@@ -62,6 +84,35 @@ int main() {
         }
         std::cout << "\n";
     }
+
+    std::cout << "8x8 Character Test:\n";
+    for(int c = ' '; c <= '~'; c++) {
+        const uint8_t* charData = MatricChar8x8::getChar(c);
+        std::cout << "Character: '" << (char)c << "'\n";
+        showContent8(charData, 8);
+        std::cout << "\n";
+    }
+
+    setValue8("Hello, World!");
+    showContent8(_led8Data.data(), _led8Data.size());
+
+    setValue8("ABCDEFGHIJKLM");
+    showContent8(_led8Data.data(), _led8Data.size());
+
+    setValue8("NOPQRSTUVWXYZ");
+    showContent8(_led8Data.data(), _led8Data.size());
+
+    setValue8("abcdefghijklm");
+    showContent8(_led8Data.data(), _led8Data.size());
+
+    setValue8("nopqrstuvwxyz");
+    showContent8(_led8Data.data(), _led8Data.size());
+
+    setValue8("0123456789+-*/%");
+    showContent8(_led8Data.data(), _led8Data.size());
+
+    setValue8("'()[]{}<>\"|;,:.");
+    showContent8(_led8Data.data(), _led8Data.size());
 
     return 0;
 }

@@ -76,8 +76,14 @@ public:
   bool modifyTimedTaskInterval(TaskHandle handle, int32_t newIntervalMs) {
     for (auto &task : _timedTasks) {
       if (task.info.handle == handle) {
-        task.nextExecution = task.nextExecution - task.intervalMs + newIntervalMs;
+        int32_t difference = newIntervalMs - task.intervalMs;
+        task.nextExecution = task.nextExecution + difference;
         task.intervalMs = newIntervalMs;
+        if (task.nextExecution <= _systickCounter) {
+          task.nextExecution = _systickCounter + newIntervalMs;
+          task.execute = true;
+        }
+        
         return true;
       }
     }

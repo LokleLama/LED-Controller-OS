@@ -96,9 +96,22 @@ bool dotMatrix5x5::scrollText() {
   }
 
   _led->setPattern(_currentFrame);
-  _current_offset++;
-  if ((_current_offset + 6) >= _bit_vector_length) {
-    _current_offset = 0; // Loop back to the beginning
+  switch (_scrollingDirection) {
+    case ScrollingDirection::LEFT:
+      _current_offset++;
+      if ((_current_offset + 6) >= _bit_vector_length) {
+        _current_offset = 0; // Loop back to the beginning
+      }
+      break;
+    case ScrollingDirection::RIGHT:
+      _current_offset--;
+      if (_current_offset < 0) {
+        _current_offset = _bit_vector_length - 6; // Loop back to the end
+      }
+      break;
+    case ScrollingDirection::STOP:
+    default:
+      break;
   }
   return true;
 }

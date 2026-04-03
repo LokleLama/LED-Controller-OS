@@ -128,7 +128,19 @@ private:
 
         variableStore.addVariable(deviceName + ".speed", defaultSpeed);
         variableStore.registerCallback(deviceName + ".speed", [scrollingDevice](const std::string& key, const std::string& value) {
-            scrollingDevice->setScrollingSpeed(ValueConverter::toInt(value));
+            auto speed = ValueConverter::toInt(value);
+            if (speed == 0) {
+                scrollingDevice->setScrollingSpeed(30);
+                scrollingDevice->setScrollingDirection(IDisplayScrolling::ScrollingDirection::STOP);
+                return true;
+            }
+            if(speed < 0) {
+                scrollingDevice->setScrollingDirection(IDisplayScrolling::ScrollingDirection::RIGHT);
+                speed = -speed;
+            } else {
+                scrollingDevice->setScrollingDirection(IDisplayScrolling::ScrollingDirection::LEFT);
+            }
+            scrollingDevice->setScrollingSpeed(speed);
             return true;
         });
 

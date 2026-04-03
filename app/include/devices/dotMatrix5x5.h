@@ -23,6 +23,7 @@ public:
 
   void setValue(const std::string& value) override;
   void setScrollingSpeed(int speed) override;
+  void setScrollingDirection(ScrollingDirection direction) override { _scrollingDirection = direction; _current_offset = 0; }
 
 private:
   std::shared_ptr<WS2812> _led;
@@ -34,6 +35,7 @@ private:
   int _total_columns;
   int _current_offset;
   int _bit_vector_length;
+  ScrollingDirection _scrollingDirection = ScrollingDirection::LEFT;
 
   bool scrollText();
 };

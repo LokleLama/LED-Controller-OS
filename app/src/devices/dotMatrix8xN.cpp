@@ -73,9 +73,22 @@ bool dotMatrix8xN::scrollText() {
 
   _led->setPattern(_currentFrame);
 
-  _current_offset++;
-  if (_current_offset >= _ledData.size()) {
-    _current_offset = 0;
+  switch (_scrollingDirection) {
+    case ScrollingDirection::LEFT:
+      _current_offset++;
+      if (_current_offset >= _ledData.size()) {
+        _current_offset = 0;
+      }
+      break;
+    case ScrollingDirection::RIGHT:
+      _current_offset--;
+      if (_current_offset < 0) {
+        _current_offset = _ledData.size() - 1;
+      }
+      break;
+    case ScrollingDirection::STOP:
+    default:
+      break;
   }
   return true;
 }

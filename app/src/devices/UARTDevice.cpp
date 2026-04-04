@@ -83,10 +83,6 @@ int UARTDevice::send(const uint8_t* data, size_t length) {
     return length;
 }
 
-int UARTDevice::dataAvailable() {
-    return _rx_fifo.count();
-}
-
 bool UARTDevice::isPinValid(uint8_t pin, int pinType) const {
     auto* validPins = (_uart_number == 0) ? _uart0_pins : _uart1_pins;
     for (int i = pinType; i < 16; i += UART_PIN_COUNT) {
@@ -95,6 +91,18 @@ bool UARTDevice::isPinValid(uint8_t pin, int pinType) const {
         }
     }
     return false;
+}
+
+bool UARTDevice::registerDataReceivedCallback(Mainloop::Function func, uint32_t signal) {
+    if(_irq_signal != 0) {
+        return false;
+    }
+    if(signal == 0) {
+        signal = 0x41525430 + _uart_number;
+    }
+    _irq_signal = signal;
+    Mainloop::getInstance().registerSignalTask(getName() + ".DataReceived", func, _irq_signal);
+    return true;
 }
 
 const std::string UARTDevice::getDetails() const {

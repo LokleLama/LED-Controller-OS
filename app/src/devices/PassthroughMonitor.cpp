@@ -13,16 +13,16 @@ PassthroughMonitor::PassthroughMonitor(std::shared_ptr<ICommDevice> commDeviceA,
   _commDeviceA->registerDataReceivedCallback([this]() { return SignalTask(); });
   _commDeviceB->registerDataReceivedCallback([this]() { return SignalTask(); });
 
-  _monitorA = std::make_shared<MonitorDevice>(*this, name + "." + commDeviceA->getName(), 0, buffersize);
-  _monitorB = std::make_shared<MonitorDevice>(*this, name + "." + commDeviceB->getName(), 1, buffersize);
+  _monitorA = std::make_shared<MonitorDevice>(*this, commDeviceA, name + "." + commDeviceA->getName(), 0, buffersize);
+  _monitorB = std::make_shared<MonitorDevice>(*this, commDeviceB, name + "." + commDeviceB->getName(), 1, buffersize);
 
   Mainloop::getInstance().registerRegularTask(getName() + ".Worker", [this]() { return ExecuteTask(); });
 
   _status = DeviceStatus::Initialized;
 }
 
-PassthroughMonitor::MonitorDevice::MonitorDevice(PassthroughMonitor& parent, const std::string& name, int number, int buffersize)
-    : _name(name), _number(number), _fifo(buffersize) {
+PassthroughMonitor::MonitorDevice::MonitorDevice(PassthroughMonitor& parent, std::shared_ptr<ICommDevice> commDevice, const std::string& name, int number, int buffersize)
+    : _name(name), _number(number), _commDevice(commDevice), _fifo(buffersize) {
   if(number == 0) {
     parent._receivedCallbackA = [this](const uint8_t* data, size_t length) { receivedData(data, length); };
   } else {

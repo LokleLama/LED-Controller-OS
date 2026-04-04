@@ -4,6 +4,7 @@
 #include "devices/ICommDevice.h"
 #include "devices/Loopback.h"
 #include "devices/Passthrough.h"
+#include "devices/PassthroughMonitor.h"
 #include "deviceController/Helper/ICommDeviceHelper.h"
 
 #include <memory>
@@ -19,7 +20,7 @@ public:
     
     const Category getCategory() const override { return Category::Communication; }
     const std::vector<std::string> getDeviceNames() const override {
-        static std::vector<std::string> names = {"Loopback", "Passthrough"};
+        static std::vector<std::string> names = {"Loopback", "Passthrough", "PassthroughMonitor"};
         return names;
     }
     const std::string& getParameterInfo() const override{
@@ -31,7 +32,12 @@ public:
                                          "  ICommDeviceNameA:   Name of the first IComm device to use (e.g.: USBUART-0)\n"
                                          "  ICommDeviceNameB:   Name of the second IComm device to use (e.g.: UART-1)\n"
                                          "  name:               Optional unique name for the device (default: auto-generated)\n"
-                                         "  buffer-size:        Optional buffer size for the passthrough (default: 4x IComm device buffer size)\n";
+                                         "  buffer-size:        Optional buffer size for the passthrough (default: 4x IComm device buffer size)\n\n"
+                                         "PassthroughMonitor <ICommDeviceNameA> <ICommDeviceNameB> [name] [buffer-size]\n"
+                                         "  ICommDeviceNameA:   Name of the first IComm device to use (e.g.: USBUART-0)\n"
+                                         "  ICommDeviceNameB:   Name of the second IComm device to use (e.g.: UART-1)\n"
+                                         "  name:               Optional unique name for the device (default: auto-generated)\n"
+                                         "  buffer-size:        Optional buffer size for the passthrough monitor (default: 4x IComm device buffer size)\n";
 
         return description;
     }
@@ -40,6 +46,8 @@ public:
             return createLoopback(name, params);
         } else if (name == "Passthrough") {
             return createPassthrough(name, params);
+        } else if (name == "PassthroughMonitor") {
+            return createPassthroughMonitor(name, params);
         }
 
         return nullptr;
@@ -132,5 +140,58 @@ private:
         }
 
         return loopback_device;
+    }
+
+    std::shared_ptr<IDevice> createPassthroughMonitor(const std::string& name, const std::vector<std::string>& params) {
+        if (params.size() < 2) {
+            return nullptr;
+        }
+        std::shared_ptr<ICommDevice> comm_device_a = ICommDeviceHelper::findCommDevice(params[0], _deviceRepo);
+        if (!comm_device_a) {
+            std::cout << "Invalid IComm device: " << params[0] << std::endl;
+            return nullptr;
+        }
+        std::shared_ptr<ICommDevice> comm_device_b = ICommDeviceHelper::findCommDevice(params[1], _deviceRepo);
+        if (!comm_device_b) {
+            std::cout << "Invalid IComm device: " << params[1] << std::endl;
+            return nullptr;
+        }
+        std::string device_name;
+        if (params.size() >= 3) {
+            device_name = params[2];
+        } else {
+            device_name = "PassthroughMonitor-" + std::to_string(_number);
+        }
+        _number++;
+        int buffer_size = comm_device_a->getBufferSize() * 4;
+        if (params.size() >= 4) {
+            buffer_size = std::stoi(params[3]);
+        }else{
+            int buffer_size_b = comm_device_b->getBufferSize() * 4;
+            if(buffer_size_b > buffer_size) {
+                buffer_size = buffer_size_b;
+            }
+        }
+
+        auto passthrough_monitor_device = std::make_shared<PassthroughMonitor>(comm_device_a, comm_device_b, device_name, buffer_size);
+        if (passthrough_monitor_device->getStatus() != IDevice::DeviceStatus::Initialized) {
+            std::cout << "Failed to initialize PassthroughMonitor device: " << device_name << std::endl;
+            return nullptr;
+        }
+
+        if(!comm_device_a->assignToUser(passthrough_monitor_device)){
+            std::cout << "Failed to assign " << comm_device_a->getName() << " to PassthroughMonitor device: " << device_name << std::endl;
+            return nullptr;
+        }
+        
+        if(!comm_device_b->assignToUser(passthrough_monitor_device)){
+            std::cout << "Failed to assign " << comm_device_b->getName() << " to PassthroughMonitor device: " << device_name << std::endl;
+            return nullptr;
+        }
+
+        _deviceRepo.addDevice(passthrough_monitor_device->getMonitorA());
+        _deviceRepo.addDevice(passthrough_monitor_device->getMonitorB());
+
+        return passthrough_monitor_device;
     }
 };

@@ -24,22 +24,14 @@ public:
     bool setFormat(int bits, int stopBits, int parity);
 
     int send(const uint8_t* data, size_t length) override;
-    int dataAvailable() override;
+    int dataAvailable() override {
+        return _rx_fifo.count();
+    }
     int receive(uint8_t* buffer, size_t length) override{
         return _rx_fifo.readAvailable(buffer, length);
     }
 
-    bool registerDataReceivedCallback(Mainloop::Function func, uint32_t signal = 0) override {
-        if(_irq_signal != 0) {
-            return false;
-        }
-        if(signal == 0) {
-            signal = 0x41525430 + _uart_number;
-        }
-        _irq_signal = signal;
-        Mainloop::getInstance().registerSignalTask(getName() + ".DataReceived", func, _irq_signal);
-        return true;
-    }
+    bool registerDataReceivedCallback(Mainloop::Function func, uint32_t signal = 0) override;
 
     int getBufferSize() const override {
         return _rx_fifo.capacity();

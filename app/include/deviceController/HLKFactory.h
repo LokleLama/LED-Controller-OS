@@ -59,10 +59,10 @@ public:
 
         auto& varStore = VariableStore::getInstance();
         
-        varStore.addVariable(distance_variable_name, static_cast<float>(0.0));
-        varStore.addBoolVariable(presence_variable_name, false);
+        auto distance_var = varStore.addVariable(distance_variable_name, static_cast<float>(0.0));
+        auto presence_var = varStore.addBoolVariable(presence_variable_name, false);
 
-        auto hlk_device = std::make_shared<HLKDevice>(comm_device, distance_variable_name, presence_variable_name, device_name);
+        auto hlk_device = std::make_shared<HLKDevice>(comm_device, distance_var, presence_var, device_name);
         if (hlk_device->getStatus() != IDevice::DeviceStatus::Initialized) {
             std::cout << "Failed to initialize HLKDevice: " << device_name << std::endl;
             return nullptr;

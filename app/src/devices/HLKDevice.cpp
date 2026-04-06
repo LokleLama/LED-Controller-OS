@@ -7,8 +7,8 @@
 #include <iostream>
 
 HLKDevice::HLKDevice(std::shared_ptr<ICommDevice> commDevice, 
-                         std::string distance, 
-                         std::string presence, 
+                         std::shared_ptr<IVariable> distance, 
+                         std::shared_ptr<IVariable> presence, 
                          const std::string& name) :
     _commDevice(commDevice), _distance(distance), _presence(presence), _name(name) {
   if(!_commDevice) {
@@ -23,7 +23,7 @@ HLKDevice::HLKDevice(std::shared_ptr<ICommDevice> commDevice,
 }
 
 const std::string HLKDevice::getDetails() const {
-  return "HLKDDevice over " + _commDevice->getName() + " with distance variable '" + _distance + "' and presence variable '" + _presence + "'";
+  return "HLKDDevice over " + _commDevice->getName() + " with distance variable '" + _distance->getName() + "' and presence variable '" + _presence->getName() + "'";
 }
 
 bool HLKDevice::ExecuteTask() {
@@ -32,9 +32,8 @@ bool HLKDevice::ExecuteTask() {
   if(bytesRead > 0) {
     auto distancePack = _finder.fastDistanceFinder(buffer, bytesRead);
     if(distancePack) {
-      auto varStore = VariableStore::getInstance();
-      varStore.setVariable(_distance, distancePack->getDistance());
-      varStore.setBoolVariable(_presence, distancePack->getObjectDetected());
+      _distance->set(distancePack->getDistance());
+      _presence->setBool(distancePack->getObjectDetected());
     }
   }
   return false;

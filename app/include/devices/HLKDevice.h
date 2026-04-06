@@ -13,8 +13,8 @@
 class HLKDevice : public ICreateSharedFromThis<HLKDevice>, public IDevice {
 public:
   HLKDevice(std::shared_ptr<ICommDevice> commDevice, 
-            std::string distance, 
-            std::string presence, 
+            std::shared_ptr<IVariable> distance, 
+            std::shared_ptr<IVariable> presence, 
             const std::string& name = "HLKDevice");
 
   const std::string getName() const override { return _name; }
@@ -24,8 +24,8 @@ public:
 private:
   std::shared_ptr<ICommDevice> _commDevice;
 
-  std::string _distance;
-  std::string _presence;
+  std::shared_ptr<IVariable> _distance;
+  std::shared_ptr<IVariable> _presence;
 
   std::string _name;
 

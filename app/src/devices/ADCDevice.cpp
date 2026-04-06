@@ -2,13 +2,13 @@
 
 #include <iostream>
 
-bool ADCDevice::_adc_initialized[4] = {false, false, false, false};
+bool ADCDevice::_adc_initialized[5] = {false, false, false, false, false};
 
 ADCDevice::ADCDevice(const std::string& name, int adc_channel, std::shared_ptr<IVariable> value_variable, int sampling_intervall)
     : _name(name), _valueVariable(value_variable), _samplingIntervall(sampling_intervall) {
 
-    if(adc_channel < 0 || adc_channel > 3) {
-        std::cerr << "Invalid ADC channel: " << adc_channel << ". Must be between 0 and 3." << std::endl;
+    if(adc_channel < 0 || adc_channel > 4) {
+        std::cerr << "Invalid ADC channel: " << adc_channel << ". Must be between 0 and 4." << std::endl;
         
         _status = DeviceStatus::Error;
         return;
@@ -22,7 +22,7 @@ ADCDevice::ADCDevice(const std::string& name, int adc_channel, std::shared_ptr<I
     _adc_channel = adc_channel;
 
     bool adc_is_initialized = false;
-    for(int i = 0; i < 4; i++) {
+    for(int i = 0; i < 5; i++) {
         adc_is_initialized |= _adc_initialized[i];
     }
 
@@ -30,9 +30,13 @@ ADCDevice::ADCDevice(const std::string& name, int adc_channel, std::shared_ptr<I
         adc_init();
     }
 
-    adc_gpio_init(_adc_pins[adc_channel]);
+    if(_adc_pins[adc_channel] >= 0) {
+        adc_gpio_init(_adc_pins[adc_channel]);
+    }
 
-    _readoutTask = Mainloop::getInstance().registerTimedTask(name + ".ADCReadout", [this]() { return ExecuteTask(); }, _samplingIntervall);
+    if(sampling_intervall > 0) {
+        _readoutTask = Mainloop::getInstance().registerTimedTask(name + ".Readout", [this]() { return ExecuteTask(); }, _samplingIntervall);
+    }
     
     _adc_initialized[adc_channel] = true;
     _status = DeviceStatus::Initialized;

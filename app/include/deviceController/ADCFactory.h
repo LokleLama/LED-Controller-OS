@@ -20,21 +20,24 @@ public:
     }
 
     const std::string& getParameterInfo() const override {
-        static std::string info = "<adc_channel> <readout_intervall> [name] [readout_variable_name]\n"
-                                  "  adc_channel:            ADC channel number (0-3)\n"
-                                  "  readout_intervall:      Interval for ADC readout in milliseconds\n"
+        static std::string info = "<adc_channel> [readout_intervall] [name] [readout_variable_name]\n"
+                                  "  adc_channel:            ADC channel number (0-4)\n"
+                                  "  readout_intervall:      Interval for ADC readout in milliseconds (default: 100)\n"
                                   "  name:                   Optional custom name for the ADC device (default: 'ADCDevice')\n"
                                   "  readout_variable_name:  Name of the variable to store ADC readout (default: auto-generated)";
         return info;
     }
 
     std::shared_ptr<IDevice> createDevice(const std::string& name, const std::vector<std::string>& params) override {
-        if (params.size() < 2) {
-            std::cout << "Not enough parameters for ADC device. Required: adc_channel and readout_intervall." << std::endl;
+        if (params.size() < 1) {
+            std::cout << "Not enough parameters for ADC device. Required: adc_channel." << std::endl;
             return nullptr;
         }
         int adc_channel = std::stoi(params[0]);
-        int readout_intervall = std::stoi(params[1]);
+        int readout_intervall = 100;
+        if (params.size() >= 2) {
+            readout_intervall = std::stoi(params[1]);
+        }
 
         std::string device_name = "ADC.Channel" + std::to_string(adc_channel);
         if (params.size() >= 3) {

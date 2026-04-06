@@ -22,8 +22,8 @@ private:
     Mainloop::TaskHandle _readoutTask;
 
     uint8_t _adc_channel;
-    uint8_t _adc_pins[4] = {26, 27, 28, 29};
-    static bool _adc_initialized[4];
+    int8_t _adc_pins[5] = {26, 27, 28, 29, -1};
+    static bool _adc_initialized[5];
     
     bool ExecuteTask();
 };

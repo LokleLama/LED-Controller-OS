@@ -9,10 +9,10 @@
 class IntVariable : public IVariable {
 public:
   // Constructor
-  IntVariable(int value, IntegerStringFormat format = IntegerStringFormat::DECIMAL) : value_(value), format_(format) {}
+  IntVariable(const std::string &name, int value, IntegerStringFormat format = IntegerStringFormat::DECIMAL) : IVariable(name), value_(value), format_(format) {}
 
-  IntVariable(const IntVariable &other) : value_(other.value_), format_(other.format_) {}
-  IntVariable(IntVariable &&other) noexcept : value_(std::move(other.value_)), format_(std::move(other.format_)) {}
+  IntVariable(const IntVariable &other) : IVariable(other.getName()), value_(other.value_), format_(other.format_) {}
+  IntVariable(IntVariable &&other) noexcept : IVariable(other.getName()), value_(std::move(other.value_)), format_(std::move(other.format_)) {}
   IntVariable &operator=(const IntVariable &other) {
     if (this != &other) {
       value_ = other.value_;
@@ -41,20 +41,20 @@ public:
 
   // Set the value
   bool set(const std::string &value) override {
-    value_ = ValueConverter::toInt(value, &format_);
-    return true;
+    return set(ValueConverter::toInt(value, &format_));
   }
   bool set(float value) override {
-    value_ = static_cast<int>(value);
-    return true;
+    return set(static_cast<int>(value));
   }
   bool set(int value) override {
+    if(!callCallback()) {
+      return false;
+    }
     value_ = value;
     return true;
   }
-  bool set(bool value) override {
-    value_ = value ? 1 : 0;
-    return true;
+  bool setBool(bool value) override {
+    return set(value ? 1 : 0);
   }
 
   // Get the type of the variable

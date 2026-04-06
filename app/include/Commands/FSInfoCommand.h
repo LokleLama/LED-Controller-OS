@@ -24,7 +24,8 @@ public:
       return 1; // Return 1 to indicate error
     }
     std::cout << " File System Information: " << fs->getFileSystemName() << " (version " << fs->getFileSystemVersion() << ")" << std::endl;
-    std::cout << "  - Total Size: " << fs->getFileSystemSize() << " bytes" << std::endl;
+    std::cout << "  - Total Size: " << fs->getFileSystemSize() / 1024 << " kB" << std::endl;
+    std::cout << "  - Block Size: " << fs->getBlockSize() << " bytes" << std::endl;
     auto usage_map =  fs->getBlockUsageMap();
     size_t free_blocks = 0;
     size_t used_blocks = 0;
@@ -50,6 +51,7 @@ public:
           break;
       }
     }
+    std::cout << "  - Free Space: " << free_blocks * fs->getBlockSize() / 1024 << " kB" << std::endl;
     std::cout << "  - Block Usage:" << std::endl;
     std::cout << "     * Free Blocks: " << free_blocks << std::endl;
     std::cout << "     * Used Blocks: " << used_blocks + used_file_blocks + used_dir_blocks << std::endl;

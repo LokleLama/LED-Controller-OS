@@ -92,7 +92,7 @@ private:
     bool setupVariable(std::shared_ptr<LEDStatus> device, const std::string& defaultValue) {
         auto& variableStore = VariableStore::getInstance();
 
-        variableStore.addVariable(device->getName() + ".value", defaultValue);
+        variableStore.addVariable(device->getName() + ".value", defaultValue)->setSystemVariable();
         variableStore.registerCallback(device->getName() + ".value", [device](const std::string& key, const std::string& value) {
             return device->setStatus(value);
         });

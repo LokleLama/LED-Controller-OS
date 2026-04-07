@@ -61,6 +61,8 @@ public:
         
         auto distance_var = varStore.addVariable(distance_variable_name, static_cast<float>(0.0));
         auto presence_var = varStore.addBoolVariable(presence_variable_name, false);
+        distance_var->setSystemVariable();
+        presence_var->setSystemVariable();
 
         auto hlk_device = std::make_shared<HLKDevice>(comm_device, distance_var, presence_var, device_name);
         if (hlk_device->getStatus() != IDevice::DeviceStatus::Initialized) {

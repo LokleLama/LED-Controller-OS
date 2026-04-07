@@ -249,8 +249,8 @@ VariableStore::getAllVariables() const {
 bool VariableStore::saveToFile(std::shared_ptr<SPFS::File>& file) const {
   JsonDocument doc;
   for (const auto& var : variables) {
-    if (var->getName() == "?") {
-      continue; // Skip internal variables
+    if (var->isSystemVariable()) {
+      continue; // Skip system variables
     }
     switch (var->getType()) {
       case IVariable::Type::INT:

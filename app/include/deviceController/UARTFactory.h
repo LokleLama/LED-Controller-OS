@@ -67,7 +67,7 @@ private:
         auto& variableStore = VariableStore::getInstance();
 
         auto baudvar = device->getName() + ".baud";
-        variableStore.addVariable(baudvar, baudrate);
+        variableStore.addVariable(baudvar, baudrate)->setSystemVariable();
         variableStore.registerCallback(baudvar, [device](const std::string& key, const std::string& value) {
             auto success = device->setBaudRate(ValueConverter::toInt(value));
             std::cout << "Baud rate changed to " << device->getBaudRate()
@@ -76,7 +76,7 @@ private:
         });
 
         auto formatvar = device->getName() + ".format";
-        variableStore.addVariable(formatvar, "8n1");
+        variableStore.addVariable(formatvar, "8n1")->setSystemVariable();
         variableStore.registerCallback(formatvar, [device](const std::string& key, const std::string& value) {
             if (value.size() < 3) {
                 std::cout << "Invalid format value" << std::endl;

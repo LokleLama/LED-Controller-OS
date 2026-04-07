@@ -38,6 +38,13 @@ public:
 
   const std::string& getName() const { return _name; }
 
+  void setSystemVariable() {
+    _isSystemVariable = true;
+  }
+  bool isSystemVariable() const {
+    return _isSystemVariable;
+  }
+
   void setCallback(SetCallback callback) { _callback = callback; }
 
 protected:
@@ -51,4 +58,5 @@ protected:
 private:
   std::string _name;
   SetCallback _callback = nullptr;
+  bool _isSystemVariable = false;
 };

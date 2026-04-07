@@ -5,6 +5,7 @@
 #include "devices/Loopback.h"
 #include "devices/Passthrough.h"
 #include "devices/PassthroughMonitor.h"
+#include "devices/MultiPassthrough.h"
 #include "deviceController/Helper/ICommDeviceHelper.h"
 
 #include <memory>
@@ -20,24 +21,34 @@ public:
     
     const Category getCategory() const override { return Category::Communication; }
     const std::vector<std::string> getDeviceNames() const override {
-        static std::vector<std::string> names = {"Loopback", "Passthrough", "PassthroughMonitor"};
+        static std::vector<std::string> names = {"Loopback", "Passthrough", "PassthroughMonitor", "MultiPassthrough"};
         return names;
     }
     const std::string& getParameterInfo() const override{
-        static std::string description = "Loopback <ICommDeviceName> [name] [buffer-size]\n"
-                                         "  ICommDeviceName:    Name of the IComm device to use (e.g.: USBUART-0)\n"
-                                         "  name:               Optional unique name for the device (default: auto-generated)\n"
-                                         "  buffer-size:        Optional buffer size for the loopback (default: 4x IComm device buffer size)\n\n"
-                                         "Passthrough <ICommDeviceNameA> <ICommDeviceNameB> [name] [buffer-size]\n"
-                                         "  ICommDeviceNameA:   Name of the first IComm device to use (e.g.: USBUART-0)\n"
-                                         "  ICommDeviceNameB:   Name of the second IComm device to use (e.g.: UART-1)\n"
-                                         "  name:               Optional unique name for the device (default: auto-generated)\n"
-                                         "  buffer-size:        Optional buffer size for the passthrough (default: 4x IComm device buffer size)\n\n"
-                                         "PassthroughMonitor <ICommDeviceNameA> <ICommDeviceNameB> [name] [buffer-size]\n"
-                                         "  ICommDeviceNameA:   Name of the first IComm device to use (e.g.: USBUART-0)\n"
-                                         "  ICommDeviceNameB:   Name of the second IComm device to use (e.g.: UART-1)\n"
-                                         "  name:               Optional unique name for the device (default: auto-generated)\n"
-                                         "  buffer-size:        Optional buffer size for the passthrough monitor (default: 4x IComm device buffer size)\n";
+        static std::string description = "Loopback <ICommDeviceName> [name] [buffer-size]\n\n"
+                                         "  ICommDeviceName:     Name of the IComm device to use (e.g.: USBUART-0)\n"
+                                         "  name:                Optional unique name for the device (default: auto-generated)\n"
+                                         "  buffer-size:         Optional buffer size for the loopback (default: 4x IComm device buffer size)\n\n"
+                                         "Passthrough <ICommDeviceNameA> <ICommDeviceNameB> [name] [buffer-size]\n\n"
+                                         "  ICommDeviceNameA:    Name of the first IComm device to use (e.g.: USBUART-0)\n"
+                                         "  ICommDeviceNameB:    Name of the second IComm device to use (e.g.: UART-1)\n"
+                                         "  name:                Optional unique name for the device (default: auto-generated)\n"
+                                         "  buffer-size:         Optional buffer size for the passthrough (default: 4x IComm device buffer size)\n\n"
+                                         "PassthroughMonitor <ICommDeviceNameA> <ICommDeviceNameB> [name] [buffer-size]\n\n"
+                                         "  ICommDeviceNameA:    Name of the first IComm device to use (e.g.: USBUART-0)\n"
+                                         "  ICommDeviceNameB:    Name of the second IComm device to use (e.g.: UART-1)\n"
+                                         "  name:                Optional unique name for the device (default: auto-generated)\n"
+                                         "  buffer-size:         Optional buffer size for the passthrough monitor (default: 4x IComm device buffer size)\n\n"
+                                         "MultiPassthrough <ICommDeviceNameMain> <ICommDeviceNameA> <ICommDeviceNameB> [name] [buffer-size]\n\n"
+                                         "  Description: MultiPassthrough device that routes data between a main IComm device and\n"
+                                         "               two other IComm devices. Data received on the main device is forwarded to\n"
+                                         "               both other devices, while data received on either of the other devices is\n"
+                                         "               forwarded to the main device.\n\n"
+                                         "  ICommDeviceNameMain: Name of the main IComm device to use (e.g.: USBUART-0)\n"
+                                         "  ICommDeviceNameA:    Name of the first IComm device to use (e.g.: UART-1)\n"
+                                         "  ICommDeviceNameB:    Name of the second IComm device to use (e.g.: UART-2)\n"
+                                         "  name:                Optional unique name for the device (default: auto-generated)\n"
+                                         "  buffer-size:         Optional buffer size for the multi-passthrough (default: 4x IComm device buffer size)";
 
         return description;
     }
@@ -48,6 +59,8 @@ public:
             return createPassthrough(name, params);
         } else if (name == "PassthroughMonitor") {
             return createPassthroughMonitor(name, params);
+        } else if (name == "MultiPassthrough") {
+            return createMultiPassthrough(name, params);
         }
 
         return nullptr;
@@ -193,5 +206,69 @@ private:
         _deviceRepo.addDevice(passthrough_monitor_device->getMonitorB());
 
         return passthrough_monitor_device;
+    }
+
+    std::shared_ptr<IDevice> createMultiPassthrough(const std::string& name, const std::vector<std::string>& params) {
+        if (params.size() < 3) {
+            return nullptr;
+        }
+        std::shared_ptr<ICommDevice> comm_device_main = ICommDeviceHelper::findCommDevice(params[0], _deviceRepo);
+        if (!comm_device_main) {
+            std::cout << "Invalid IComm device: " << params[0] << std::endl;
+            return nullptr;
+        }
+        std::shared_ptr<ICommDevice> comm_device_a = ICommDeviceHelper::findCommDevice(params[1], _deviceRepo);
+        if (!comm_device_a) {
+            std::cout << "Invalid IComm device: " << params[1] << std::endl;
+            return nullptr;
+        }
+        std::shared_ptr<ICommDevice> comm_device_b = ICommDeviceHelper::findCommDevice(params[2], _deviceRepo);
+        if (!comm_device_b) {
+            std::cout << "Invalid IComm device: " << params[2] << std::endl;
+            return nullptr;
+        }
+        std::string device_name;
+        if (params.size() >= 4) {
+            device_name = params[3];
+        } else {
+            device_name = "MultiPassthrough-" + std::to_string(_number);
+        }
+        _number++;
+        int buffer_size = comm_device_main->getBufferSize() * 4;
+        if (params.size() >= 5) {
+            buffer_size = std::stoi(params[4]);
+        }else{
+            int buffer_size_a = comm_device_a->getBufferSize() * 4;
+            if(buffer_size_a > buffer_size) {
+                buffer_size = buffer_size_a;
+            }
+            int buffer_size_b = comm_device_b->getBufferSize() * 4;
+            if(buffer_size_b > buffer_size) {
+                buffer_size = buffer_size_b;
+            }
+        }
+
+        auto multi_passthrough_device = std::make_shared<MultiPassthrough>(comm_device_main, comm_device_a, comm_device_b, device_name, buffer_size);
+        if (multi_passthrough_device->getStatus() != IDevice::DeviceStatus::Initialized) {
+            std::cout << "Failed to initialize MultiPassthrough device: " << device_name << std::endl;
+            return nullptr;
+        }
+
+        if(!comm_device_main->assignToUser(multi_passthrough_device)){
+            std::cout << "Failed to assign " << comm_device_main->getName() << " to MultiPassthrough device: " << device_name << std::endl;
+            return nullptr;
+        }
+
+        if(!comm_device_a->assignToUser(multi_passthrough_device)){
+            std::cout << "Failed to assign " << comm_device_a->getName() << " to MultiPassthrough device: " << device_name << std::endl;
+            return nullptr;
+        }
+        
+        if(!comm_device_b->assignToUser(multi_passthrough_device)){
+            std::cout << "Failed to assign " << comm_device_b->getName() << " to MultiPassthrough device: " << device_name << std::endl;
+            return nullptr;
+        }
+
+        return multi_passthrough_device;
     }
 };

@@ -51,6 +51,7 @@ public:
 
         auto& varStore = VariableStore::getInstance();
         auto readout_var = varStore.addVariable(readout_variable_name, static_cast<int>(0));
+        readout_var->setSystemVariable();
 
         auto adc_device = std::make_shared<ADCDevice>(device_name, adc_channel, readout_var, readout_intervall);
         if (adc_device->getStatus() != IDevice::DeviceStatus::Initialized) {

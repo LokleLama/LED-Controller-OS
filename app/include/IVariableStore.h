@@ -31,6 +31,8 @@ public:
   virtual std::shared_ptr<IVariable> addVariable(const std::string &key,
                                                  float value) = 0;
 
+  virtual std::shared_ptr<IVariable> registerVariable(std::shared_ptr<IVariable> new_variable) = 0;
+
   virtual bool setVariable(const std::string &key,
                            const std::string &value) = 0;
   virtual bool setBoolVariable(const std::string &key, bool value) = 0;

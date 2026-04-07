@@ -29,6 +29,9 @@ ADCDevice::ADCDevice(const std::string& name, int adc_channel, std::shared_ptr<I
     if (!adc_is_initialized) {
         adc_init();
     }
+    if(adc_channel == 4) {
+        adc_set_temp_sensor_enabled(true);
+    }
 
     if(_adc_pins[adc_channel] >= 0) {
         adc_gpio_init(_adc_pins[adc_channel]);

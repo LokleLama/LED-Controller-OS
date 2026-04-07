@@ -2,6 +2,8 @@
 
 #include "deviceController/DeviceRepository.h"
 #include "devices/ADCDevice.h"
+#include "VariableStore/VariableStore.h"
+#include "VariableStore/SpecialVariables/CPUTemperature.h"
 
 #include <memory>
 #include <string>
@@ -45,12 +47,20 @@ public:
         }
 
         std::string readout_variable_name = "adc.ch" + std::to_string(adc_channel);
+        if(adc_channel == 4) {
+            readout_variable_name = "cpu.temperature";
+        }
         if (params.size() >= 4) {
             readout_variable_name = params[3];
         }
 
         auto& varStore = VariableStore::getInstance();
-        auto readout_var = varStore.addVariable(readout_variable_name, static_cast<int>(0));
+        std::shared_ptr<IVariable> readout_var = nullptr;
+        if(adc_channel == 4) {
+            readout_var = varStore.registerVariable(std::make_shared<CPUTemperature>(readout_variable_name));
+        } else {
+            readout_var = varStore.addVariable(readout_variable_name, static_cast<int>(0));
+        }
         readout_var->setSystemVariable();
 
         auto adc_device = std::make_shared<ADCDevice>(device_name, adc_channel, readout_var, readout_intervall);

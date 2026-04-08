@@ -39,7 +39,7 @@ public:
                                    "                              \"Warning\": \"#FFFF00\",\n"
                                    "                              \"Error\": \"#FF0000\",\n"
                                    "                              \"Idle\": \"#0000FF\"\n"
-                                   "                          }\n";
+                                   "                          }";
         return empty;
     }
     std::shared_ptr<IDevice> createDevice(const std::string& name, const std::vector<std::string>& params) override {

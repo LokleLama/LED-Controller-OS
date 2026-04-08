@@ -26,8 +26,8 @@ public:
            "                           after allocation, use --append to add data and --finish to finalize the content block\n"
            "           --append <content>: appends the specified content to the current content block\n"
            "           -n: do not add a newline after the appended content\n"
-           "           --finish: finalizes the current content block\n";
-           "                     Note: If the content is smaller then the allocated size, the remaining space will be not be used and remains free.\n";
+           "           --finish: finalizes the current content block\n"
+           "                     Note: If the content is smaller then the allocated size, the remaining space will be not be used and remains free.";
   }
 
   // Executes the command

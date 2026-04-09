@@ -25,6 +25,8 @@ public:
   std::shared_ptr<IVariable> addVariable(const std::string &key,
                                          uint32_t value) override;
 
+  std::shared_ptr<IVariable> registerVariable(std::shared_ptr<IVariable> new_variable) override;
+
   bool setVariable(const std::string &key, const std::string &value) override;
   bool setBoolVariable(const std::string &key, bool value) override;
   bool setVariable(const std::string &key, float value) override;

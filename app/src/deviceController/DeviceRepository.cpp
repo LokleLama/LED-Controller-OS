@@ -7,12 +7,14 @@
 #include "deviceController/LEDStatusFactory.h"
 #include "deviceController/CommRouterFactory.h"
 #include "deviceController/HLKFactory.h"
+#include "deviceController/ADCFactory.h"
 
 #include <algorithm>
 
 DeviceRepository::DeviceRepository(const Console& console) {
     _factories.push_back(std::make_shared<PIOFactory>());
     _factories.push_back(std::make_shared<UARTFactory>());
+    _factories.push_back(std::make_shared<ADCFactory>());
     _factories.push_back(std::make_shared<LEDFactory>(*this));
     _factories.push_back(std::make_shared<LEDDisplayFactory>(*this));
     _factories.push_back(std::make_shared<LEDStatusFactory>(*this, console));

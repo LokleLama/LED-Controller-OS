@@ -149,8 +149,16 @@ std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
   return addVariable(key, static_cast<int>(value));
 }
 
-std::shared_ptr<IVariable>
-VariableStore::getVariable(const std::string &key) const {
+std::shared_ptr<IVariable> VariableStore::registerVariable(std::shared_ptr<IVariable> new_variable) {
+  auto var = findVariable(new_variable->getName());
+  if(var) {
+    return var;
+  }
+  variables.push_back(new_variable);
+  return new_variable;
+}
+
+std::shared_ptr<IVariable> VariableStore::getVariable(const std::string &key) const {
   return findVariable(key);
 }
 

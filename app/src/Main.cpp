@@ -18,6 +18,7 @@
 #include "Commands/TimeCommand.h"
 #include "Commands/VersionCommand.h"
 #include "Commands/MemInfoCommand.h"
+#include "Commands/CreateVarCommand.h"
 
 #include "Commands/DirCommand.h"
 #include "Commands/ChangeDirCommand.h"
@@ -82,6 +83,7 @@ int main() {
   console.registerCommand(std::make_shared<SetCommand>(variableStore));
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
   console.registerCommand(std::make_shared<EnvCommand>(variableStore, console));
+  console.registerCommand(std::make_shared<CreateVarCommand>(variableStore));
 
   console.registerCommand(std::make_shared<HelpCommand>(console));
   console.registerCommand(std::make_shared<LedCommand>(console, deviceRepo));

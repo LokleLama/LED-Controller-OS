@@ -9,11 +9,11 @@
 class StringVariable : public IVariable {
 public:
   // Constructor
-  StringVariable(const std::string &value) : value_(value) {}
+  StringVariable(const std::string &name, const std::string &value) : IVariable(name), value_(value) {}
 
-  StringVariable(const StringVariable &other) : value_(other.value_) {}
+  StringVariable(const StringVariable &other) : IVariable(other.getName()), value_(other.value_) {}
   StringVariable(StringVariable &&other) noexcept
-      : value_(std::move(other.value_)) {}
+      : IVariable(other.getName()), value_(std::move(other.value_)) {}
   StringVariable &operator=(const StringVariable &other) {
     if (this != &other) {
       value_ = other.value_;
@@ -40,24 +40,20 @@ public:
 
   // Set the value
   bool set(const std::string &value) override {
+    if(!callCallback()) {
+      return false;
+    }
     value_ = value;
     return true;
   }
   bool set(float value) override {
-    value_ = std::to_string(value);
-    return true;
+    return set(std::to_string(value));
   }
   bool set(int value) override {
-    value_ = std::to_string(value);
-    return true;
+    return set(std::to_string(value));
   }
-  bool set(bool value) override {
-    if(value) {
-      value_ = "true";
-    } else {
-      value_ = "false";
-    }
-    return true;
+  bool setBool(bool value) override {
+    return set(value ? "true" : "false");
   }
 
   // Get the type of the variable

@@ -46,10 +46,14 @@ public:
   bool loadFromFile(const std::shared_ptr<SPFS::File>& file) override;
 
 private:
-  std::unordered_map<std::string, std::shared_ptr<IVariable>> variables;
+  std::vector<std::shared_ptr<IVariable>> variables;
   std::unordered_map<std::string, IVariableStore::Callback> callbacks;
+  bool _ignoreCallbacks = false;
 
   VariableStore() = default;
   
   size_t findVariableEnd(const std::string &input, size_t startPos) const;
+  bool valueChangedCallback(const std::string& key);
+
+  std::shared_ptr<IVariable> findVariable(const std::string &key) const;
 };

@@ -9,11 +9,11 @@
 class FloatVariable : public IVariable {
 public:
   // Constructor
-  FloatVariable(float value) : value_(value) {}
+  FloatVariable(const std::string &name, float value) : IVariable(name), value_(value) {}
 
-  FloatVariable(const FloatVariable &other) : value_(other.value_) {}
+  FloatVariable(const FloatVariable &other) : IVariable(other.getName()), value_(other.value_) {}
   FloatVariable(FloatVariable &&other) noexcept
-      : value_(std::move(other.value_)) {}
+      : IVariable(other.getName()), value_(std::move(other.value_)) {}
   FloatVariable &operator=(const FloatVariable &other) {
     if (this != &other) {
       value_ = other.value_;
@@ -40,20 +40,20 @@ public:
 
   // Set the value
   bool set(const std::string &value) override {
-    value_ = std::stof(value);
-    return true;
+    return set(std::stof(value));
   }
   bool set(float value) override {
+    if(!callCallback()) {
+      return false;
+    }
     value_ = value;
     return true;
   }
   bool set(int value) override {
-    value_ = static_cast<float>(value);
-    return true;
+    return set(static_cast<float>(value));
   }
-  bool set(bool value) override {
-    value_ = value ? 1.0f : 0.0f;
-    return true;
+  bool setBool(bool value) override {
+    return set(value ? 1.0f : 0.0f);
   }
 
   // Get the type of the variable

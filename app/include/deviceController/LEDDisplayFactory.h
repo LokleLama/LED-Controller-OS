@@ -108,13 +108,13 @@ private:
     bool setupVariable(std::shared_ptr<IDisplayDevice> device, const std::string& defaultValue, uint32_t defaultColor) {
         auto& variableStore = VariableStore::getInstance();
 
-        variableStore.addVariable(device->getName() + ".value", defaultValue);
+        variableStore.addVariable(device->getName() + ".value", defaultValue)->setSystemVariable();
         variableStore.registerCallback(device->getName() + ".value", [device](const std::string& key, const std::string& value) {
             device->setValue(value);
             return true;
         });
 
-        variableStore.addVariable(device->getName() + ".color", defaultColor);
+        variableStore.addVariable(device->getName() + ".color", defaultColor)->setSystemVariable();
         variableStore.registerCallback(device->getName() + ".color", [device](const std::string& key, const std::string& value) {
             device->setColor(ValueConverter::toInt(value));
             return true;
@@ -126,7 +126,7 @@ private:
     bool setupScrollingSpeedVariable(const std::string& deviceName, std::shared_ptr<IDisplayScrolling> scrollingDevice, int defaultSpeed) {
         auto& variableStore = VariableStore::getInstance();
 
-        variableStore.addVariable(deviceName + ".speed", defaultSpeed);
+        variableStore.addVariable(deviceName + ".speed", defaultSpeed)->setSystemVariable();
         variableStore.registerCallback(deviceName + ".speed", [scrollingDevice](const std::string& key, const std::string& value) {
             auto speed = ValueConverter::toInt(value);
             if (speed == 0) {

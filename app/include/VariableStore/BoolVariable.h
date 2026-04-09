@@ -9,11 +9,11 @@
 class BoolVariable : public IVariable {
 public:
   // Constructor
-  BoolVariable(bool value) : value_(value) {}
+  BoolVariable(const std::string &name, bool value) : IVariable(name), value_(value) {}
 
-  BoolVariable(const BoolVariable &other) : value_(other.value_) {}
+  BoolVariable(const BoolVariable &other) : IVariable(other.getName()), value_(other.value_) {}
   BoolVariable(BoolVariable &&other) noexcept
-      : value_(std::move(other.value_)) {}
+      : IVariable(other.getName()), value_(std::move(other.value_)) {}
   BoolVariable &operator=(const BoolVariable &other) {
     if (this != &other) {
       value_ = other.value_;
@@ -36,23 +36,22 @@ public:
   // Set the value
   bool set(const std::string &value) override {
     if (value == "true" || value == "1") {
-      value_ = true;
+      return setBool(true);
     } else if (value == "false" || value == "0") {
-      value_ = false;
-    } else {
-      return false;
+      return setBool(false);
     }
-    return true;
+    return false;
   }
   bool set(float value) override {
-    value_ = (value != 0.0f);
-    return true;
+    return setBool(value != 0.0f);
   }
   bool set(int value) override {
-    value_ = (value != 0);
-    return true;
+    return setBool(value != 0);
   }
-  bool set(bool value) override {
+  bool setBool(bool value) override {
+    if(!callCallback()) {
+      return false;
+    }
     value_ = value;
     return true;
   }

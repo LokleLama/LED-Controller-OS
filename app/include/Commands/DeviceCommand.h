@@ -18,7 +18,7 @@ public:
            "          list open                   - Lists all opened devices\n"
            "          param <name>                - Displays parameter information for the specified device\n"
            "          info <name>                 - Displays information about the specified device\n"
-           "          open <name> [parameters]    - Opens the specified device (opening a device will set the variable 'lastOpenedDevice')\n";
+           "          open <name> [parameters]    - Opens the specified device (opening a device will set the variable 'lastOpenedDevice')";
   }
 
   // Executes the command

@@ -18,7 +18,7 @@ public:
            "       Displays the contents of the specified file.\n"
            "       Options:\n"
            "         -${version_offset}  Display the file in the version ${current - offset}\n"
-           "         --hex               Display the file contents in hexadecimal format\n";
+           "         --hex               Display the file contents in hexadecimal format";
   }
 
   // Executes the command

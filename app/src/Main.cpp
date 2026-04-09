@@ -106,7 +106,7 @@ int main() {
   console.registerCommand(std::make_shared<TaskCommand>());
 
   variableStore.addVariable("init-script", "startup.sh");
-  variableStore.addVariable("?", 0);
+  variableStore.addVariable("?", 0)->setSystemVariable();
 
   console.EnqueueCommand("env load");
   console.EnqueueCommand("exec ${init-script}");

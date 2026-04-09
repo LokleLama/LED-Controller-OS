@@ -355,6 +355,13 @@ public:
     return _fs_header->size;
   }
 
+  int getBlockSize() const{
+    if(_fs_header == nullptr){
+      return -1;
+    }
+    return _fs_header->block_and_page_size & 0x0000FFFF;
+  }
+
   enum class BlockState {
     FREE,
     USED,

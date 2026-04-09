@@ -124,6 +124,10 @@ private:
   std::vector<TimedTaskInfo> _timedTasks;
   std::vector<SignalTaskInfo> _signalTasks;
 
+  uint32_t _loop_statistic[8];
+  uint32_t _max_loop_time;
+  int _loop_statistic_ptr;
+
   bool _running;
   uint32_t _systickCounter = 0;
   TaskHandle _nextTaskHandle = 0;

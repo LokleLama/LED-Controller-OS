@@ -6,13 +6,17 @@
 #include "Utils/ValueConverter.h"
 
 #include <time.h>
+#include <cstring>
+#include <iomanip>
 
 Mainloop& Mainloop::getInstance() {
     static Mainloop instance;
     return instance;
 }
 
-Mainloop::Mainloop() : _running(false), _systickCounter(0) {}
+Mainloop::Mainloop() : _running(false), _systickCounter(0), _loop_statistic_ptr(0), _max_loop_time(0) {
+  memset(_loop_statistic, 0, sizeof(_loop_statistic));
+}
 
 // Static callback function for the alarm
 bool Mainloop::alarm_callback(repeating_timer *rt) {
@@ -31,6 +35,7 @@ void Mainloop::start() {
 
   while (_running) {
     // Execute timed tasks
+    uint64_t loop_start = time_us_64();
     for (auto &task : _timedTasks) {
       if (task.execute) {
         task.info.startTime = time_us_64();
@@ -65,6 +70,20 @@ void Mainloop::start() {
         n--;
       }
     }
+
+    uint64_t total_loop_time = time_us_64() - loop_start;
+    if(total_loop_time <= static_cast<uint64_t>(static_cast<uint32_t>(-1))){
+      _loop_statistic[_loop_statistic_ptr] = total_loop_time;
+      if(total_loop_time > _max_loop_time){
+        _max_loop_time = total_loop_time;
+      }
+    }else{
+      _loop_statistic[_loop_statistic_ptr] = static_cast<uint32_t>(-1);
+    }
+    _loop_statistic_ptr++;
+    if(_loop_statistic_ptr >= 8){
+      _loop_statistic_ptr = 0;
+    }
   }
 
   // Cancel the timer when the loop stops
@@ -95,6 +114,13 @@ void Mainloop::onMillisecond() {
 }
 
 void Mainloop::OuptutTaskInformation() {
+  float total_loop_time = 0;
+  for(int i = 0; i < 8; i++){
+    total_loop_time += _loop_statistic[i];
+  }
+  total_loop_time /= 80;
+  std::cout << "Approximate CPU Load (per 1 ms): " << std::fixed << std::setprecision(2) << total_loop_time << "% (max time: " << _max_loop_time << "us)" << std::endl;
+
   std::cout << "Regular Tasks:" << std::endl;
   std::cout << " PID - Name (Mean Time / Max Time)" << std::endl;
   for (const auto &task : _regularTasks) {

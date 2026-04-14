@@ -38,7 +38,7 @@ const std::string USBUARTDevice::getDetails() const {
     return "USBUART Device";
 }
 
-bool USBUARTDevice::registerDataReceivedCallback(Mainloop::Function func, uint32_t signal) {
+bool USBUARTDevice::registerDataReceivedCallback(Mainloop::Function func, Signal signal) {
     if(_irq_signal != 0) {
         return false;
     }

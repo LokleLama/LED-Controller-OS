@@ -3,6 +3,7 @@
 #include "devices/IDevice.h"
 #include "devices/ICommDevice.h"
 #include "Utils/IRQFifo.h"
+#include "Utils/Signal.h"
 
 #include <cstdint>
 #include <string>
@@ -30,7 +31,7 @@ public:
         return _fifo.readAvailable(buffer, length);
     }
 
-    bool registerDataReceivedCallback(Mainloop::Function func, uint32_t signal = 0) override;
+    bool registerDataReceivedCallback(Mainloop::Function func, Signal signal = 0) override;
 
     int getBufferSize() const override {
         return _fifo.capacity();
@@ -42,7 +43,7 @@ public:
     std::shared_ptr<ICommDevice> _commDevice;
 
     IRQFifo _fifo;
-    uint32_t _irq_signal = 0;
+    Signal _irq_signal = 0;
 
     void receivedData(const uint8_t* data, size_t length);
   };

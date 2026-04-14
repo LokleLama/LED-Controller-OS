@@ -21,8 +21,7 @@ std::shared_ptr<IVariable> VariableStore::findVariable(const std::string &key) c
   return nullptr;
 }
 
-bool VariableStore::setVariable(const std::string &key,
-                                const std::string &value) {
+bool VariableStore::setVariable(const std::string &key, const std::string &value) {
   if (callbacks.find(key) != callbacks.end()) {
     if (!callbacks[key](key, value)) {
       return false;
@@ -162,8 +161,7 @@ std::shared_ptr<IVariable> VariableStore::getVariable(const std::string &key) co
   return findVariable(key);
 }
 
-size_t VariableStore::findVariableEnd(const std::string &input,
-                                      size_t startPos) const {
+size_t VariableStore::findVariableEnd(const std::string &input, size_t startPos) const {
   size_t pos = startPos;
   while (pos < input.length()) {
     char c = input[pos];

@@ -71,7 +71,7 @@ void PassthroughMonitor::MonitorDevice::receivedData(const uint8_t* data, size_t
   }
 }
 
-bool PassthroughMonitor::MonitorDevice::registerDataReceivedCallback(Mainloop::Function func, uint32_t signal)  {
+bool PassthroughMonitor::MonitorDevice::registerDataReceivedCallback(Mainloop::Function func, Signal signal)  {
   if(_irq_signal != 0) {
     return false;
   }

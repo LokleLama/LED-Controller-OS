@@ -4,6 +4,7 @@
 #include "hardware/irq.h"
 
 #include "Utils/ValueConverter.h"
+#include "Utils/Signal.h"
 
 #include <time.h>
 #include <cstring>
@@ -176,7 +177,7 @@ void Mainloop::OuptutTaskInformation() {
   std::cout << " PID - Name (Mean Time / Max Time)" << std::endl;
   for (const auto &task : _signalTasks) {
     OuptutTaskInformation(task.info);
-    std::cout << " [Signal: " << ValueConverter::toString(task.signal, IntegerStringFormat::HEX) << "]" << std::endl;
+    std::cout << " [Signal: " << SignalConverter::toString(task.signal) << "]" << std::endl;
   }
 }
 

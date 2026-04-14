@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "ITask.h"
+#include "Utils/Signal.h"
 
 class Mainloop {
 public:
@@ -40,7 +41,7 @@ private:
   struct SignalTaskInfo {
     struct TaskInfo info;
 
-    uint32_t signal;
+    Signal signal;
     bool execute;
   };
 
@@ -112,17 +113,17 @@ public:
     return false;
   }
 
-  TaskPID registerSignalTask(ITask *task, uint32_t signal) {
+  TaskPID registerSignalTask(ITask *task, Signal signal) {
     return registerSignalTask(task->getName(), [task](TaskPID pid) { return task->ExecuteTask(pid); }, signal);
   }
 
-  TaskPID registerSignalTask(const std::string &name, Function func, uint32_t signal) {
+  TaskPID registerSignalTask(const std::string &name, Function func, Signal signal) {
     TaskPID handle = _nextTaskPID++;
     _signalTasks.push_back({{handle, name, func, 0, 0, 0}, signal, false});
     return handle;
   }
 
-  void triggerSignal(uint32_t signal) {
+  void triggerSignal(Signal signal) {
     for (auto &task : _signalTasks) {
       if (task.signal == signal) {
         task.execute = true;

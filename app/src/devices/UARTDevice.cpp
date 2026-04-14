@@ -93,7 +93,7 @@ bool UARTDevice::isPinValid(uint8_t pin, int pinType) const {
     return false;
 }
 
-bool UARTDevice::registerDataReceivedCallback(Mainloop::Function func, uint32_t signal) {
+bool UARTDevice::registerDataReceivedCallback(Mainloop::Function func, Signal signal) {
     if(_irq_signal != 0) {
         return false;
     }

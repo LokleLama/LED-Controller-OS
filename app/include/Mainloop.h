@@ -108,6 +108,10 @@ public:
     }
   }
 
+  void killTask(TaskHandle handle) {
+    _tasksToKill.push_back(handle);
+  }
+
   // Start the mainloop
   void start();
 
@@ -123,6 +127,8 @@ private:
   std::vector<TaskInfo> _regularTasks;
   std::vector<TimedTaskInfo> _timedTasks;
   std::vector<SignalTaskInfo> _signalTasks;
+
+  std::vector<TaskHandle> _tasksToKill;
 
   uint32_t _loop_statistic[8];
   uint32_t _max_loop_time;

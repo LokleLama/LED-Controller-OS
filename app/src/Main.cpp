@@ -34,7 +34,9 @@
 #include "Commands/MakeFilesystemCommand.h"
 
 #include "Commands/DeviceCommand.h"
+
 #include "Commands/TaskCommand.h"
+#include "Commands/KillCommand.h"
 
 #include "BackgroundTasks/StartCommand.h"
 
@@ -78,7 +80,6 @@ int main() {
   
   console.registerCommand(std::make_shared<VersionCommand>());
   console.registerCommand(std::make_shared<EchoCommand>());
-  console.registerCommand(std::make_shared<TimeCommand>(picoTime));
 
   console.registerCommand(std::make_shared<SetCommand>(variableStore));
   console.registerCommand(std::make_shared<GetCommand>(variableStore));
@@ -86,7 +87,6 @@ int main() {
   console.registerCommand(std::make_shared<CreateVarCommand>(variableStore));
 
   console.registerCommand(std::make_shared<HelpCommand>(console));
-  console.registerCommand(std::make_shared<LedCommand>(console, deviceRepo));
 
   console.registerCommand(std::make_shared<DirCommand>(console));
   console.registerCommand(std::make_shared<ChangeDirCommand>(console));
@@ -104,8 +104,12 @@ int main() {
 
   console.registerCommand(std::make_shared<DeviceCommand>(variableStore, deviceRepo));
 
-  console.registerCommand(std::make_shared<StartCommand>(picoTime));
   console.registerCommand(std::make_shared<TaskCommand>());
+  console.registerCommand(std::make_shared<KillCommand>(mainloop));
+
+  console.registerCommand(std::make_shared<TimeCommand>(picoTime));
+  console.registerCommand(std::make_shared<StartCommand>(picoTime));
+  console.registerCommand(std::make_shared<LedCommand>(console, deviceRepo));
 
   variableStore.addVariable("init-script", "startup.sh");
   variableStore.addVariable("?", 0)->setSystemVariable();

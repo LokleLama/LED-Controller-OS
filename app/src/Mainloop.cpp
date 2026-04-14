@@ -71,6 +71,36 @@ void Mainloop::start() {
       }
     }
 
+    for (int n = 0; n < _tasksToKill.size(); n++) {
+      TaskHandle handle = _tasksToKill[n];
+      bool found = false;
+      for (int i = 0; i < _regularTasks.size(); i++) {
+        if (_regularTasks[i].handle == handle) {
+          _regularTasks.erase(_regularTasks.begin() + i);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        for (int i = 0; i < _timedTasks.size(); i++) {
+          if (_timedTasks[i].info.handle == handle) {
+            _timedTasks.erase(_timedTasks.begin() + i);
+            found = true;
+            break;
+          }
+        }
+      }
+      if (!found) {
+        for (int i = 0; i < _signalTasks.size(); i++) {
+          if (_signalTasks[i].info.handle == handle) {
+            _signalTasks.erase(_signalTasks.begin() + i);
+            break;
+          }
+        }
+      }
+    }
+    _tasksToKill.clear();
+
     uint64_t total_loop_time = time_us_64() - loop_start;
     if(total_loop_time <= static_cast<uint64_t>(static_cast<uint32_t>(-1))){
       _loop_statistic[_loop_statistic_ptr] = total_loop_time;

@@ -10,10 +10,10 @@ Passthrough::Passthrough(std::shared_ptr<ICommDevice> commDeviceA, std::shared_p
     return;
   }
 
-  _commDeviceA->registerDataReceivedCallback([this]() { return SignalTask(); });
-  _commDeviceB->registerDataReceivedCallback([this]() { return SignalTask(); });
+  _commDeviceA->registerDataReceivedCallback([this](TaskPID) { return SignalTask(); });
+  _commDeviceB->registerDataReceivedCallback([this](TaskPID) { return SignalTask(); });
 
-  Mainloop::getInstance().registerRegularTask(getName() + ".Worker", [this]() { return ExecuteTask(); });
+  Mainloop::getInstance().registerRegularTask(getName() + ".Worker", [this](TaskPID) { return ExecuteTask(); });
     
   _status = DeviceStatus::Initialized;
 }

@@ -17,7 +17,7 @@ HLKDevice::HLKDevice(std::shared_ptr<ICommDevice> commDevice,
     return;
   }
 
-  _commDevice->registerDataReceivedCallback([this]() { return ExecuteTask(); });
+  _commDevice->registerDataReceivedCallback([this](TaskPID) { return ExecuteTask(); });
 
   _status = DeviceStatus::Initialized;
 }

@@ -4,7 +4,7 @@
 
 
 USBUARTDevice::USBUARTDevice(int interface_number) : _interface_number(interface_number) {
-    Mainloop::getInstance().registerRegularTask(getName() + ".Worker", [this]() { return ExecuteTask(); });
+    Mainloop::getInstance().registerRegularTask(getName() + ".Worker", [this](TaskPID) { return ExecuteTask(); });
     _status = DeviceStatus::Initialized;
 }
 

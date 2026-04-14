@@ -103,7 +103,7 @@ bool Console::ExecuteLine(const std::string &line) {
   }
 }
 
-bool Console::ExecuteTask() {
+bool Console::ExecuteTask(TaskPID pid) {
   // Process commands from the queue first
   if (!commandQueue.empty()) {
     std::string command = commandQueue.front();

@@ -6,7 +6,7 @@ Loopback::Loopback(std::shared_ptr<ICommDevice> commDevice, const std::string& n
 
 Loopback::Loopback(std::shared_ptr<ICommDevice> commDevice, const std::string& name, int buffersize)
     : _commDevice(commDevice), _name(name), _fifo(buffersize) {
-  _commDevice->registerDataReceivedCallback([this]() { return ExecuteTask(); });
+  _commDevice->registerDataReceivedCallback([this](TaskPID) { return ExecuteTask(); });
     
   _status = DeviceStatus::Initialized;
 }

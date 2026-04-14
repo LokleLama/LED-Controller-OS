@@ -38,7 +38,7 @@ ADCDevice::ADCDevice(const std::string& name, int adc_channel, std::shared_ptr<I
     }
 
     if(sampling_intervall > 0) {
-        _readoutTask = Mainloop::getInstance().registerTimedTask(name + ".Readout", [this]() { return ExecuteTask(); }, _samplingIntervall);
+        _readoutTask = Mainloop::getInstance().registerTimedTask(name + ".Readout", [this](TaskPID) { return ExecuteTask(); }, _samplingIntervall);
     }
     
     _adc_initialized[adc_channel] = true;

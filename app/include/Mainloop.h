@@ -10,18 +10,23 @@
 
 class Mainloop {
 public:
-  using Function = std::function<bool()>;
-  using TaskHandle = int;
+  using Function = std::function<bool(TaskPID)>;
 
 private:
   struct TaskInfo {
-    TaskHandle handle;
+    TaskPID pid;
     std::string name;
     Function func;
 
     uint64_t startTime;
     uint32_t meanTime;
     uint32_t maxTime;
+  };
+
+  struct RegularTaskInfo {
+    struct TaskInfo info;
+
+    uint32_t sleepUntil;
   };
 
   struct TimedTaskInfo {
@@ -43,23 +48,40 @@ public:
   static Mainloop& getInstance();
 
   // Register a function to be executed in every mainloop iteration
-  TaskHandle registerRegularTask(const std::string &name, Function func) {
-    TaskHandle handle = _nextTaskHandle++;
-    _regularTasks.push_back({handle, name, func, 0, 0, 0});
+  TaskPID registerRegularTask(const std::string &name, Function func) {
+    TaskPID handle = _nextTaskPID++;
+    _regularTasks.push_back({{handle, name, func, 0, 0, 0}, 0});
     return handle;
   }
 
-  TaskHandle registerRegularTask(ITask *task) {
-    return registerRegularTask(task->getName(), [task]() { return task->ExecuteTask(); });
+  TaskPID registerRegularTask(ITask *task) {
+    return registerRegularTask(task->getName(), [task](TaskPID pid) { return task->ExecuteTask(pid); });
   }
 
-  TaskHandle registerTimedTask(ITask *task, int32_t intervalMs, int32_t initialDelayMs = 0) {
-    return registerTimedTask(task->getName(), [task]() { return task->ExecuteTask(); }, intervalMs, initialDelayMs);
+  bool sleepTask(TaskPID handle, uint32_t sleepTimeMs) {
+    for (auto &task : _regularTasks) {
+      if (task.info.pid == handle) {
+        task.sleepUntil = _systickCounter + sleepTimeMs;
+        return true;
+      }
+    }
+    for (auto &task : _timedTasks) {
+      if (task.info.pid == handle) {
+        task.nextExecution = _systickCounter + sleepTimeMs;
+        task.execute = false;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  TaskPID registerTimedTask(ITask *task, int32_t intervalMs, int32_t initialDelayMs = 0) {
+    return registerTimedTask(task->getName(), [task](TaskPID pid) { return task->ExecuteTask(pid); }, intervalMs, initialDelayMs);
   }
 
   // Register a function to be executed every x ms
-  TaskHandle registerTimedTask(const std::string &name, Function func, int32_t intervalMs, int32_t initialDelayMs = 0) {
-    TaskHandle handle = _nextTaskHandle++;
+  TaskPID registerTimedTask(const std::string &name, Function func, int32_t intervalMs, int32_t initialDelayMs = 0) {
+    TaskPID handle = _nextTaskPID++;
     TimedTaskInfo taskInfo{{handle, name, func, 0, 0, 0}, initialDelayMs == 0, intervalMs, _systickCounter + initialDelayMs};
     if(initialDelayMs == 0){
       taskInfo.nextExecution += intervalMs;
@@ -69,13 +91,13 @@ public:
   }
 
   // Register a function to be executed once after y ms
-  TaskHandle registerDelayedTask(const std::string &name, Function func, int32_t delayMs) {
+  TaskPID registerDelayedTask(const std::string &name, Function func, int32_t delayMs) {
     return registerTimedTask(name, func, -1, delayMs);
   }
 
-  bool modifyTimedTaskInterval(TaskHandle handle, int32_t newIntervalMs) {
+  bool modifyTimedTaskInterval(TaskPID handle, int32_t newIntervalMs) {
     for (auto &task : _timedTasks) {
-      if (task.info.handle == handle) {
+      if (task.info.pid == handle) {
         int32_t difference = newIntervalMs - task.intervalMs;
         task.nextExecution = task.nextExecution + difference;
         task.intervalMs = newIntervalMs;
@@ -90,12 +112,12 @@ public:
     return false;
   }
 
-  TaskHandle registerSignalTask(ITask *task, uint32_t signal) {
-    return registerSignalTask(task->getName(), [task]() { return task->ExecuteTask(); }, signal);
+  TaskPID registerSignalTask(ITask *task, uint32_t signal) {
+    return registerSignalTask(task->getName(), [task](TaskPID pid) { return task->ExecuteTask(pid); }, signal);
   }
 
-  TaskHandle registerSignalTask(const std::string &name, Function func, uint32_t signal) {
-    TaskHandle handle = _nextTaskHandle++;
+  TaskPID registerSignalTask(const std::string &name, Function func, uint32_t signal) {
+    TaskPID handle = _nextTaskPID++;
     _signalTasks.push_back({{handle, name, func, 0, 0, 0}, signal, false});
     return handle;
   }
@@ -108,7 +130,7 @@ public:
     }
   }
 
-  void killTask(TaskHandle handle) {
+  void killTask(TaskPID handle) {
     _tasksToKill.push_back(handle);
   }
 
@@ -124,11 +146,11 @@ public:
   void OuptutTaskInformation();
 
 private:
-  std::vector<TaskInfo> _regularTasks;
+  std::vector<RegularTaskInfo> _regularTasks;
   std::vector<TimedTaskInfo> _timedTasks;
   std::vector<SignalTaskInfo> _signalTasks;
 
-  std::vector<TaskHandle> _tasksToKill;
+  std::vector<TaskPID> _tasksToKill;
 
   uint32_t _loop_statistic[8];
   uint32_t _max_loop_time;
@@ -136,7 +158,7 @@ private:
 
   bool _running;
   uint32_t _systickCounter = 0;
-  TaskHandle _nextTaskHandle = 0;
+  TaskPID _nextTaskPID = 0;
 
   Mainloop();
 

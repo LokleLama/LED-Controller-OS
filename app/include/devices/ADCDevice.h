@@ -19,7 +19,7 @@ private:
     std::string _name;
     std::shared_ptr<IVariable> _valueVariable;
     int _samplingIntervall;
-    Mainloop::TaskHandle _readoutTask;
+    TaskPID _readoutTask;
 
     uint8_t _adc_channel;
     int8_t _adc_pins[5] = {26, 27, 28, 29, -1};

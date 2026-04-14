@@ -39,7 +39,7 @@ void Mainloop::start() {
     for (auto &task : _timedTasks) {
       if (task.execute) {
         task.info.startTime = time_us_64();
-        if(!task.info.func()){
+        if(!task.info.func(task.info.pid)){
           task.intervalMs = -1; // mark the Task for removal
         }
         calculateStatistics(task.info);
@@ -50,17 +50,21 @@ void Mainloop::start() {
     for (auto &task : _signalTasks) {
       if (task.execute) {
         task.info.startTime = time_us_64();
-        auto rerun = task.info.func();
+        auto rerun = task.info.func(task.info.pid);
         calculateStatistics(task.info);
         task.execute = rerun;
       }
     }
 
+    uint32_t currentTime = _systickCounter;
     // Execute regular tasks
     for (auto &task : _regularTasks) {
-      task.startTime = time_us_64();
-      task.func();
-      calculateStatistics(task);
+      if(task.sleepUntil > currentTime){
+        continue;
+      }
+      task.info.startTime = time_us_64();
+      task.info.func(task.info.pid);
+      calculateStatistics(task.info);
     }
 
     // Remove completed timed tasks
@@ -72,10 +76,10 @@ void Mainloop::start() {
     }
 
     for (int n = 0; n < _tasksToKill.size(); n++) {
-      TaskHandle handle = _tasksToKill[n];
+      TaskPID handle = _tasksToKill[n];
       bool found = false;
       for (int i = 0; i < _regularTasks.size(); i++) {
-        if (_regularTasks[i].handle == handle) {
+        if (_regularTasks[i].info.pid == handle) {
           _regularTasks.erase(_regularTasks.begin() + i);
           found = true;
           break;
@@ -83,7 +87,7 @@ void Mainloop::start() {
       }
       if (!found) {
         for (int i = 0; i < _timedTasks.size(); i++) {
-          if (_timedTasks[i].info.handle == handle) {
+          if (_timedTasks[i].info.pid == handle) {
             _timedTasks.erase(_timedTasks.begin() + i);
             found = true;
             break;
@@ -92,7 +96,7 @@ void Mainloop::start() {
       }
       if (!found) {
         for (int i = 0; i < _signalTasks.size(); i++) {
-          if (_signalTasks[i].info.handle == handle) {
+          if (_signalTasks[i].info.pid == handle) {
             _signalTasks.erase(_signalTasks.begin() + i);
             break;
           }
@@ -154,7 +158,10 @@ void Mainloop::OuptutTaskInformation() {
   std::cout << "Regular Tasks:" << std::endl;
   std::cout << " PID - Name (Mean Time / Max Time)" << std::endl;
   for (const auto &task : _regularTasks) {
-    OuptutTaskInformation(task);
+    OuptutTaskInformation(task.info);
+    if (task.sleepUntil > _systickCounter){
+      std::cout << " [Sleeping for " << (task.sleepUntil - _systickCounter) << " ms]";
+    } 
     std::cout << std::endl;
   }
 
@@ -174,5 +181,5 @@ void Mainloop::OuptutTaskInformation() {
 }
 
 void Mainloop::OuptutTaskInformation(const struct TaskInfo &task) {
-  std::cout << " " << task.handle <<" - " << task.name << " (" << task.meanTime << " us / " << task.maxTime << " us)";
+  std::cout << " " << task.pid <<" - " << task.name << " (" << task.meanTime << " us / " << task.maxTime << " us)";
 }

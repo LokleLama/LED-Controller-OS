@@ -23,7 +23,7 @@ public:
     _taskRunning = false;
   }
 
-  bool ExecuteTask() override {
+  bool ExecuteTask(TaskPID pid) override {
     // Here you would add logic to set the specified variable to the current time every minute.
     // For demonstration purposes, we'll just print the current time.
     std::tm timeInfo = _picoTime->getTimeInfo();

@@ -6,6 +6,7 @@ class LinearTransformation : public FloatVariable {
 public:
   LinearTransformation(const std::string& name, float multiplier = 1.0f, float offset = 0.0f)
    : FloatVariable(name, 0.0f), _multiplier(multiplier), _offset(offset) {
+    setSystemVariable();
   }
 
   bool set(const std::string &value) override {

@@ -14,6 +14,7 @@ public:
   StringVariable(const StringVariable &other) : IVariable(other.getName()), value_(other.value_) {}
   StringVariable(StringVariable &&other) noexcept
       : IVariable(other.getName()), value_(std::move(other.value_)) {}
+      
   StringVariable &operator=(const StringVariable &other) {
     if (this != &other) {
       value_ = other.value_;

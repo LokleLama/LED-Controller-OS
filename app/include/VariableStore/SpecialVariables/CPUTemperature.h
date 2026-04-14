@@ -7,6 +7,7 @@ public:
   CPUTemperature(const std::string& name, float adc_voltage_reference = 3.3f, uint16_t max_adc_value = 4095)
    : FloatVariable(name, 0.0f) {
     _adc_voltage_per_tick = adc_voltage_reference / max_adc_value;
+    setSystemVariable();
   }
 
   bool set(const std::string& value) override {

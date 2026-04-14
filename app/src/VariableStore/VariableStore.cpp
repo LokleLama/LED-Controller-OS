@@ -233,9 +233,9 @@ bool VariableStore::valueChangedCallback(const std::string& key) {
   if(_ignoreCallbacks) {
     return true;
   }
-  auto var = findVariable(key);
-  if (var) {
-    if (callbacks.find(key) != callbacks.end()) {
+  if (callbacks.find(key) != callbacks.end()) {
+    auto var = findVariable(key);
+    if (var) {
       return callbacks[key](key, var->asString());
     }
   }

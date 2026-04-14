@@ -13,7 +13,7 @@ VariableStore& VariableStore::getInstance() {
 }
 
 std::shared_ptr<IVariable> VariableStore::findVariable(const std::string &key) const {
-  for (const auto &var : variables) {
+  for (const auto &var : _variables) {
     if (var->getName() == key) {
       return var;
     }
@@ -22,8 +22,8 @@ std::shared_ptr<IVariable> VariableStore::findVariable(const std::string &key) c
 }
 
 bool VariableStore::setVariable(const std::string &key, const std::string &value) {
-  if (callbacks.find(key) != callbacks.end()) {
-    if (!callbacks[key](key, value)) {
+  if (_callbacks.find(key) != _callbacks.end()) {
+    if (!_callbacks[key](key, value)) {
       return false;
     }
   }
@@ -37,8 +37,8 @@ bool VariableStore::setVariable(const std::string &key, const std::string &value
   return false;
 }
 bool VariableStore::setBoolVariable(const std::string &key, bool value) {
-  if (callbacks.find(key) != callbacks.end()) {
-    if (!callbacks[key](key, value ? "true" : "false")) {
+  if (_callbacks.find(key) != _callbacks.end()) {
+    if (!_callbacks[key](key, value ? "true" : "false")) {
       return false;
     }
   }
@@ -52,8 +52,8 @@ bool VariableStore::setBoolVariable(const std::string &key, bool value) {
   return false;
 }
 bool VariableStore::setVariable(const std::string &key, float value) {
-  if (callbacks.find(key) != callbacks.end()) {
-    if (!callbacks[key](key, std::to_string(value))) {
+  if (_callbacks.find(key) != _callbacks.end()) {
+    if (!_callbacks[key](key, std::to_string(value))) {
       return false;
     }
   }
@@ -67,8 +67,8 @@ bool VariableStore::setVariable(const std::string &key, float value) {
   return false;
 }
 bool VariableStore::setVariable(const std::string &key, int value) {
-  if (callbacks.find(key) != callbacks.end()) {
-    if (!callbacks[key](key, std::to_string(value))) {
+  if (_callbacks.find(key) != _callbacks.end()) {
+    if (!_callbacks[key](key, std::to_string(value))) {
       return false;
     }
   }
@@ -98,7 +98,7 @@ std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
     return var;
   }
   auto ret = std::make_shared<StringVariable>(key, value);
-  variables.push_back(ret);
+  _variables.push_back(ret);
   return ret;
 }
 
@@ -110,7 +110,7 @@ std::shared_ptr<IVariable> VariableStore::addBoolVariable(const std::string &key
     return var;
   }
   auto ret = std::make_shared<BoolVariable>(key, value);
-  variables.push_back(ret);
+  _variables.push_back(ret);
   return ret;
 }
 
@@ -122,7 +122,7 @@ std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
     return var;
   }
   auto ret = std::make_shared<FloatVariable>(key, value);
-  variables.push_back(ret);
+  _variables.push_back(ret);
   return ret;
 }
 
@@ -134,7 +134,7 @@ std::shared_ptr<IVariable> VariableStore::addVariable(const std::string &key,
     return var;
   }
   auto ret = std::make_shared<IntVariable>(key, value);
-  variables.push_back(ret);
+  _variables.push_back(ret);
   return ret;
 }
 
@@ -153,7 +153,7 @@ std::shared_ptr<IVariable> VariableStore::registerVariable(std::shared_ptr<IVari
   if(var) {
     return var;
   }
-  variables.push_back(new_variable);
+  _variables.push_back(new_variable);
   return new_variable;
 }
 
@@ -226,17 +226,17 @@ void VariableStore::registerCallback(const std::string &key,
     });
   }
 
-  callbacks[key] = callback;
+  _callbacks[key] = callback;
 }
 
 bool VariableStore::valueChangedCallback(const std::string& key) {
   if(_ignoreCallbacks) {
     return true;
   }
-  if (callbacks.find(key) != callbacks.end()) {
+  if (_callbacks.find(key) != _callbacks.end()) {
     auto var = findVariable(key);
     if (var) {
-      return callbacks[key](key, var->asString());
+      return _callbacks[key](key, var->asString());
     }
   }
   return true;
@@ -246,7 +246,7 @@ const std::unordered_map<std::string, std::string>
 VariableStore::getAllVariables() const {
   std::unordered_map<std::string, std::string> result;
 
-  for (const auto &var : variables) {
+  for (const auto &var : _variables) {
     result[var->getName()] = var->asString();
   }
   return result;
@@ -254,7 +254,7 @@ VariableStore::getAllVariables() const {
 
 bool VariableStore::saveToFile(std::shared_ptr<SPFS::File>& file) const {
   JsonDocument doc;
-  for (const auto& var : variables) {
+  for (const auto& var : _variables) {
     if (var->isSystemVariable()) {
       continue; // Skip system variables
     }
@@ -302,19 +302,19 @@ bool VariableStore::loadFromFile(const std::shared_ptr<SPFS::File>& file) {
       // Variable does not exist, create it based on the type in JSON
       if (kv.value().is<int>()) {
         auto ret = std::make_shared<IntVariable>(key, kv.value().as<int>());
-        variables.push_back(ret);
+        _variables.push_back(ret);
       } else if (kv.value().is<float>() || kv.value().is<double>()) {
         auto ret = std::make_shared<FloatVariable>(key, kv.value().as<float>());
-        variables.push_back(ret);
+        _variables.push_back(ret);
       } else if (kv.value().is<bool>()) {
         auto ret = std::make_shared<BoolVariable>(key, kv.value().as<bool>());
-        variables.push_back(ret);
+        _variables.push_back(ret);
       } else if (kv.value().is<std::string>()) {
         auto ret = std::make_shared<StringVariable>(key, kv.value().as<std::string>());
-        variables.push_back(ret);
+        _variables.push_back(ret);
       } else if (kv.value().is<const char*>()) {
         auto ret = std::make_shared<StringVariable>(key, std::string(kv.value().as<const char*>()));
-        variables.push_back(ret);
+        _variables.push_back(ret);
       }
     } else {
       // Variable exists, set its value

@@ -8,6 +8,8 @@
 #include "IVariable.h"
 #include "IVariableStore.h"
 
+#include "Utils/Signal.h"
+
 class VariableStore : public IVariableStore {
 public:
   static VariableStore& getInstance();
@@ -41,6 +43,8 @@ public:
   void registerCallback(const std::string &key,
                         IVariableStore::Callback callback) override;
 
+  Signal registerSignal(const std::string &key, Signal signal = 0) override;
+
   const std::unordered_map<std::string, std::string>
   getAllVariables() const override;
 
@@ -48,9 +52,12 @@ public:
   bool loadFromFile(const std::shared_ptr<SPFS::File>& file) override;
 
 private:
-  std::vector<std::shared_ptr<IVariable>> variables;
-  std::unordered_map<std::string, IVariableStore::Callback> callbacks;
+  std::vector<std::shared_ptr<IVariable>> _variables;
+  std::unordered_map<std::string, IVariableStore::Callback> _callbacks;
+  std::unordered_map<std::string, Signal> _signals;
   bool _ignoreCallbacks = false;
+
+  static Signal _signalNumber;
 
   VariableStore() = default;
   

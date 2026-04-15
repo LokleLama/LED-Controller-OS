@@ -4,7 +4,7 @@
 
 
 USBUARTDevice::USBUARTDevice(int interface_number) : _interface_number(interface_number) {
-    Mainloop::getInstance().registerRegularTask(getName() + ".Worker", [this]() { return ExecuteTask(); });
+    Mainloop::getInstance().registerRegularTask(getName() + ".Worker", [this](TaskPID) { return ExecuteTask(); });
     _status = DeviceStatus::Initialized;
 }
 
@@ -38,7 +38,7 @@ const std::string USBUARTDevice::getDetails() const {
     return "USBUART Device";
 }
 
-bool USBUARTDevice::registerDataReceivedCallback(Mainloop::Function func, uint32_t signal) {
+bool USBUARTDevice::registerDataReceivedCallback(Mainloop::Function func, Signal signal) {
     if(_irq_signal != 0) {
         return false;
     }

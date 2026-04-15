@@ -5,6 +5,7 @@
 #include "devices/ICommDevice.h"
 
 #include "Utils/IRQFifo.h"
+#include "Utils/Signal.h"
 
 #include <vector>
 #include <memory>
@@ -31,7 +32,7 @@ public:
         return _rx_fifo.readAvailable(buffer, length);
     }
 
-    bool registerDataReceivedCallback(Mainloop::Function func, uint32_t signal = 0) override;
+    bool registerDataReceivedCallback(Mainloop::Function func, Signal signal = 0) override;
 
     int getBufferSize() const override {
         return _rx_fifo.capacity();
@@ -45,7 +46,7 @@ private:
     uint _baud_rate;
     IRQFifo _rx_fifo;
 
-    uint32_t _irq_signal = 0;
+    Signal _irq_signal = 0;
 
     static UARTDevice* _instances[2];
     static void on_uart0_rx();

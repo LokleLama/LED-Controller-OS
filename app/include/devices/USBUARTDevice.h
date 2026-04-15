@@ -5,6 +5,8 @@
 #include "devices/ICommDevice.h"
 #include "ITask.h"
 
+#include "Utils/Signal.h"
+
 #include <vector>
 #include <memory>
 #include <string>
@@ -22,7 +24,7 @@ public:
     int dataAvailable() override;
     int receive(uint8_t* buffer, size_t length) override;
 
-    bool registerDataReceivedCallback(Mainloop::Function func, uint32_t signal = 0) override;
+    bool registerDataReceivedCallback(Mainloop::Function func, Signal signal = 0) override;
 
     int getBufferSize() const override {
         return 64;
@@ -30,7 +32,7 @@ public:
 
 private:
     int _interface_number;
-    uint32_t _irq_signal = 0;
+    Signal _irq_signal = 0;
 
     bool ExecuteTask();
 };

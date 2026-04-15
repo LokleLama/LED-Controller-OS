@@ -14,6 +14,7 @@ public:
   BoolVariable(const BoolVariable &other) : IVariable(other.getName()), value_(other.value_) {}
   BoolVariable(BoolVariable &&other) noexcept
       : IVariable(other.getName()), value_(std::move(other.value_)) {}
+      
   BoolVariable &operator=(const BoolVariable &other) {
     if (this != &other) {
       value_ = other.value_;

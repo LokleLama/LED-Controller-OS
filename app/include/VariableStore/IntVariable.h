@@ -13,6 +13,7 @@ public:
 
   IntVariable(const IntVariable &other) : IVariable(other.getName()), value_(other.value_), format_(other.format_) {}
   IntVariable(IntVariable &&other) noexcept : IVariable(other.getName()), value_(std::move(other.value_)), format_(std::move(other.format_)) {}
+  
   IntVariable &operator=(const IntVariable &other) {
     if (this != &other) {
       value_ = other.value_;

@@ -28,7 +28,7 @@ public:
 private:
   std::shared_ptr<WS2812> _led;
   std::string _name;
-  Mainloop::TaskHandle _scrollingTask;
+  TaskPID _scrollingTask;
   ScrollingDirection _scrollingDirection = ScrollingDirection::LEFT;
 
   std::vector<uint8_t> _ledData;

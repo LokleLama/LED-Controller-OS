@@ -11,7 +11,7 @@ dotMatrix8xN::dotMatrix8xN(std::shared_ptr<WS2812> led, const std::string& name,
 
   _currentFrame.resize(led->getLEDCount() & ~0x07, 0);
 
-  _scrollingTask = Mainloop::getInstance().registerTimedTask(name + ".TextScrolling", [this]() { return scrollText(); }, 100);
+  _scrollingTask = Mainloop::getInstance().registerTimedTask(name + ".TextScrolling", [this](TaskPID) { return scrollText(); }, 100);
 
   _status = DeviceStatus::Initialized;
 }

@@ -10,6 +10,7 @@
 #include "Flash/SPFS.h"
 
 #include "IVariable.h"
+#include "Utils/Signal.h"
 
 class IVariableStore {
 public:
@@ -47,6 +48,8 @@ public:
   virtual std::string findAndReplaceVariables(const std::string &input) const = 0;
 
   virtual void registerCallback(const std::string &key, Callback callback) = 0;
+  
+  virtual Signal registerSignal(const std::string &key, Signal signal = 0) = 0;
 
   virtual const std::unordered_map<std::string, std::string>
   getAllVariables() const = 0;

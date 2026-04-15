@@ -14,6 +14,7 @@ public:
   FloatVariable(const FloatVariable &other) : IVariable(other.getName()), value_(other.value_) {}
   FloatVariable(FloatVariable &&other) noexcept
       : IVariable(other.getName()), value_(std::move(other.value_)) {}
+      
   FloatVariable &operator=(const FloatVariable &other) {
     if (this != &other) {
       value_ = other.value_;

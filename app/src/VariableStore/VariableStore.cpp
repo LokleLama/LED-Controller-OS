@@ -7,6 +7,8 @@
 
 #include "ArduinoJson.h"
 
+#include "Mainloop.h"
+
 VariableStore& VariableStore::getInstance() {
   static VariableStore instance;
   return instance;
@@ -229,6 +231,25 @@ void VariableStore::registerCallback(const std::string &key,
   _callbacks[key] = callback;
 }
 
+Signal VariableStore::_signalNumber = '0';
+
+Signal VariableStore::registerSignal(const std::string &key, Signal signal) {
+  if(signal == 0) {
+    signal = 0x76617200 + _signalNumber;
+    _signalNumber++;
+    if((_signalNumber & 0xFF) == '0'){
+      _signalNumber = 'A';
+    }else if((_signalNumber & 0xFF) == 'Z' + 1){
+      _signalNumber = 'a';
+    }else if((_signalNumber & 0xFF) == 'z' + 1){
+      _signalNumber = '0';
+      _signalNumber += 0x100;
+    }
+  }
+  _signals[key] = signal;
+  return signal;
+}
+
 bool VariableStore::valueChangedCallback(const std::string& key) {
   if(_ignoreCallbacks) {
     return true;
@@ -238,6 +259,9 @@ bool VariableStore::valueChangedCallback(const std::string& key) {
     if (var) {
       return _callbacks[key](key, var->asString());
     }
+  }
+  if (_signals.find(key) != _signals.end()) {
+    Mainloop::getInstance().triggerSignal(_signals[key]);
   }
   return true;
 }

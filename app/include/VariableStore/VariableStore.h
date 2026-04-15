@@ -43,6 +43,8 @@ public:
   void registerCallback(const std::string &key,
                         IVariableStore::Callback callback) override;
 
+  Signal registerSignal(const std::string &key, Signal signal = 0) override;
+
   const std::unordered_map<std::string, std::string>
   getAllVariables() const override;
 
@@ -54,6 +56,8 @@ private:
   std::unordered_map<std::string, IVariableStore::Callback> _callbacks;
   std::unordered_map<std::string, Signal> _signals;
   bool _ignoreCallbacks = false;
+
+  static Signal _signalNumber;
 
   VariableStore() = default;
   

@@ -25,7 +25,7 @@ public:
         chars[3] = signal & 0xFF;
 
         for(int i = 0; i < 4; i++) {
-            if(!std::isprint(chars[i])) {
+            if(!std::isalnum(chars[i])) {
                 return ValueConverter::toString(signal, IntegerStringFormat::HEX);
             }
         }

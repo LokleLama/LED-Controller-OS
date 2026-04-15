@@ -12,6 +12,7 @@ public:
   enum class Category {
     Unknown,
     PIO,
+    GPIO,
     ADC,
     Communication,
     Protocol,

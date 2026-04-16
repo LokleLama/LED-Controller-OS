@@ -41,7 +41,7 @@ private:
   struct SignalTaskInfo {
     struct TaskInfo info;
 
-    Signal signal;
+    SignalFilter filter;
     bool execute;
   };
 
@@ -113,19 +113,27 @@ public:
     return false;
   }
 
+  TaskPID registerSignalTask(ITask *task, SignalFilter filter) {
+    return registerSignalTask(task->getName(), [task](TaskPID pid) { return task->ExecuteTask(pid); }, filter);
+  }
+
+  TaskPID registerSignalTask(const std::string &name, Function func, SignalFilter filter) {
+    TaskPID handle = _nextTaskPID++;
+    _signalTasks.push_back({{handle, name, func, 0, 0, 0}, filter, false});
+    return handle;
+  }
+
   TaskPID registerSignalTask(ITask *task, Signal signal) {
-    return registerSignalTask(task->getName(), [task](TaskPID pid) { return task->ExecuteTask(pid); }, signal);
+    return registerSignalTask(task, {signal, 0xFFFFFFFF});
   }
 
   TaskPID registerSignalTask(const std::string &name, Function func, Signal signal) {
-    TaskPID handle = _nextTaskPID++;
-    _signalTasks.push_back({{handle, name, func, 0, 0, 0}, signal, false});
-    return handle;
+    return registerSignalTask(name, func, {signal, 0xFFFFFFFF});
   }
 
   void triggerSignal(Signal signal) {
     for (auto &task : _signalTasks) {
-      if (task.signal == signal) {
+      if(((signal ^ task.filter.signal) & task.filter.mask) == 0){
         task.execute = true;
       }
     }

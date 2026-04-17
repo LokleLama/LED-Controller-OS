@@ -51,15 +51,21 @@ void GPIODevice::setConfiguration(GPIODevice::GPIOConfiguration config) {
             gpio_set_dir(_gpio_number, GPIO_OUT);
             break;
         case GPIODevice::GPIOConfiguration::INPUT_PULLUP:
-        case GPIODevice::GPIOConfiguration::OUTPUT_OPEN_DRAIN:
             gpio_set_dir(_gpio_number, GPIO_IN);
             gpio_pull_up(_gpio_number);
             gpio_put(_gpio_number, false);
             break;
         case GPIODevice::GPIOConfiguration::INPUT_PULLDOWN:
-        case GPIODevice::GPIOConfiguration::OUTPUT_OPEN_SOURCE:
             gpio_set_dir(_gpio_number, GPIO_IN);
             gpio_pull_down(_gpio_number);
+            gpio_put(_gpio_number, true);
+            break;
+        case GPIODevice::GPIOConfiguration::OUTPUT_OPEN_DRAIN:
+            gpio_set_dir(_gpio_number, GPIO_IN);
+            gpio_put(_gpio_number, false);
+            break;
+        case GPIODevice::GPIOConfiguration::OUTPUT_OPEN_SOURCE:
+            gpio_set_dir(_gpio_number, GPIO_IN);
             gpio_put(_gpio_number, true);
             break;
     }

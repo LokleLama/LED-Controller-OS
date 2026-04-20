@@ -131,6 +131,15 @@ public:
     return registerSignalTask(name, func, {signal, 0xFFFFFFFF});
   }
 
+  SignalFilter getSignalFilter(TaskPID handle) {
+    for (auto &task : _signalTasks) {
+      if (task.info.pid == handle) {
+        return task.filter;
+      }
+    }
+    return {0, 0};
+  }
+
   void triggerSignal(Signal signal) {
     for (auto &task : _signalTasks) {
       if(((signal ^ task.filter.signal) & task.filter.mask) == 0){

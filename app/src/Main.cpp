@@ -107,7 +107,7 @@ int main() {
 
   console.registerCommand(std::make_shared<TaskCommand>());
   console.registerCommand(std::make_shared<KillCommand>(mainloop));
-  console.registerCommand(std::make_shared<SignalCommand>(mainloop));
+  console.registerCommand(std::make_shared<SignalCommand>(mainloop, console));
 
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));
   console.registerCommand(std::make_shared<StartCommand>(picoTime));

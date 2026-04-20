@@ -5,13 +5,14 @@
 #include "Utils/ValueConverter.h"
 #include "Mainloop.h"
 #include "ITask.h"
+#include <list>
 #include <string>
 
 class SignalCommand : public ICommand {
 private:
   class SignalTask : public ITask {
   public:
-    SignalTask(const std::string &command) : _command(command) {}
+    SignalTask(const std::string &command, Console &console) : _command(command), _console(console) {}
 
     void setPID(TaskPID pid) {
         _pid = pid;
@@ -22,7 +23,7 @@ private:
     }
     
     bool ExecuteTask(TaskPID pid) override {
-        std::cout << "Executing command: " << _command << std::endl;
+        _console.EnqueueCommand(_command);
         return false;
     }
 
@@ -32,11 +33,12 @@ private:
 
   private:
     std::string _command;
+    Console &_console;
     TaskPID _pid;
   };
 
 public:
-  SignalCommand(Mainloop &mainloop) : _mainloop(mainloop) {}
+  SignalCommand(Mainloop &mainloop, Console &console) : _mainloop(mainloop), _console(console) {}
 
   // Returns the name of the command
   const std::string getName() const override { return "signal"; }
@@ -73,14 +75,13 @@ public:
             return -1;
         }
         int pid = std::stoi(args[2]);
-        for (int n = 0; n < _signalTasks.size(); n++) {
-            const auto &task = _signalTasks[n];
-            if (task.getPID() == pid) {
-                _mainloop.killTask(task.getPID());
-                _signalTasks.erase(_signalTasks.begin() + n);
-                std::cout << "Stopped signal handler with PID: " << task.getPID() << std::endl;
-                return 0;
-            }
+        for (auto it = _signalTasks.begin(); it != _signalTasks.end(); ++it) {
+          if (it->getPID() == pid) {
+            _mainloop.killTask(it->getPID());
+            _signalTasks.erase(it);
+            std::cout << "Stopped signal handler with PID: " << pid << std::endl;
+            return 0;
+          }
         }
         std::cout << "No signal handler found with PID: " << pid << std::endl;
         return -1;
@@ -104,7 +105,12 @@ public:
     }
     SignalFilter filter = SignalConverter::fromString(args[2]);
 
-    SignalTask task(args[3]);
+    std::string command;
+    for (size_t i = 3; i < args.size(); i++) {
+        command += args[i] + " ";
+    } 
+
+    SignalTask task(command, _console);
     _signalTasks.push_back(task);
 
     TaskPID pid = _mainloop.registerSignalTask(&_signalTasks.back(), filter);
@@ -117,5 +123,6 @@ public:
 
 private:
   Mainloop &_mainloop;
-  std::vector<SignalTask> _signalTasks;
+  Console &_console;
+  std::list<SignalTask> _signalTasks;
 };

@@ -25,6 +25,8 @@ void dotMatrix5x5::setValue(const std::string& value){
     std::cerr << "Invalid value length for dotMatrix5x5 display: " << value << std::endl;
     return;
   }
+  
+  _scrollingEnabled = value.length() != 1;
 
   _bit_vector_length = (value.length() + 1) * 6; // Each character is 5 columns wide + 1 spacer column
   _current_offset = 0; // Start at the beginning of the LED data
@@ -94,8 +96,12 @@ bool dotMatrix5x5::scrollText() {
       }
     }
   }
-
   _led->setPattern(_currentFrame);
+
+  if(!_scrollingEnabled) {
+    return true; // If scrolling is disabled, just display the static text
+  }
+
   switch (_scrollingDirection) {
     case ScrollingDirection::LEFT:
       _current_offset++;

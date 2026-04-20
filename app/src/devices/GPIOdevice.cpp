@@ -33,9 +33,9 @@ const std::string GPIODevice::getDetails() const {
 }
 
 void GPIODevice::set(bool state) {
-    if(_configuration == GPIOConfiguration::OUTPUT_OPEN_DRAIN) {
+    if(_configuration == GPIOConfiguration::OUTPUT_OPEN_DRAIN || _configuration == GPIOConfiguration::INPUT_PULLUP) {
         gpio_set_dir(_gpio_number, state ? GPIO_IN : GPIO_OUT);
-    }else if(_configuration == GPIOConfiguration::OUTPUT_OPEN_SOURCE) {
+    }else if(_configuration == GPIOConfiguration::OUTPUT_OPEN_SOURCE || _configuration == GPIOConfiguration::INPUT_PULLDOWN) {
         gpio_set_dir(_gpio_number, state ? GPIO_OUT : GPIO_IN);
     } else {
         gpio_put(_gpio_number, state);

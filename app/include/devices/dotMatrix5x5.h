@@ -36,6 +36,7 @@ private:
   int _current_offset;
   int _bit_vector_length;
   ScrollingDirection _scrollingDirection = ScrollingDirection::LEFT;
+  bool _scrollingEnabled;
 
   bool scrollText();
 };

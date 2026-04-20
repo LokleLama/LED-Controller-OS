@@ -20,6 +20,7 @@ GPIODevice::GPIODevice(int gpio_number, GPIODevice::GPIOConfiguration config)
             
             Mainloop::getInstance().triggerSignal(sig);
         });
+        irq_set_enabled(IO_IRQ_BANK0, true);
         _irq_initialized = true;
     }
 

@@ -8,6 +8,19 @@
 #include <iostream>
 #include <sstream>
 
+
+Console::Console(IVariableStore &variableStore, std::shared_ptr<SPFS> fs) : 
+  _variableStore(variableStore)
+{
+  setFileSystem(fs);
+  
+  resultVariable = variableStore.addVariable("?", 0);
+  resultVariable->setSystemVariable();
+
+  pidVariable = variableStore.addVariable("$", 0);
+  pidVariable->setSystemVariable();
+}
+
 bool Console::registerCommand(std::shared_ptr<ICommand> command) {
   if (!command) {
     return false;
@@ -104,6 +117,8 @@ bool Console::ExecuteLine(const std::string &line) {
 }
 
 bool Console::ExecuteTask(TaskPID pid) {
+  pidVariable->set(static_cast<int>(pid));
+
   // Process commands from the queue first
   if (!commandQueue.empty()) {
     std::string command = commandQueue.front();
@@ -201,4 +216,13 @@ void Console::outputPrompt() const {
     std::cout << currentDirectory->getFullPath() << " > ";
   }
   std::cout.flush();
+}
+
+void Console::setFileSystem(std::shared_ptr<SPFS> fs) {
+  _fs = fs;
+  if(_fs != nullptr) {
+    currentDirectory = _fs->getRootDirectory();
+  } else {
+    currentDirectory = nullptr;
+  }
 }

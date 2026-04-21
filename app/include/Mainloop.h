@@ -131,7 +131,7 @@ public:
     return registerSignalTask(name, func, {signal, 0xFFFFFFFF});
   }
 
-  SignalFilter getSignalFilter(TaskPID handle) {
+  SignalFilter getSignalFilter(TaskPID handle) const {
     for (auto &task : _signalTasks) {
       if (task.info.pid == handle) {
         return task.filter;
@@ -159,9 +159,9 @@ public:
   void stop() { _running = false; }
 
   // Simulated SysTick functions
-  uint32_t getSysTick() { return _systickCounter; }
+  uint32_t getSysTick() const { return _systickCounter; }
 
-  void OuptutTaskInformation();
+  void OuptutTaskInformation() const;
 
 private:
   std::vector<RegularTaskInfo> _regularTasks;
@@ -182,7 +182,7 @@ private:
 
   void onMillisecond();
   void calculateStatistics(struct TaskInfo &task);
-  void OuptutTaskInformation(const struct TaskInfo &task);
+  void OuptutTaskInformation(const struct TaskInfo &task) const;
 
   static bool alarm_callback(repeating_timer *rt);
 };

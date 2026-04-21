@@ -234,6 +234,10 @@ void VariableStore::registerCallback(const std::string &key,
 Signal VariableStore::_signalNumber = '0';
 
 Signal VariableStore::registerSignal(const std::string &key, Signal signal) {
+  if (_signals.find(key) != _signals.end()) {
+    return _signals[key];
+  }
+
   if(signal == 0) {
     signal = 0x76617200 + _signalNumber;
     _signalNumber++;
@@ -251,17 +255,19 @@ Signal VariableStore::registerSignal(const std::string &key, Signal signal) {
 }
 
 bool VariableStore::valueChangedCallback(const std::string& key) {
+  if (_signals.find(key) != _signals.end()) {
+    Mainloop::getInstance().triggerSignal(_signals[key]);
+  }
+
   if(_ignoreCallbacks) {
     return true;
   }
+  
   if (_callbacks.find(key) != _callbacks.end()) {
     auto var = findVariable(key);
     if (var) {
       return _callbacks[key](key, var->asString());
     }
-  }
-  if (_signals.find(key) != _signals.end()) {
-    Mainloop::getInstance().triggerSignal(_signals[key]);
   }
   return true;
 }

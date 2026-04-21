@@ -50,6 +50,7 @@ public:
   virtual void registerCallback(const std::string &key, Callback callback) = 0;
   
   virtual Signal registerSignal(const std::string &key, Signal signal = 0) = 0;
+  virtual Signal getSignal(const std::string &key) const = 0;
 
   virtual const std::unordered_map<std::string, std::string>
   getAllVariables() const = 0;

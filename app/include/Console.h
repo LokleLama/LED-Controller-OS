@@ -13,13 +13,7 @@
 
 class Console : public ITask {
 public:
-  Console(IVariableStore &variableStore, std::shared_ptr<SPFS> fs = nullptr) : 
-    _variableStore(variableStore)
-  {
-    setFileSystem(fs);
-    resultVariable = variableStore.getVariable("?");
-  }
-  ~Console(){};
+  Console(IVariableStore &variableStore, std::shared_ptr<SPFS> fs = nullptr);
 
   bool registerCommand(std::shared_ptr<ICommand> command);
 
@@ -41,19 +35,17 @@ public:
 
   std::shared_ptr<SPFS::Directory> currentDirectory;
 
-  void setFileSystem(std::shared_ptr<SPFS> fs) {
-    _fs = fs;
-    if(_fs != nullptr) {
-      currentDirectory = _fs->getRootDirectory();
-    } else {
-      currentDirectory = nullptr;
-    }
+  void setFileSystem(std::shared_ptr<SPFS> fs);
+
+  TaskPID getPID() const {
+    return static_cast<TaskPID>(pidVariable->asInt());
   }
 
 private:
   IVariableStore &_variableStore;
   std::shared_ptr<SPFS> _fs;
   std::shared_ptr<IVariable> resultVariable;
+  std::shared_ptr<IVariable> pidVariable;
   std::vector<std::shared_ptr<ICommand>> commandList;
   bool isConnected = false;
   std::string inputBuffer;

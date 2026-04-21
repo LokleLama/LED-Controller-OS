@@ -38,6 +38,7 @@
 #include "Commands/TaskCommand.h"
 #include "Commands/KillCommand.h"
 #include "Commands/SignalCommand.h"
+#include "Commands/SleepCommand.h"
 
 #include "BackgroundTasks/StartCommand.h"
 
@@ -67,8 +68,8 @@ int main() {
       fs = nullptr;
     }
   }
-  variableStore.addVariable("var.fs_offset", SPFS_FLASH_OFFSET);
-  variableStore.addVariable("var.fs_size", SPFS_FLASH_SIZE);
+  variableStore.addVariable("var.fs_offset", SPFS_FLASH_OFFSET)->setSystemVariable();
+  variableStore.addVariable("var.fs_size", SPFS_FLASH_SIZE)->setSystemVariable();
 
   Console console(variableStore, fs);
   DeviceRepository deviceRepo(console);
@@ -108,13 +109,13 @@ int main() {
   console.registerCommand(std::make_shared<TaskCommand>());
   console.registerCommand(std::make_shared<KillCommand>(mainloop));
   console.registerCommand(std::make_shared<SignalCommand>(mainloop, console));
+  console.registerCommand(std::make_shared<SleepCommand>(mainloop, console));
 
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));
   console.registerCommand(std::make_shared<StartCommand>(picoTime));
   console.registerCommand(std::make_shared<LedCommand>(console, deviceRepo));
 
   variableStore.addVariable("init-script", "startup.sh");
-  variableStore.addVariable("?", 0)->setSystemVariable();
 
   console.EnqueueCommand("env load");
   console.EnqueueCommand("exec ${init-script}");

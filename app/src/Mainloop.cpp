@@ -148,7 +148,7 @@ void Mainloop::onMillisecond() {
   }
 }
 
-void Mainloop::OuptutTaskInformation() {
+void Mainloop::OuptutTaskInformation() const {
   float total_loop_time = 0;
   for(int i = 0; i < 8; i++){
     total_loop_time += _loop_statistic[i];
@@ -181,6 +181,6 @@ void Mainloop::OuptutTaskInformation() {
   }
 }
 
-void Mainloop::OuptutTaskInformation(const struct TaskInfo &task) {
+void Mainloop::OuptutTaskInformation(const struct TaskInfo &task) const {
   std::cout << " " << task.pid <<" - " << task.name << " (" << task.meanTime << " us / " << task.maxTime << " us)";
 }

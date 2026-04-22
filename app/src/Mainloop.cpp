@@ -177,7 +177,7 @@ void Mainloop::OuptutTaskInformation() const {
   std::cout << " PID - Name (Mean Time / Max Time)" << std::endl;
   for (const auto &task : _signalTasks) {
     OuptutTaskInformation(task.info);
-    std::cout << " [Signal: " << SignalConverter::toString(task.filter) << "]" << std::endl;
+    std::cout << " [on Signal: " << SignalConverter::toString(task.filter) << "]" << std::endl;
   }
 }
 

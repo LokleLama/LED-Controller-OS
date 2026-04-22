@@ -77,7 +77,7 @@ public:
             std::cout << getHelp() << std::endl;
             return -1;
         }
-        int pid = std::stoi(args[2]);
+        int pid = std::strtol(args[2].c_str(), nullptr, 0);
         for (auto it = _signalTasks.begin(); it != _signalTasks.end(); ++it) {
           if (it->getPID() == pid) {
             _mainloop.killTask(it->getPID());

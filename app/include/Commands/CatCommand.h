@@ -41,7 +41,7 @@ public:
       if (args[i] == "--hex") {
         hexOutput = true;
       } else if (args[i][0] == '-' && isdigit(args[i][1])) {
-        version = std::stoi(args[i].substr(1));
+        version = std::strtol(args[i].substr(1).c_str(), nullptr, 0);
         if (version < 0) {
           std::cout << "Invalid version number: " << args[i].substr(1) << std::endl;
           return -1; // Return -1 to indicate error

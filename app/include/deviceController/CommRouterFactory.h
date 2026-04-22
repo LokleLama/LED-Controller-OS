@@ -93,7 +93,7 @@ private:
         _number++;
         int buffer_size = comm_device_a->getBufferSize() * 4;
         if (params.size() >= 4) {
-            buffer_size = std::stoi(params[3]);
+            buffer_size = std::strtol(params[3].c_str(), nullptr, 0);
         }else{
             int buffer_size_b = comm_device_b->getBufferSize() * 4;
             if(buffer_size_b > buffer_size) {
@@ -138,7 +138,7 @@ private:
         _number++;
         int buffer_size = comm_device->getBufferSize() * 4;
         if (params.size() >= 3) {
-            buffer_size = std::stoi(params[2]);
+            buffer_size = std::strtol(params[2].c_str(), nullptr, 0);
         }
 
         auto loopback_device = std::make_shared<Loopback>(comm_device, device_name, buffer_size);
@@ -178,7 +178,7 @@ private:
         _number++;
         int buffer_size = comm_device_a->getBufferSize() * 4;
         if (params.size() >= 4) {
-            buffer_size = std::stoi(params[3]);
+            buffer_size = std::strtol(params[3].c_str(), nullptr, 0);
         }else{
             int buffer_size_b = comm_device_b->getBufferSize() * 4;
             if(buffer_size_b > buffer_size) {
@@ -236,7 +236,7 @@ private:
         _number++;
         int buffer_size = comm_device_main->getBufferSize() * 4;
         if (params.size() >= 5) {
-            buffer_size = std::stoi(params[4]);
+            buffer_size = std::strtol(params[4].c_str(), nullptr, 0);
         }else{
             int buffer_size_a = comm_device_a->getBufferSize() * 4;
             if(buffer_size_a > buffer_size) {

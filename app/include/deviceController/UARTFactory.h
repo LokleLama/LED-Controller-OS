@@ -30,7 +30,7 @@ public:
         return empty;
     }
     std::shared_ptr<IDevice> createDevice(const std::string& name, const std::vector<std::string>& params) override {
-        int uart_number = std::stoi(name.substr(4));
+        int uart_number = std::strtol(name.substr(4).c_str(), nullptr, 0);
 
         if (uart_number < 0 || uart_number >= 2) {
             return nullptr;
@@ -44,11 +44,11 @@ public:
         if (params.size() < 2) {
             return nullptr;
         }
-        uint8_t tx_pin = static_cast<uint8_t>(std::stoi(params[0]));
-        uint8_t rx_pin = static_cast<uint8_t>(std::stoi(params[1]));
+        uint8_t tx_pin = static_cast<uint8_t>(std::strtol(params[0].c_str(), nullptr, 0));
+        uint8_t rx_pin = static_cast<uint8_t>(std::strtol(params[1].c_str(), nullptr, 0));
         uint baud_rate = 115200;
         if (params.size() >= 3) {
-            baud_rate = static_cast<uint>(std::stoi(params[2]));
+            baud_rate = static_cast<uint>(std::strtol(params[2].c_str(), nullptr, 0));
         }
 
         auto uart_device = std::make_shared<UARTDevice>(uart_number, tx_pin, rx_pin, baud_rate);

@@ -19,20 +19,20 @@ int ValueConverter::toInt(const std::string& str, IntegerStringFormat* format) {
     long long result = 0;
     switch(*format){
       case IntegerStringFormat::BINARY:
-        result = std::stoll(str.substr(2), nullptr, 2);
+        result = std::strtoll(str.substr(2).c_str(), nullptr, 2);
         break;
       case IntegerStringFormat::OCTAL:
-        result = std::stoll(str.substr(2), nullptr, 8);
+        result = std::strtoll(str.substr(2).c_str(), nullptr, 8);
         break;
       case IntegerStringFormat::HEX:
-        result = std::stoll(str.substr(2), nullptr, 16);
+        result = std::strtoll(str.substr(2).c_str(), nullptr, 16);
         break;
       case IntegerStringFormat::HEX_COLOR:
-        result = std::stoll(str.substr(1), nullptr, 16);
+        result = std::strtoll(str.substr(1).c_str(), nullptr, 16);
         break;
       case IntegerStringFormat::DECIMAL:
       default:
-        result = std::stoll(str, nullptr, 10);
+        result = std::strtoll(str.c_str(), nullptr, 10);
         break;
     }
     return static_cast<int>(result);

@@ -32,10 +32,10 @@ public:
         float offset = 0.0f;
 
         if (args.size() >= 4) {
-            multiplier = std::stof(args[3]);
+            multiplier = std::strtof(args[3].c_str(), nullptr);
         }
         if (args.size() >= 5) {
-            offset = std::stof(args[4]);
+            offset = std::strtof(args[4].c_str(), nullptr);
         }
         if (store.registerVariable(std::make_shared<LinearTransformation>(name, multiplier, offset)) != nullptr) {
             std::cout << "Variable \"" << name << "\" created with linear transformation (multiplier: " << multiplier << ", offset: " << offset << ")" << std::endl;

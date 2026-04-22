@@ -35,10 +35,10 @@ public:
             std::cout << "Not enough parameters for ADC device. Required: adc_channel." << std::endl;
             return nullptr;
         }
-        int adc_channel = std::stoi(params[0]);
+        int adc_channel = std::strtol(params[0].c_str(), nullptr, 0);
         int readout_intervall = 100;
         if (params.size() >= 2) {
-            readout_intervall = std::stoi(params[1]);
+            readout_intervall = std::strtol(params[1].c_str(), nullptr, 0);
         }
 
         std::string device_name = "ADC.Channel" + std::to_string(adc_channel);

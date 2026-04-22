@@ -24,8 +24,8 @@ public:
       std::cout << getHelp() << std::endl;
       return -1; // Return -1 to indicate an error
     }
-    int addr = std::stoi(args[1], nullptr, 0);
-    int len = std::stoi(args[2], nullptr, 0);
+    int addr = std::strtol(args[1].c_str(), nullptr, 0);
+    int len = std::strtol(args[2].c_str(), nullptr, 0);
     std::vector<uint8_t> buffer(len);
     int result = Flash::read(buffer, addr);
     if (result == len) {

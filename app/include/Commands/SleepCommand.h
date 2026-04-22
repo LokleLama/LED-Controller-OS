@@ -22,10 +22,10 @@ public:
       std::cout << getHelp() << std::endl;
       return -1;
     }
-    int duration = std::stoi(args[1]);
+    int duration = std::strtol(args[1].c_str(), nullptr, 0);
 
     if (args.size() >= 3) {
-      int pid = std::stoi(args[2]);
+      int pid = std::strtol(args[2].c_str(), nullptr, 0);
       if(pid == 0){
         std::cout << "Cannot sleep task with PID 0" << std::endl;
         return -1;

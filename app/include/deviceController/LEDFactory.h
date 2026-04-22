@@ -40,15 +40,15 @@ public:
             std::cout << "Invalid PIO device: " << pio_device_name << std::endl;
             return nullptr;
         }
-        int pin = std::stoi(params[1]);
-        int num_leds = std::stoi(params[2]);
+        int pin = std::strtol(params[1].c_str(), nullptr, 0);
+        int num_leds = std::strtol(params[2].c_str(), nullptr, 0);
         int bits_per_pixel = 24;
         float frequency = 800000;
         if (params.size() >= 4) {
-            bits_per_pixel = std::stoi(params[3]);
+            bits_per_pixel = std::strtol(params[3].c_str(), nullptr, 0);
         }
         if (params.size() >= 5) {
-            frequency = std::stof(params[4]);
+            frequency = std::strtof(params[4].c_str(), nullptr);
         }
         std::string device_name;
         if (params.size() >= 6) {

@@ -19,7 +19,7 @@ public:
         return names;
     }
     std::shared_ptr<IDevice> createDevice(const std::string& name, const std::vector<std::string>& params) override {
-        int pio_number = std::stoi(name.substr(3));
+        int pio_number = std::strtol(name.substr(3).c_str(), nullptr, 0);
 
         if (pio_number < 0 || pio_number >= 2 || claimed_sms[pio_number] >= 4) {
             return nullptr;

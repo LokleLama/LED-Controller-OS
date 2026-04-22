@@ -63,6 +63,7 @@ private:
   VariableStore() = default;
   
   size_t findVariableEnd(const std::string &input, size_t startPos) const;
+  size_t findVariableStart(std::string &input, size_t startPos) const;
   bool valueChangedCallback(const std::string& key);
 
   std::shared_ptr<IVariable> findVariable(const std::string &key) const;

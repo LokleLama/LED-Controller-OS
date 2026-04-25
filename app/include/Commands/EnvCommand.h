@@ -67,7 +67,11 @@ public:
     }
     std::cout << "Variables:\n";
     for (const auto &pair : value) {
-      std::cout << pair.first << " = " << pair.second << std::endl;
+      std::cout << pair.first << " = " << pair.second;
+      if (store.getSignal(pair.first) != 0) {
+        std::cout << "    (signal: " << SignalConverter::toString(store.getSignal(pair.first)) << ")";
+      }
+      std::cout << std::endl;
     }
     return 0;
   }

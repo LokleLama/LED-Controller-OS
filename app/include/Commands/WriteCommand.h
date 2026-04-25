@@ -24,13 +24,13 @@ public:
       std::cout << getHelp() << std::endl;
       return -1; // Return -1 to indicate an error
     }
-    int addr = std::stoi(args[1], nullptr, 0);
+    int addr = std::strtol(args[1].c_str(), nullptr, 0);
 
     std::vector<uint8_t> buffer(256);
     int result = Flash::read(buffer, addr);
     if (result == buffer.size()) {
       for(size_t i = 2; i < args.size(); ++i) {
-        buffer[i - 2] = static_cast<uint8_t>(std::stoi(args[i], nullptr, 0));
+        buffer[i - 2] = static_cast<uint8_t>(std::strtol(args[i].c_str(), nullptr, 0));
       }
 
       result = Flash::write(buffer, addr);      

@@ -37,7 +37,7 @@ public:
         if (params.size() < 2) {
             return nullptr;
         }
-        int gpio_number = std::stoi(params[0]);
+        int gpio_number = std::strtol(params[0].c_str(), nullptr, 0);
         GPIODevice::GPIOConfiguration config = GPIODevice::parseConfiguration(params[1]);
         if (config == GPIODevice::GPIOConfiguration::INVALID) {
             std::cout << "Invalid GPIO configuration: " << params[1] << std::endl;

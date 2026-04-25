@@ -10,7 +10,7 @@ public:
   }
 
   bool set(const std::string &value) override {
-    return set(std::stof(value));
+    return set(std::strtof(value.c_str(), nullptr));
   }
 
   bool set(float value) override {

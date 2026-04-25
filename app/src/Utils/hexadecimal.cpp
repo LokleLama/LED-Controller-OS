@@ -24,7 +24,7 @@ std::vector<uint8_t> Hexadecimal::decode(const std::string &hexString) {
       byteString = "0" + byteString;
     }
 
-    uint8_t byte = static_cast<uint8_t>(std::stoi(byteString, nullptr, 16));
+    uint8_t byte = static_cast<uint8_t>(std::strtol(byteString.c_str(), nullptr, 16));
     data.push_back(byte);
     i += 1; // Move to the next byte (2 characters)
   }

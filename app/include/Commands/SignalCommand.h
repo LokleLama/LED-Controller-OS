@@ -5,6 +5,7 @@
 #include "Utils/ValueConverter.h"
 #include "Mainloop.h"
 #include "ITask.h"
+#include "IVariableStore.h"
 #include <list>
 #include <string>
 
@@ -38,7 +39,7 @@ private:
   };
 
 public:
-  SignalCommand(Mainloop &mainloop, Console &console) : _mainloop(mainloop), _console(console) {}
+  SignalCommand(Mainloop &mainloop, Console &console, IVariableStore &store) : _mainloop(mainloop), _console(console), _store(store) {}
 
   // Returns the name of the command
   const std::string getName() const override { return "signal"; }
@@ -47,11 +48,13 @@ public:
     return "Usage: signal add <signal> <command>\n"
            "       signal list\n"
            "       signal stop <PID>\n"
-           "       signal emit <signal>\n\n"
+           "       signal emit <signal>\n"
+           "       signal var <variable> [<signal>]\n\n"
            "       list:  Lists all registered signal handlers\n"
            "       stop:  Stops a signal handler by its PID\n"
            "       emit:  Triggers a signal to test handlers\n"
            "       add:   Registers a new signal handler with the specified signal filter and command to execute\n"
+           "       var:   Registers a signal handler that triggers when a variable changes. If <signal> is not provided, a unique signal will be generated.\n"
            "         <signal>: A 4-character string or a hexadecimal number representing the signal\n"
            "         <command>: The command to execute when the signal is received";
   }
@@ -74,7 +77,7 @@ public:
             std::cout << getHelp() << std::endl;
             return -1;
         }
-        int pid = std::stoi(args[2]);
+        int pid = std::strtol(args[2].c_str(), nullptr, 0);
         for (auto it = _signalTasks.begin(); it != _signalTasks.end(); ++it) {
           if (it->getPID() == pid) {
             _mainloop.killTask(it->getPID());
@@ -93,6 +96,18 @@ public:
         Signal signal = SignalConverter::fromString(args[2]).signal;
         _mainloop.triggerSignal(signal);
         std::cout << "Emitted signal: " << SignalConverter::toString(signal) << std::endl;
+        return 0;
+    } else if (args[1] == "var") {
+        if (args.size() < 3 || args.size() > 4) {
+            std::cout << getHelp() << std::endl;
+            return -1;
+        }
+        Signal signal = 0;
+        if (args.size() == 4) {
+            signal = SignalConverter::fromString(args[3]).signal;
+        }
+        signal = _store.registerSignal(args[2], signal);
+        std::cout << "Registered variable signal handler for variable: " << args[2] << " with signal: " << SignalConverter::toString(signal) << std::endl;
         return 0;
     } else if (args[1] != "add") {
       std::cout << getHelp() << std::endl;
@@ -124,5 +139,6 @@ public:
 private:
   Mainloop &_mainloop;
   Console &_console;
+  IVariableStore &_store;
   std::list<SignalTask> _signalTasks;
 };

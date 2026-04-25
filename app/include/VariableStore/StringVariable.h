@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdlib>
 #include <stdexcept>
 #include <string>
 #include <variant>
@@ -26,10 +27,10 @@ public:
   std::string asString() const override { return value_; }
 
   // Convert to float
-  float asFloat() const override { return std::stof(value_); };
+  float asFloat() const override { return std::strtof(value_.c_str(), nullptr); };
 
   // Convert to int
-  int asInt() const override { return std::stoi(value_); };
+  int asInt() const override { return static_cast<int>(std::strtoll(value_.c_str(), nullptr, 10)); };
 
   // Convert to bool
   bool asBool() const override {

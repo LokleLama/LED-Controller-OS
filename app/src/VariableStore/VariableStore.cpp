@@ -175,47 +175,72 @@ size_t VariableStore::findVariableEnd(const std::string &input, size_t startPos)
   return pos;
 }
 
+size_t VariableStore::findVariableStart(std::string &input, size_t startPos) const {
+  size_t pos = startPos;
+  while ((pos = input.find("$", pos)) != std::string::npos) {
+    if (pos > 0 && input[pos - 1] == '\\') {
+      input.erase(pos - 1, 1); // Remove escape character
+      pos += 1; // Move past the escaped variable
+      continue;
+    }
+    return pos;
+  }
+  return pos;
+}
+
 std::string VariableStore::findAndReplaceVariables(const std::string &input) const {
   std::string result = input;
   size_t pos = 0;
-  while ((pos = result.find("${", pos)) != std::string::npos) {
-    if (pos > 0 && result[pos - 1] == '\\') {
-      result.erase(pos - 1, 1); // Remove escape character
-      pos += 1; // Move past the escaped variable
-      continue;
-    }
-    size_t endPos = result.find("}", pos);
-    if (endPos == std::string::npos) {
-      break; // No closing parenthesis found
-    }
-    std::string varName = result.substr(pos + 2, endPos - pos - 2);
-    auto var = getVariable(varName);
-    if(var){
-      std::string varValue = "\"" + var->asValueString() + "\"";
-      result.replace(pos, endPos - pos + 1, varValue);
-      pos += varValue.length(); // Move past the replaced value
-    }else{
-      pos = endPos + 1; // Move past the closing brace if variable not found
+  while ((pos = findVariableStart(result, pos)) != std::string::npos) {
+    switch (result[pos + 1]) {
+      case '{': {
+        size_t endPos = result.find("}", pos);
+        if (endPos == std::string::npos) {
+          break; // No closing parenthesis found
+        }
+        std::string varName = result.substr(pos + 2, endPos - pos - 2);
+        auto var = getVariable(varName);
+        if(var){
+          std::string varValue = "\"" + var->asValueString() + "\"";
+          result.replace(pos, endPos - pos + 1, varValue);
+          pos += varValue.length(); // Move past the replaced value
+        }else{
+          pos = endPos + 1; // Move past the closing brace if variable not found
+        }
+        break;
+      }
+      case '[': {
+        size_t endPos = result.find("]", pos);
+        if (endPos == std::string::npos) {
+          break; // No closing parenthesis found
+        }
+        std::string varName = result.substr(pos + 2, endPos - pos - 2);
+        auto var = getVariable(varName);
+        if(var){
+          std::string varValue = std::to_string(var->asInt());
+          result.replace(pos, endPos - pos + 1, varValue);
+          pos += varValue.length(); // Move past the replaced value
+        }else{
+          pos = endPos + 1; // Move past the closing brace if variable not found
+        }
+        break;
+      }
+      default: {
+        size_t endPos = findVariableEnd(result, pos + 1);
+        std::string varName = result.substr(pos + 1, endPos - pos - 1);
+        auto var = getVariable(varName);
+        if(var){
+          std::string varValue = var->asValueString();
+          result.replace(pos, endPos - pos, varValue);
+          pos += varValue.length(); // Move past the replaced value
+        }else{
+          pos = endPos; // Move past the variable name if variable not found
+        }
+        break;
+      }
     }
   }
-  pos = 0;
-  while ((pos = result.find("$", pos)) != std::string::npos) {
-    if (pos > 0 && result[pos - 1] == '\\') {
-      result.erase(pos - 1, 1); // Remove escape character
-      pos += 1; // Move past the escaped variable
-      continue;
-    }
-    size_t endPos = findVariableEnd(result, pos + 1);
-    std::string varName = result.substr(pos + 1, endPos - pos - 1);
-    auto var = getVariable(varName);
-    if(var){
-      std::string varValue = var->asValueString();
-      result.replace(pos, endPos - pos, varValue);
-      pos += varValue.length(); // Move past the replaced value
-    }else{
-      pos = endPos + 1; // Move past the closing brace if variable not found
-    }
-  }
+  
   return result;
 }
 
@@ -234,6 +259,11 @@ void VariableStore::registerCallback(const std::string &key,
 Signal VariableStore::_signalNumber = '0';
 
 Signal VariableStore::registerSignal(const std::string &key, Signal signal) {
+  auto sig = _signals.find(key);
+  if (sig != _signals.end()) {
+    return sig->second;
+  }
+
   if(signal == 0) {
     signal = 0x76617200 + _signalNumber;
     _signalNumber++;
@@ -250,18 +280,28 @@ Signal VariableStore::registerSignal(const std::string &key, Signal signal) {
   return signal;
 }
 
+Signal VariableStore::getSignal(const std::string &key) const {
+  auto sig = _signals.find(key);
+  if (sig != _signals.end()) {
+    return sig->second;
+  }
+  return 0;
+}
+
 bool VariableStore::valueChangedCallback(const std::string& key) {
+  if (_signals.find(key) != _signals.end()) {
+    Mainloop::getInstance().triggerSignal(_signals[key]);
+  }
+
   if(_ignoreCallbacks) {
     return true;
   }
+
   if (_callbacks.find(key) != _callbacks.end()) {
     auto var = findVariable(key);
     if (var) {
       return _callbacks[key](key, var->asString());
     }
-  }
-  if (_signals.find(key) != _signals.end()) {
-    Mainloop::getInstance().triggerSignal(_signals[key]);
   }
   return true;
 }

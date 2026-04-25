@@ -44,6 +44,7 @@ public:
                         IVariableStore::Callback callback) override;
 
   Signal registerSignal(const std::string &key, Signal signal = 0) override;
+  Signal getSignal(const std::string &key) const override;
 
   const std::unordered_map<std::string, std::string>
   getAllVariables() const override;
@@ -62,6 +63,7 @@ private:
   VariableStore() = default;
   
   size_t findVariableEnd(const std::string &input, size_t startPos) const;
+  size_t findVariableStart(std::string &input, size_t startPos) const;
   bool valueChangedCallback(const std::string& key);
 
   std::shared_ptr<IVariable> findVariable(const std::string &key) const;

@@ -37,13 +37,13 @@ public:
 
     bool isExpectedFile(const std::string& expected_magic_number);
     bool isExpectedFile(uint32_t expected_magic_number);
-    bool isFileContentValid();
+    bool isFileHeaderValid();
 
     const void* getFieldData(dataFileFieldSignature_t signature, size_t* out_size = nullptr) const;
 
     // Calling this method will fill an internal map for fast data access.
     // This is not required to access the data but will make it faster.
-    bool createFieldIndex();
+    std::vector<dataFileFieldSignature_t> createFieldIndex();
 
     static dataFileFieldSignature_t makeSignature(const char* signature, size_t length = 3);
     static dataFileFieldSignature_t makeSignature(const std::string& signature) { return makeSignature(signature.c_str(), signature.size()); }
@@ -52,7 +52,7 @@ public:
 
     static bool checkSignature(dataFileFieldSignature_t signature);
 
-private:
+protected:
     struct dataFileHeader {
         uint32_t magic;                            // Magic number to identify the dat file
         uint32_t size;                             // the size of the file excluding the header
@@ -71,12 +71,17 @@ private:
                                                    //     8bit CRC checksum of the field header (LSB)
     };
 
-    std::shared_ptr<SPFS::ReadOnlyFile> _file;
-    const uint8_t* _data;
-    size_t _size;
-    bool _is_valid = false;
+    bool isHeaderValid() const {
+        return _is_valid;
+    }
 
-    std::map<dataFileFieldSignature_t, const dataFileField*> _field_indizes;
+    size_t getDataSize() const {
+        return _size;
+    }
+
+    void changeDataSize(size_t new_size) {
+        _size = new_size;
+    }
 
     const dataFileField* getFieldHeader(const void* pointer) const {
         if(pointer == nullptr || reinterpret_cast<intptr_t>(pointer) % sizeof(uint32_t) != 0) {
@@ -92,6 +97,15 @@ private:
     uint16_t getFieldSize(const dataFileField* field) const {
         return static_cast<uint16_t>(field->signature_size & 0xFFFF);
     }
+
+private:
+    std::shared_ptr<SPFS::ReadOnlyFile> _file;
+    const uint8_t* _data;
+    size_t _size;
+    bool _is_valid = false;
+
+    std::map<dataFileFieldSignature_t, const dataFileField*> _field_indizes;
+
     const void* findFieldDataInIndex(dataFileFieldSignature_t signature, size_t* out_size = nullptr) const;
 
     static constexpr uint8_t _signature_lookup[40] = {
@@ -105,4 +119,30 @@ private:
     static constexpr uint8_t _bit_count_lookup[32] = {
         0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 
         1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5 };
+};
+
+
+
+class dataFileMemoryWriter : public dataFileReader {
+public:
+    dataFileMemoryWriter(uint8_t* buffer, size_t capacity);
+
+    bool setHeader(const std::string& magic_number, uint32_t fileSize = -1);
+    bool setHeader(uint32_t magic_number, uint32_t fileSize = -1);
+
+    bool setAppendMode();
+
+    bool addField(dataFileFieldSignature_t signature, const std::string& data) {
+        return addField(signature, data.c_str(), static_cast<uint16_t>(data.size()));
+    }
+    bool addField(dataFileFieldSignature_t signature, const std::vector<uint8_t>& data) {
+        return addField(signature, data.data(), static_cast<uint16_t>(data.size()));
+    }
+    bool addField(dataFileFieldSignature_t signature, const void* data, uint16_t size);
+
+private:
+    uint8_t* _buffer;
+    size_t _capacity;
+
+    void recalculateHeaderChecksum(uint32_t fileSize = -1);
 };

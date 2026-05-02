@@ -3,7 +3,7 @@
 
 #include "Utils/dataFile.h"
 
-int main(int argc, char **argv) {
+int main(int argc, const char **argv) {
     printf("Usage: crc-test <string | signature>\n");
 
     if (argc < 2) {

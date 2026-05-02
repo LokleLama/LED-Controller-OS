@@ -18,8 +18,8 @@ bool dataFileMemoryWriter::setHeader(const std::string& magic_number, uint32_t f
     }
     uint32_t magic = 0;
     for(size_t i = 0; i < length; i++) {
-        magic <<= 8;
-        magic |= static_cast<uint8_t>(magic_number[i]);
+        magic >>= 8;
+        magic |= static_cast<uint32_t>(magic_number[i]) << 24;
     }
     return setHeader(magic, fileSize);
 }
@@ -102,8 +102,8 @@ bool dataFileReader::isExpectedFile(const std::string& expected_magic_number) {
     }
     uint32_t expected_magic = 0;
     for(size_t i = 0; i < length; i++) {
-        expected_magic <<= 8;
-        expected_magic |= static_cast<uint8_t>(expected_magic_number[i]);
+        expected_magic >>= 8;
+        expected_magic |= static_cast<uint32_t>(expected_magic_number[i]) << 24;
     }
     return isExpectedFile(expected_magic);
 }

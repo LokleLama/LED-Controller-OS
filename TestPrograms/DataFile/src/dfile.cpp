@@ -127,8 +127,8 @@ int main(int argc, const char **argv) {
         } else {
             magic = 0;
             for(size_t i = 0; i < strlen(argv[2]) && i < 4; i++) {
-                magic <<= 8;
-                magic |= argv[2][i];
+                magic >>= 8;
+                magic |= argv[2][i] << 24;
             }
         }
         

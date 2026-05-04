@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import base64
 import queue
 import re
 import threading
@@ -30,6 +31,7 @@ else:
 
 
 DEFAULT_BAUD = 115200
+UPLOAD_CHUNK_SIZE = 48
 
 DIR_HEADER_RE = re.compile(r"^\s*Directory of\s+(.+?)\s*$")
 DIR_ENTRY_RE = re.compile(r"^\s*<DIR>\s+(.+?)\s+\((\d+)\s+entries\)\s*$")
@@ -340,8 +342,8 @@ class FileSyncApp(tk.Tk):
 
 		ttk.Separator(frame).pack(fill=tk.X, pady=8)
 		ttk.Label(frame, text=(
-			"Upload uses: store --alloc / --append / --finish\n"
-			"Escapes: \\\\, \\$, and \\\""
+			"Upload uses: store --alloc / --append -b64 / --finish\n"
+			"Binary-safe Base64 transfer"
 		)).pack(anchor=tk.W)
 
 	def _build_device_panel(self, panel: ttk.Labelframe) -> None:
@@ -628,13 +630,6 @@ class FileSyncApp(tk.Tk):
 
 		def work() -> str:
 			raw = local_path.read_bytes()
-			try:
-				text = raw.decode("utf-8")
-			except UnicodeDecodeError as exc:
-				raise RuntimeError(
-					"Upload currently supports UTF-8 text files. "
-					"For binary files, extend this script to use `store --append -hex`."
-				) from exc
 
 			alloc_resp = self.session.execute_and_capture(
 				f"store {quote_device_arg(remote_name)} --alloc {len(raw)}",
@@ -644,14 +639,10 @@ class FileSyncApp(tk.Tk):
 			if "Error:" in alloc_resp:
 				raise RuntimeError(alloc_resp.strip())
 
-			segments = text.splitlines(keepends=True)
-			if not segments and text == "":
-				segments = []
-
-			for segment in segments:
-				has_newline = segment.endswith("\n")
-				content = segment[:-1] if has_newline else segment
-				cmd = f"store --append {'-n ' if not has_newline else ''}\"{escape_device_text(content)}\""
+			for start in range(0, len(raw), UPLOAD_CHUNK_SIZE):
+				chunk = raw[start:start + UPLOAD_CHUNK_SIZE]
+				encoded_chunk = base64.b64encode(chunk).decode("ascii")
+				cmd = f"store --append -b64 {quote_device_arg(encoded_chunk)}"
 				resp = self.session.execute_and_capture(cmd, timeout=1.5, quiet=0.20)
 				if "Error:" in resp:
 					raise RuntimeError(resp.strip())

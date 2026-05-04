@@ -18,6 +18,7 @@ public:
   bool ExecuteTask(TaskPID pid) override {
     if(!_device->setPattern(&_pattern_data[_current_offset], _device->getLEDCount())) { // Assuming each LED pattern is 4 bytes (e.g., RGB or RGBW)
       _is_playing = false;
+      std::cout << "Failed to set LED pattern for device: " << _device->getName() << std::endl;
       return false;
     }
 
@@ -27,8 +28,7 @@ public:
       if(_loop) {
         _current_offset = 0;
       } else {
-        _is_playing = false;
-        return false;
+        std::cout << "Finished playing LED pattern on device: " << _device->getName() << std::endl;
       }
     }
     

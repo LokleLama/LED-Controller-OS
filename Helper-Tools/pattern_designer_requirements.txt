@@ -1,0 +1,3 @@
+# Pattern Designer Requirements
+# tkinter is usually included with Python
+# No external dependencies required for the GUI itself

@@ -113,7 +113,7 @@ int main() {
 
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));
   console.registerCommand(std::make_shared<StartCommand>(picoTime));
-  console.registerCommand(std::make_shared<LedCommand>(console, deviceRepo));
+  console.registerCommand(std::make_shared<LedCommand>(mainloop, console, deviceRepo));
 
   variableStore.addVariable("init-script", "startup.sh");
 

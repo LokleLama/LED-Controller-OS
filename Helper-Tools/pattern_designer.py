@@ -9,6 +9,7 @@ import struct
 import threading
 import time
 import base64
+import shlex
 from colorsys import hsv_to_rgb, rgb_to_hsv
 from dataclasses import dataclass
 from pathlib import Path
@@ -272,6 +273,106 @@ class PatternDesignerApp(tk.Tk):
 
         self.info_var = tk.StringVar(value="Frame: 0")
         ttk.Label(editor_frame, textvariable=self.info_var).pack(fill=tk.X, pady=(6, 0))
+
+        console_frame = ttk.Labelframe(root, text="Command Console", padding=6)
+        console_frame.pack(fill=tk.BOTH, expand=False, pady=(6, 0))
+        self._build_console_panel(console_frame)
+
+    def _build_console_panel(self, parent: ttk.Frame) -> None:
+        """Build bottom console output panel for command diagnostics."""
+        controls = ttk.Frame(parent)
+        controls.pack(fill=tk.X, pady=(0, 6))
+
+        ttk.Button(controls, text="Clear Console", command=self._clear_console).pack(side=tk.LEFT)
+
+        console_wrap = ttk.Frame(parent)
+        console_wrap.pack(fill=tk.BOTH, expand=True)
+
+        self.console_text = tk.Text(
+            console_wrap,
+            height=10,
+            wrap=tk.WORD,
+            bg="#101010",
+            fg="#d8d8d8",
+            insertbackground="#d8d8d8",
+            relief=tk.FLAT,
+            font=("TkFixedFont", 9),
+        )
+        self.console_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        console_scroll = ttk.Scrollbar(console_wrap, orient=tk.VERTICAL, command=self.console_text.yview)
+        console_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.console_text.configure(yscrollcommand=console_scroll.set)
+
+        self.console_text.tag_configure("cmd", foreground="#7ec8ff")
+        self.console_text.tag_configure("stdout", foreground="#d8d8d8")
+        self.console_text.tag_configure("stderr", foreground="#ff8a8a")
+        self.console_text.tag_configure("meta", foreground="#a8a8a8")
+
+        self._log_console("Console ready. Export commands and dfile output will appear here.", tag="meta")
+
+    def _clear_console(self) -> None:
+        """Clear command console output."""
+        self.console_text.configure(state=tk.NORMAL)
+        self.console_text.delete("1.0", tk.END)
+        self.console_text.configure(state=tk.DISABLED)
+
+    def _log_console(self, message: str, tag: str = "stdout") -> None:
+        """Append a line to the command console."""
+        if not hasattr(self, "console_text"):
+            return
+
+        self.console_text.configure(state=tk.NORMAL)
+        self.console_text.insert(tk.END, message + "\n", tag)
+        self.console_text.see(tk.END)
+        self.console_text.configure(state=tk.DISABLED)
+
+    @staticmethod
+    def _short_arg(value: str, max_len: int = 100) -> str:
+        """Shorten long argument strings for readable console output."""
+        if len(value) <= max_len:
+            return value
+        hidden = len(value) - max_len
+        return f"{value[:max_len]}...<+{hidden} chars>"
+
+    def _format_command_for_log(self, cmd: list[str]) -> str:
+        """Render command line text safely for log output."""
+        shortened = [self._short_arg(arg) for arg in cmd]
+        try:
+            return shlex.join(shortened)
+        except Exception:
+            return " ".join(shortened)
+
+    def _run_logged_command(self, cmd: list[str], cwd: Optional[Path] = None) -> subprocess.CompletedProcess[str]:
+        """Run a command and emit command/stdout/stderr/exit to the console."""
+        cwd_str = str(cwd) if cwd is not None else None
+        command_text = self._format_command_for_log(cmd)
+        if cwd_str:
+            self._log_console(f"$ {command_text}  (cwd: {cwd_str})", tag="cmd")
+        else:
+            self._log_console(f"$ {command_text}", tag="cmd")
+
+        try:
+            result = subprocess.run(
+                cmd,
+                check=True,
+                capture_output=True,
+                text=True,
+                cwd=cwd_str,
+            )
+            if result.stdout:
+                self._log_console(result.stdout.rstrip("\n"), tag="stdout")
+            if result.stderr:
+                self._log_console(result.stderr.rstrip("\n"), tag="stderr")
+            self._log_console(f"[exit {result.returncode}]", tag="meta")
+            return result
+        except subprocess.CalledProcessError as e:
+            if e.stdout:
+                self._log_console(e.stdout.rstrip("\n"), tag="stdout")
+            if e.stderr:
+                self._log_console(e.stderr.rstrip("\n"), tag="stderr")
+            self._log_console(f"[exit {e.returncode}]", tag="meta")
+            raise
     
     def _build_tools_panel(self, parent: ttk.Frame) -> None:
         """Build color and editing tools panel."""
@@ -819,6 +920,9 @@ class PatternDesignerApp(tk.Tk):
             # Find dfile tool
             dfile_dir = Path(__file__).parent.parent / "TestPrograms" / "DataFile"
             dfile_binary = dfile_dir / "build" / "dfile"
+
+            self._log_console("--- Export started ---", tag="meta")
+            self._log_console(f"Target file: {filepath}", tag="meta")
             
             if not dfile_binary.exists():
                 # Try to find compiled dfile
@@ -832,43 +936,49 @@ class PatternDesignerApp(tk.Tk):
                         break
             
             if not dfile_binary.exists():
+                self._log_console("dfile binary not found.", tag="stderr")
                 messagebox.showerror(
                     "Export Error",
                     "Could not find dfile tool. Build it first with:\n"
                     "cd TestPrograms/DataFile && make"
                 )
                 return
+
+            self._log_console(f"Using dfile: {dfile_binary}", tag="meta")
             
             # Create new dataFile with pattern magic number
             magic = 0x5053544E  # "PSTN" magic for pattern
-            subprocess.run(
+            self._run_logged_command(
                 [str(dfile_binary), "create", hex(magic), str(filepath)],
-                check=True, capture_output=True, text=True
+                cwd=dfile_dir,
             )
             
             # Append timing field (frame delay in ms as 16-bit value)
             frame_delay_bytes = struct.pack('>H', self.settings.frame_delay_ms)
             frame_delay_b64 = base64.b64encode(frame_delay_bytes).decode('ascii')
-            subprocess.run(
+            self._run_logged_command(
                 [str(dfile_binary), "append", "tim", "-b64", frame_delay_b64, str(filepath)],
-                check=True, capture_output=True, text=True
+                cwd=dfile_dir,
             )
             
             # Append offset jump field (pixels to jump as 16-bit value)
             offset_jump_bytes = struct.pack('>H', self.settings.offset_jump)
             offset_jump_b64 = base64.b64encode(offset_jump_bytes).decode('ascii')
-            subprocess.run(
+            self._run_logged_command(
                 [str(dfile_binary), "append", "jmp", "-b64", offset_jump_b64, str(filepath)],
-                check=True, capture_output=True, text=True
+                cwd=dfile_dir,
             )
             
             # Append LED pattern data
             pattern_bytes = self.pattern.to_bytes(self.settings.led_format)
             pattern_b64 = base64.b64encode(pattern_bytes).decode('ascii')
-            subprocess.run(
+            self._log_console(f"Pattern payload: {len(pattern_bytes)} bytes ({len(pattern_b64)} b64 chars)", tag="meta")
+            self._run_logged_command(
                 [str(dfile_binary), "append", "dat", "-b64", pattern_b64, str(filepath)],
-                check=True, capture_output=True, text=True
+                cwd=dfile_dir,
             )
+
+            self._log_console("--- Export completed successfully ---", tag="meta")
             
             messagebox.showinfo(
                 "Export Successful",
@@ -881,8 +991,10 @@ class PatternDesignerApp(tk.Tk):
             )
         except subprocess.CalledProcessError as e:
             error_msg = e.stderr if e.stderr else str(e)
-            messagebox.showerror("Export Error", f"dfile tool error:\n{error_msg}")
+            self._log_console("--- Export failed ---", tag="stderr")
+            messagebox.showerror("Export Error", f"dfile tool error:\n{error_msg}\n\nSee Command Console for full output.")
         except Exception as e:
+            self._log_console(f"Unexpected export error: {e}", tag="stderr")
             messagebox.showerror("Export Error", str(e))
     
     def _on_close(self) -> None:

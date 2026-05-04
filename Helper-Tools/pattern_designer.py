@@ -969,6 +969,14 @@ class PatternDesignerApp(tk.Tk):
                 cwd=dfile_dir,
             )
             
+            # Append pattern length field (number of LEDs as 32-bit value)
+            pattern_length_bytes = struct.pack('>I', self.pattern.num_leds)
+            pattern_length_b64 = base64.b64encode(pattern_length_bytes).decode('ascii')
+            self._run_logged_command(
+                [str(dfile_binary), "append", "len", "-b64", pattern_length_b64, str(filepath)],
+                cwd=dfile_dir,
+            )
+            
             # Append LED pattern data
             pattern_bytes = self.pattern.to_bytes(self.settings.led_format)
             pattern_b64 = base64.b64encode(pattern_bytes).decode('ascii')

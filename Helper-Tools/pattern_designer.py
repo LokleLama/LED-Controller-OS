@@ -23,8 +23,11 @@ from tkinter import filedialog, messagebox, ttk
 class LEDFormat(Enum):
     """Supported LED color formats."""
     RGB = (0, 1, 2, None)    # R, G, B, no alpha
+    RBG = (0, 2, 1, None)
     BGR = (2, 1, 0, None)
+    BRG = (2, 0, 1, None)
     GRB = (1, 0, 2, None)
+    GBR = (1, 2, 0, None)
     RGBW = (0, 1, 2, 3)      # R, G, B, W
     GRBW = (1, 0, 2, 3)
     WRGB = (3, 0, 1, 2)
@@ -221,6 +224,8 @@ class PatternDesignerApp(tk.Tk):
         self.strip_bar_height = 15
         self.editor_cell_size = 15
         self.live_update_var = tk.BooleanVar(value=False)
+        self.preview_brightness_var = tk.DoubleVar(value=1.0)
+        self.preview_brightness_label_var = tk.StringVar(value="1.00x")
         
         self._build_ui()
         self._bind_variable_traces()
@@ -402,12 +407,31 @@ class PatternDesignerApp(tk.Tk):
         ttk.Scale(parent, from_=0, to=255, variable=self.b_var, orient=tk.HORIZONTAL,
                  command=self._on_color_change, length=80).pack(side=tk.LEFT, padx=2)
         ttk.Entry(parent, textvariable=self.b_var, width=4).pack(side=tk.LEFT, padx=2)
+
+        ttk.Separator(parent, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=8, fill=tk.Y)
+        ttk.Label(parent, text="Preview Brightness:").pack(side=tk.LEFT, padx=(2, 2))
+        ttk.Scale(
+            parent,
+            from_=1.0,
+            to=4.0,
+            variable=self.preview_brightness_var,
+            orient=tk.HORIZONTAL,
+            command=self._on_preview_brightness_change,
+            length=120,
+        ).pack(side=tk.LEFT, padx=2)
+        ttk.Label(parent, textvariable=self.preview_brightness_label_var, width=6).pack(side=tk.LEFT, padx=(2, 2))
         
         ttk.Separator(parent, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=8, fill=tk.Y)
         ttk.Button(parent, text="Clear All", command=self.clear_pattern).pack(side=tk.LEFT, padx=2)
         ttk.Button(parent, text="Interpolate", command=self.interpolate_pattern).pack(side=tk.LEFT, padx=2)
         ttk.Button(parent, text="Gradient", command=self.create_gradient).pack(side=tk.LEFT, padx=2)
         ttk.Label(parent, text="(Paint LEDs by clicking/dragging in the timeline bar below)").pack(side=tk.LEFT, padx=(8, 0), fill=tk.X, expand=True)
+
+    def _on_preview_brightness_change(self, _value: str) -> None:
+        """Update preview brightness text and redraw timeline bars."""
+        brightness = max(1.0, float(self.preview_brightness_var.get()))
+        self.preview_brightness_label_var.set(f"{brightness:.2f}x")
+        self.refresh_visualization()
     
     def _build_control_panel(self, parent: ttk.Frame) -> None:
         """Build top control panel with buttons."""
@@ -709,13 +733,18 @@ class PatternDesignerApp(tk.Tk):
         self._draw_strip_bar()
         self._draw_editor_bar()
 
-    @staticmethod
-    def _display_color(r: int, g: int, b: int, w: int) -> str:
+    def _display_color(self, r: int, g: int, b: int, w: int) -> str:
         """Convert an RGBW value to displayable hex color."""
         if w > 0:
             r = min(255, r + w)
             g = min(255, g + w)
             b = min(255, b + w)
+
+        # Display-only brightness boost for dark colors in preview/editor bars.
+        brightness = max(1.0, float(self.preview_brightness_var.get()))
+        r = min(255, int(r * brightness))
+        g = min(255, int(g * brightness))
+        b = min(255, int(b * brightness))
         return f"#{r:02x}{g:02x}{b:02x}"
 
     def _draw_strip_bar(self) -> None:
@@ -947,14 +976,13 @@ class PatternDesignerApp(tk.Tk):
             self._log_console(f"Using dfile: {dfile_binary}", tag="meta")
             
             # Create new dataFile with pattern magic number
-            magic = 0x5053544E  # "PSTN" magic for pattern
             self._run_logged_command(
-                [str(dfile_binary), "create", hex(magic), str(filepath)],
+                [str(dfile_binary), "create", "LEDP", str(filepath)],
                 cwd=dfile_dir,
             )
             
             # Append timing field (frame delay in ms as 16-bit value)
-            frame_delay_bytes = struct.pack('>H', self.settings.frame_delay_ms)
+            frame_delay_bytes = struct.pack('<H', self.settings.frame_delay_ms)
             frame_delay_b64 = base64.b64encode(frame_delay_bytes).decode('ascii')
             self._run_logged_command(
                 [str(dfile_binary), "append", "tim", "-b64", frame_delay_b64, str(filepath)],
@@ -962,15 +990,15 @@ class PatternDesignerApp(tk.Tk):
             )
             
             # Append offset jump field (pixels to jump as 16-bit value)
-            offset_jump_bytes = struct.pack('>H', self.settings.offset_jump)
+            offset_jump_bytes = struct.pack('<H', self.settings.offset_jump)
             offset_jump_b64 = base64.b64encode(offset_jump_bytes).decode('ascii')
             self._run_logged_command(
                 [str(dfile_binary), "append", "jmp", "-b64", offset_jump_b64, str(filepath)],
                 cwd=dfile_dir,
             )
             
-            # Append pattern length field (number of LEDs as 32-bit value)
-            pattern_length_bytes = struct.pack('>I', self.pattern.num_leds)
+            # Append pattern length field (number of LEDs as 16-bit value)
+            pattern_length_bytes = struct.pack('<H', self.pattern.num_leds)
             pattern_length_b64 = base64.b64encode(pattern_length_bytes).decode('ascii')
             self._run_logged_command(
                 [str(dfile_binary), "append", "len", "-b64", pattern_length_b64, str(filepath)],

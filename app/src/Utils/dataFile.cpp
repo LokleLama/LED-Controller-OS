@@ -8,7 +8,7 @@ dataFileMemoryWriter::dataFileMemoryWriter(uint8_t* buffer, size_t capacity) : d
         _buffer = nullptr; 
         _capacity = 0; 
     }
-    changeDataSize(sizeof(dataFileHeader));
+    changeFileSize(sizeof(dataFileHeader));
 }
 
 bool dataFileMemoryWriter::setHeader(const std::string& magic_number, uint32_t fileSize){
@@ -33,6 +33,27 @@ bool dataFileMemoryWriter::setHeader(uint32_t magic_number, uint32_t fileSize){
     return isFileHeaderValid();
 }
 
+const dataFileReader::dataFileField* dataFileReader::start() const{
+    if(!_is_valid) {
+        return nullptr;
+    }
+    return getFieldHeader(_data + sizeof(dataFileHeader));
+}
+
+const dataFileReader::dataFileField* dataFileReader::next(const dataFileField* current) const {
+    if(current == nullptr || !_is_valid) {
+        return nullptr;
+    }
+    return getFieldHeader(reinterpret_cast<const uint8_t*>(current) + getFieldSpace(current));
+}
+
+const dataFileReader::dataFileField* dataFileReader::end() const {
+    if(!_is_valid) {
+        return nullptr;
+    }
+    return getFieldHeader(_data + _size);
+}
+
 void dataFileMemoryWriter::recalculateHeaderChecksum(uint32_t fileSize) {
     if(_buffer != nullptr) {
         dataFileHeader* header = reinterpret_cast<dataFileHeader*>(_buffer);
@@ -40,7 +61,7 @@ void dataFileMemoryWriter::recalculateHeaderChecksum(uint32_t fileSize) {
             if (!isHeaderValid()){
                 header->size = sizeof(dataFileHeader);
             }else{
-                header->size = getDataSize();
+                header->size = getFileSize();
             }
         }else{
             header->size = fileSize;
@@ -60,14 +81,14 @@ bool dataFileMemoryWriter::setAppendMode() {
     while(ptr + sizeof(dataFileField) <= end) {
         const dataFileField* field = getFieldHeader(ptr);
         if(field == nullptr) {
-            changeDataSize(sizeof(dataFileHeader)); // skip the invalid byte and try to find the next field header
+            changeFileSize(sizeof(dataFileHeader)); // skip the invalid byte and try to find the next field header
             return false; // alignment issue, cannot switch to append mode
         }
         if(!isValidFieldHeader(field)) {
             return true; // reached the end of the valid fields, can switch to append mode
         }
-        changeDataSize(getDataSize() + sizeof(dataFileField) + getFieldSize(field));
-        ptr += sizeof(dataFileField) + getFieldSize(field);
+        changeFileSize(getFileSize() + getFieldSpace(field));
+        ptr += getFieldSpace(field);
     }
 
     return false; // no more space to append new fields, cannot switch to append mode
@@ -75,17 +96,17 @@ bool dataFileMemoryWriter::setAppendMode() {
 
 bool dataFileMemoryWriter::addField(dataFileFieldSignature_t signature, const void* data, uint16_t size) {
     if(_buffer == nullptr || data == nullptr || size == 0 || 
-       _capacity < getDataSize() + sizeof(dataFileField) + size) {
+       _capacity < getFileSize() + sizeof(dataFileField) + size) {
         return false; // not enough capacity to add the field
     }
-    dataFileField* field = reinterpret_cast<dataFileField*>(_buffer + getDataSize());
+    dataFileField* field = reinterpret_cast<dataFileField*>(_buffer + getFileSize());
     field->signature_size = (static_cast<uint32_t>(signature) << 16) | size;
     field->flags_checksum = 0;
     field->flags_checksum = (field->flags_checksum & 0x00FFFFFF) | (CRC8::calculate(reinterpret_cast<uint8_t*>(field), sizeof(dataFileField) - 1) << 24);
     if(data != nullptr && size > 0) {
         memcpy(field + 1, data, size);
     }
-    changeDataSize(getDataSize() + sizeof(dataFileField) + size);
+    changeFileSize(getFileSize() + getFieldSpace(field));
     recalculateHeaderChecksum();
     return true;
 }
@@ -159,13 +180,20 @@ const void* dataFileReader::getFieldData(dataFileFieldSignature_t signature, siz
         }
         if(getFieldSignature(field) == signature) {
             if(out_size) {
-                *out_size = getFieldSize(field);
+                *out_size = getDataSize(field);
             }
             return ptr + sizeof(dataFileField); // the field data starts immediately after the field header
         }
-        ptr += sizeof(dataFileField) + getFieldSize(field);
+        ptr += getFieldSpace(field);
     }
     return nullptr; // field not found
+}
+
+const void* dataFileReader::getFieldData(const dataFileField* field) const {
+    if(!_is_valid || field == nullptr) {
+        return nullptr;
+    }
+    return reinterpret_cast<const uint8_t*>(field) + sizeof(dataFileField); // the field data starts immediately after the field header
 }
 
 const void* dataFileReader::findFieldDataInIndex(dataFileFieldSignature_t signature, size_t* out_size) const {
@@ -176,7 +204,7 @@ const void* dataFileReader::findFieldDataInIndex(dataFileFieldSignature_t signat
     if(it != _field_indizes.end()) {
         const dataFileField* field_header = it->second;
         if(out_size) {
-            *out_size = getFieldSize(field_header);
+            *out_size = getDataSize(field_header);
         }
         return reinterpret_cast<const uint8_t*>(field_header) + sizeof(dataFileField); // the field data starts immediately after the field header
     }
@@ -208,7 +236,7 @@ std::vector<dataFileFieldSignature_t> dataFileReader::createFieldIndex(){
         dataFileFieldSignature_t signature = getFieldSignature(field);
         _field_indizes[signature] = field;
         signatures.push_back(signature);
-        ptr += sizeof(dataFileField) + getFieldSize(field);
+        ptr += getFieldSpace(field);
     }
 
     return signatures;

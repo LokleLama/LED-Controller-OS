@@ -59,10 +59,16 @@ int main(int argc, const char **argv) {
             printf("Invalid file header in file %s\n", argv[2]);
             return -1;
         }
-        auto signatures = reader.createFieldIndex();
-        printf("Found %zu fields:\n", signatures.size());
-        for(const auto& sig : signatures) {
-            printf("  %s (0x%04X)\n", dataFileReader::signatureToString(sig).c_str(), sig);
+
+        auto current = reader.start();
+        printf("Found fields:\n");
+        while(current != nullptr && current != reader.end()) {
+            printf("    %s (0x%04X): %u bytes @ %lu bytes\n", 
+                dataFileReader::signatureToString(reader.getFieldSignature(current)).c_str(), 
+                reader.getFieldSignature(current), 
+                reader.getDataSize(current), 
+                reinterpret_cast<const uint8_t*>(current) - fdata.data());
+            current = reader.next(current);
         }
     } else if(strcmp(argv[1], "read") == 0) {
         if (argc < 4) {
@@ -132,12 +138,12 @@ int main(int argc, const char **argv) {
             }
         }
         
-        uint8_t buffer[12] = {0};
+        uint8_t buffer[256] = {0};
         dataFileMemoryWriter writer(buffer, sizeof(buffer));
         if(writer.setHeader(magic)) {
             FILE* file = fopen(argv[3], "wb");
             if(file != nullptr) {
-                fwrite(buffer, 1, sizeof(buffer), file);
+                fwrite(buffer, 1, writer.getFileSize(), file);
                 fclose(file);
             }else{
                 printf("Failed to create file %s\n", argv[3]);
@@ -190,11 +196,12 @@ int main(int argc, const char **argv) {
         fseek(file, 0, SEEK_END);
         size_t file_size = ftell(file);
         fseek(file, 0, SEEK_SET);
-        std::vector<uint8_t> file_data(file_size + 8 /*sizeof(dataFileField)*/ + data.size());
-        fread(file_data.data(), 1, file_size, file);
+        size_t new_size = file_size + 32 + data.size();
+        uint8_t file_data[new_size];
+        fread(file_data, 1, file_size, file);
         fclose(file);
 
-        dataFileMemoryWriter writer(file_data.data(), file_data.size());
+        dataFileMemoryWriter writer(file_data, new_size);
 
         if(!writer.setAppendMode()) {
             printf("Failed to set append mode for file %s, not enough space to append new field\n", filename);
@@ -207,7 +214,7 @@ int main(int argc, const char **argv) {
 
         file = fopen(filename, "wb");
         if(file != nullptr) {
-            fwrite(file_data.data(), 1, file_data.size(), file);
+            fwrite(file_data, 1, writer.getFileSize(), file);
             fclose(file);
         } else {
             printf("Failed to open file %s for writing\n", filename);

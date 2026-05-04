@@ -26,6 +26,18 @@ class dataFileReader {
 private:
     dataFileReader(const uint8_t* data, size_t size, std::shared_ptr<SPFS::ReadOnlyFile> file);
 public:
+    struct dataFileField {
+    private:
+        uint32_t signature_size;                   // signature to identify the field type
+                                                   //     16bit signature (MSB) (must be an even number of 1 bits, so the MSB is a parity bit to make the field even)
+                                                   //     16bit size of the field data (LSB)
+        uint32_t flags_checksum;                   // flags and checksum of the field
+                                                   //     24bit flags (MSB) (the structure is not yet specified, so it remains 0 for future use)
+                                                   //     8bit CRC checksum of the field header (LSB)
+        friend class dataFileReader;
+        friend class dataFileMemoryWriter;
+    };
+
     dataFileReader(std::shared_ptr<SPFS> spfs, std::string fileName) : dataFileReader(spfs->getRootDirectory(), fileName) {}
     dataFileReader(std::shared_ptr<SPFS::Directory> directory, std::string fileName) : dataFileReader(directory->openFile(fileName)) {}
     dataFileReader(std::shared_ptr<SPFS::ReadOnlyFile> file) : dataFileReader(file->getMemoryMappedAddress(), file->getSize(), file) {}
@@ -34,12 +46,27 @@ public:
     dataFileReader(const dataFileReader& other) = delete; // prevent copying
     dataFileReader& operator=(const dataFileReader& other) = delete; // prevent assignment
 
+    const dataFileField* start() const;
+    const dataFileField* next(const dataFileField* current) const;
+    const dataFileField* end() const;
 
     bool isExpectedFile(const std::string& expected_magic_number);
     bool isExpectedFile(uint32_t expected_magic_number);
     bool isFileHeaderValid();
 
     const void* getFieldData(dataFileFieldSignature_t signature, size_t* out_size = nullptr) const;
+
+    const void* getFieldData(const dataFileField* field) const;
+    uint16_t getDataSize(const dataFileField* field) const {
+        return static_cast<uint16_t>(field->signature_size & 0xFFFF);
+    }
+    dataFileFieldSignature_t getFieldSignature(const dataFileField* field) const {
+        return static_cast<dataFileFieldSignature_t>(field->signature_size >> 16);
+    }
+
+    size_t getFileSize() const {
+        return _size;
+    }
 
     // Calling this method will fill an internal map for fast data access.
     // This is not required to access the data but will make it faster.
@@ -62,24 +89,11 @@ protected:
                                                    //     8bit CRC checksum of the header  (LSB)
     };
     
-    struct dataFileField {
-        uint32_t signature_size;                   // signature to identify the field type
-                                                   //     16bit signature (MSB) (must be an even number of 1 bits, so the MSB is a parity bit to make the field even)
-                                                   //     16bit size of the field data (LSB)
-        uint32_t flags_checksum;                   // flags and checksum of the field
-                                                   //     24bit flags (MSB) (the structure is not yet specified, so it remains 0 for future use)
-                                                   //     8bit CRC checksum of the field header (LSB)
-    };
-
     bool isHeaderValid() const {
         return _is_valid;
     }
 
-    size_t getDataSize() const {
-        return _size;
-    }
-
-    void changeDataSize(size_t new_size) {
+    void changeFileSize(size_t new_size) {
         _size = new_size;
     }
 
@@ -91,11 +105,8 @@ protected:
     }
     bool isValidFieldHeader(const dataFileField* field) const;
 
-    dataFileFieldSignature_t getFieldSignature(const dataFileField* field) const {
-        return static_cast<dataFileFieldSignature_t>(field->signature_size >> 16);
-    }
-    uint16_t getFieldSize(const dataFileField* field) const {
-        return static_cast<uint16_t>(field->signature_size & 0xFFFF);
+    uint16_t getFieldSpace(const dataFileField* field) const {
+        return sizeof(dataFileField) + ((getDataSize(field) + 3) & ~0x03);
     }
 
 private:

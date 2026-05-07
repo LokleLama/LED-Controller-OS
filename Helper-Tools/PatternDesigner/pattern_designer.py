@@ -5,11 +5,13 @@ from __future__ import annotations
 
 import subprocess
 import json
+import socket
 import struct
 import threading
 import time
 import base64
 import shlex
+import tempfile
 from colorsys import hsv_to_rgb, rgb_to_hsv
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,7 +19,13 @@ from typing import Any, Callable, Optional
 from enum import Enum
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
+
+
+DEFAULT_UPLOAD_HOST = "localhost"
+DEFAULT_UPLOAD_PORT = 8822
+UPLOAD_CHUNK_SIZE = 48
+COMMAND_TERMINATOR = "\r\n"
 
 
 class LEDFormat(Enum):
@@ -442,6 +450,7 @@ class PatternDesignerApp(tk.Tk):
         ttk.Button(panel, text="Save Pattern", command=self.save_pattern).pack(side=tk.LEFT, padx=2)
         ttk.Separator(panel, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=8, fill=tk.Y)
         ttk.Button(panel, text="Export to Binary", command=self.export_binary).pack(side=tk.LEFT, padx=2)
+        ttk.Button(panel, text="Export + Send To Device", command=self.export_and_send_network).pack(side=tk.LEFT, padx=2)
         ttk.Separator(panel, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=8, fill=tk.Y)
         
         self.anim_btn = ttk.Button(panel, text="Start Animation", command=self.toggle_animation)
@@ -935,6 +944,121 @@ class PatternDesignerApp(tk.Tk):
             messagebox.showinfo("Save Pattern", "Pattern saved successfully")
         except Exception as e:
             messagebox.showerror("Save Error", str(e))
+
+    @staticmethod
+    def _escape_device_text(value: str) -> str:
+        """Escape text for the device parser."""
+        return value.replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$")
+
+    @classmethod
+    def _quote_device_arg(cls, value: str) -> str:
+        return f'"{cls._escape_device_text(value)}"'
+
+    def _find_dfile_binary(self) -> tuple[Path, Path]:
+        """Locate dfile executable and return (dfile_dir, dfile_binary)."""
+        repo_root = Path(__file__).resolve().parents[2]
+        dfile_dir = repo_root / "TestPrograms" / "DataFile"
+        candidates = [
+            dfile_dir / "build" / "dfile",
+            dfile_dir / "dfile",
+            Path("/root/LED-Controller-OS/TestPrograms/DataFile/build/dfile"),
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return dfile_dir, candidate
+        raise FileNotFoundError(
+            "Could not find dfile tool. Build it first with:\n"
+            "cd TestPrograms/DataFile && make"
+        )
+
+    def _export_pattern_to_binary_path(self, output_path: Path) -> None:
+        """Export the current pattern to a binary DataFile path."""
+        dfile_dir, dfile_binary = self._find_dfile_binary()
+        self._log_console(f"Using dfile: {dfile_binary}", tag="meta")
+
+        self._run_logged_command(
+            [str(dfile_binary), "create", "LEDP", str(output_path)],
+            cwd=dfile_dir,
+        )
+
+        frame_delay_bytes = struct.pack('<H', self.settings.frame_delay_ms)
+        frame_delay_b64 = base64.b64encode(frame_delay_bytes).decode('ascii')
+        self._run_logged_command(
+            [str(dfile_binary), "append", "tim", "-b64", frame_delay_b64, str(output_path)],
+            cwd=dfile_dir,
+        )
+
+        offset_jump_bytes = struct.pack('<H', self.settings.offset_jump)
+        offset_jump_b64 = base64.b64encode(offset_jump_bytes).decode('ascii')
+        self._run_logged_command(
+            [str(dfile_binary), "append", "jmp", "-b64", offset_jump_b64, str(output_path)],
+            cwd=dfile_dir,
+        )
+
+        pattern_length_bytes = struct.pack('<H', self.pattern.num_leds)
+        pattern_length_b64 = base64.b64encode(pattern_length_bytes).decode('ascii')
+        self._run_logged_command(
+            [str(dfile_binary), "append", "len", "-b64", pattern_length_b64, str(output_path)],
+            cwd=dfile_dir,
+        )
+
+        pattern_bytes = self.pattern.to_bytes(self.settings.led_format)
+        pattern_b64 = base64.b64encode(pattern_bytes).decode('ascii')
+        self._log_console(f"Pattern payload: {len(pattern_bytes)} bytes ({len(pattern_b64)} b64 chars)", tag="meta")
+        self._run_logged_command(
+            [str(dfile_binary), "append", "dat", "-b64", pattern_b64, str(output_path)],
+            cwd=dfile_dir,
+        )
+
+    def _send_command_and_capture(
+        self,
+        sock: socket.socket,
+        command: str,
+        timeout_s: float = 4.0,
+        quiet_s: float = 0.25,
+    ) -> str:
+        """Send one command over TCP and capture response until quiet period."""
+        sock.sendall((command + COMMAND_TERMINATOR).encode("utf-8"))
+
+        chunks: list[bytes] = []
+        start = time.monotonic()
+        last_rx: Optional[float] = None
+        while time.monotonic() - start < timeout_s:
+            try:
+                data = sock.recv(4096)
+            except socket.timeout:
+                data = b""
+            if data:
+                chunks.append(data)
+                last_rx = time.monotonic()
+                continue
+            if last_rx is not None and (time.monotonic() - last_rx) >= quiet_s:
+                break
+
+        return b"".join(chunks).decode("utf-8", errors="replace")
+
+    def _upload_binary_over_network(self, host: str, port: int, remote_name: str, payload: bytes) -> None:
+        """Upload binary payload to device filesystem through SerialServer."""
+        self._log_console(f"Opening TCP connection to {host}:{port}", tag="meta")
+        with socket.create_connection((host, port), timeout=3.0) as sock:
+            sock.settimeout(0.10)
+
+            alloc_cmd = f"store {self._quote_device_arg(remote_name)} --alloc {len(payload)}"
+            alloc_resp = self._send_command_and_capture(sock, alloc_cmd, timeout_s=3.0)
+            if "Error:" in alloc_resp or "<device not connected>" in alloc_resp:
+                raise RuntimeError(f"Upload allocate failed: {alloc_resp.strip()}")
+
+            for start in range(0, len(payload), UPLOAD_CHUNK_SIZE):
+                chunk = payload[start:start + UPLOAD_CHUNK_SIZE]
+                encoded = base64.b64encode(chunk).decode("ascii")
+                append_cmd = f"store --append -b64 {self._quote_device_arg(encoded)}"
+                append_resp = self._send_command_and_capture(sock, append_cmd, timeout_s=2.0)
+                if "Error:" in append_resp or "<device not connected>" in append_resp:
+                    raise RuntimeError(f"Upload append failed: {append_resp.strip()}")
+
+            finish_resp = self._send_command_and_capture(sock, "store --finish", timeout_s=3.0)
+            if "Error:" in finish_resp or "<device not connected>" in finish_resp:
+                raise RuntimeError(f"Upload finish failed: {finish_resp.strip()}")
     
     def export_binary(self) -> None:
         """Export pattern to binary file using dataFile tool."""
@@ -946,73 +1070,12 @@ class PatternDesignerApp(tk.Tk):
             return
         
         try:
-            # Find dfile tool
-            dfile_dir = Path(__file__).parent.parent / "TestPrograms" / "DataFile"
-            dfile_binary = dfile_dir / "build" / "dfile"
-
             self._log_console("--- Export started ---", tag="meta")
             self._log_console(f"Target file: {filepath}", tag="meta")
-            
-            if not dfile_binary.exists():
-                # Try to find compiled dfile
-                possible_paths = [
-                    dfile_dir / "dfile",
-                    Path("/root/LED-Controller-OS/TestPrograms/DataFile/build/dfile"),
-                ]
-                for p in possible_paths:
-                    if p.exists():
-                        dfile_binary = p
-                        break
-            
-            if not dfile_binary.exists():
-                self._log_console("dfile binary not found.", tag="stderr")
-                messagebox.showerror(
-                    "Export Error",
-                    "Could not find dfile tool. Build it first with:\n"
-                    "cd TestPrograms/DataFile && make"
-                )
-                return
 
-            self._log_console(f"Using dfile: {dfile_binary}", tag="meta")
-            
-            # Create new dataFile with pattern magic number
-            self._run_logged_command(
-                [str(dfile_binary), "create", "LEDP", str(filepath)],
-                cwd=dfile_dir,
-            )
-            
-            # Append timing field (frame delay in ms as 16-bit value)
-            frame_delay_bytes = struct.pack('<H', self.settings.frame_delay_ms)
-            frame_delay_b64 = base64.b64encode(frame_delay_bytes).decode('ascii')
-            self._run_logged_command(
-                [str(dfile_binary), "append", "tim", "-b64", frame_delay_b64, str(filepath)],
-                cwd=dfile_dir,
-            )
-            
-            # Append offset jump field (pixels to jump as 16-bit value)
-            offset_jump_bytes = struct.pack('<H', self.settings.offset_jump)
-            offset_jump_b64 = base64.b64encode(offset_jump_bytes).decode('ascii')
-            self._run_logged_command(
-                [str(dfile_binary), "append", "jmp", "-b64", offset_jump_b64, str(filepath)],
-                cwd=dfile_dir,
-            )
-            
-            # Append pattern length field (number of LEDs as 16-bit value)
-            pattern_length_bytes = struct.pack('<H', self.pattern.num_leds)
-            pattern_length_b64 = base64.b64encode(pattern_length_bytes).decode('ascii')
-            self._run_logged_command(
-                [str(dfile_binary), "append", "len", "-b64", pattern_length_b64, str(filepath)],
-                cwd=dfile_dir,
-            )
-            
-            # Append LED pattern data
+            output_path = Path(filepath)
+            self._export_pattern_to_binary_path(output_path)
             pattern_bytes = self.pattern.to_bytes(self.settings.led_format)
-            pattern_b64 = base64.b64encode(pattern_bytes).decode('ascii')
-            self._log_console(f"Pattern payload: {len(pattern_bytes)} bytes ({len(pattern_b64)} b64 chars)", tag="meta")
-            self._run_logged_command(
-                [str(dfile_binary), "append", "dat", "-b64", pattern_b64, str(filepath)],
-                cwd=dfile_dir,
-            )
 
             self._log_console("--- Export completed successfully ---", tag="meta")
             
@@ -1025,6 +1088,9 @@ class PatternDesignerApp(tk.Tk):
                 f"Offset jump: {self.settings.offset_jump} pixels\n"
                 f"Format: {self.settings.led_format.name}"
             )
+        except FileNotFoundError as e:
+            self._log_console("dfile binary not found.", tag="stderr")
+            messagebox.showerror("Export Error", str(e))
         except subprocess.CalledProcessError as e:
             error_msg = e.stderr if e.stderr else str(e)
             self._log_console("--- Export failed ---", tag="stderr")
@@ -1032,6 +1098,69 @@ class PatternDesignerApp(tk.Tk):
         except Exception as e:
             self._log_console(f"Unexpected export error: {e}", tag="stderr")
             messagebox.showerror("Export Error", str(e))
+
+    def export_and_send_network(self) -> None:
+        """Export pattern and upload to device over SerialServer TCP."""
+        remote_name = simpledialog.askstring(
+            "Remote File Name",
+            "Filename on device:",
+            initialvalue="pattern.bin",
+            parent=self,
+        )
+        if not remote_name:
+            return
+
+        host = simpledialog.askstring(
+            "SerialServer Host",
+            "Host:",
+            initialvalue=DEFAULT_UPLOAD_HOST,
+            parent=self,
+        )
+        if host is None:
+            return
+        host = host.strip()
+        if not host:
+            messagebox.showwarning("Invalid host", "Host cannot be empty.")
+            return
+
+        port = simpledialog.askinteger(
+            "SerialServer Port",
+            "TCP port:",
+            initialvalue=DEFAULT_UPLOAD_PORT,
+            minvalue=1,
+            maxvalue=65535,
+            parent=self,
+        )
+        if port is None:
+            return
+
+        try:
+            self._log_console("--- Export + Network send started ---", tag="meta")
+            self._log_console(f"Target: {host}:{port} -> {remote_name}", tag="meta")
+
+            with tempfile.TemporaryDirectory(prefix="pattern_export_") as temp_dir:
+                temp_path = Path(temp_dir) / "pattern.bin"
+                self._export_pattern_to_binary_path(temp_path)
+                payload = temp_path.read_bytes()
+                self._log_console(f"Upload payload: {len(payload)} bytes", tag="meta")
+                self._upload_binary_over_network(host, port, remote_name, payload)
+
+            self._log_console("--- Export + Network send completed successfully ---", tag="meta")
+            messagebox.showinfo(
+                "Upload Successful",
+                f"Pattern exported and uploaded to {host}:{port}\n"
+                f"Remote file: {remote_name}",
+            )
+        except FileNotFoundError as e:
+            self._log_console("dfile binary not found.", tag="stderr")
+            messagebox.showerror("Export And Send Error", str(e))
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr if e.stderr else str(e)
+            self._log_console("--- Export + Network send failed ---", tag="stderr")
+            messagebox.showerror("Export And Send Error", f"dfile tool error:\n{error_msg}\n\nSee Command Console for full output.")
+        except Exception as e:
+            self._log_console(f"Export/send error: {e}", tag="stderr")
+            messagebox.showerror("Export And Send Error", str(e))
     
     def _on_close(self) -> None:
         """Handle window close."""

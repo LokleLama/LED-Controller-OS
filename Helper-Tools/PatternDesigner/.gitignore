@@ -1,0 +1,6 @@
+*.json
+*.bin
+*.dat
+docs/
+
+dfile

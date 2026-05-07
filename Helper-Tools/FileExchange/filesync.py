@@ -6,31 +6,21 @@ from __future__ import annotations
 import base64
 import queue
 import re
+import socket
 import threading
 import time
-import importlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 
-try:
-	serial = importlib.import_module("serial")
-	list_ports = importlib.import_module("serial.tools.list_ports")
-	SerialException = getattr(serial, "SerialException", Exception)
-except Exception as exc:  # pragma: no cover - runtime dependency guard
-	serial = None
-	list_ports = None
-	SerialException = Exception
-	IMPORT_ERROR = exc
-else:
-	IMPORT_ERROR = None
 
-
-DEFAULT_BAUD = 115200
+DEFAULT_SERVER_HOST = "localhost"
+DEFAULT_SERVER_PORT = 8822
+COMMAND_TERMINATOR = "\r\n"
 UPLOAD_CHUNK_SIZE = 48
 
 DIR_HEADER_RE = re.compile(r"^\s*Directory of\s+(.+?)\s*$")
@@ -115,7 +105,7 @@ def parse_hex_bytes(text: str) -> bytes:
 class SerialSession:
 	def __init__(self, on_chunk: Callable[[str], None]):
 		self._on_chunk = on_chunk
-		self._serial: Optional[Any] = None
+		self._socket: Optional[socket.socket] = None
 		self._thread: Optional[threading.Thread] = None
 		self._running = threading.Event()
 		self._write_lock = threading.Lock()
@@ -125,36 +115,37 @@ class SerialSession:
 		self._capture_chunks: list[str] = []
 		self._capture_last_rx = 0.0
 
-	def connect(self, port: str, baud: int) -> None:
-		if serial is None:
-			raise RuntimeError(f"pyserial import failed: {IMPORT_ERROR}")
+	def connect(self, host: str, port: int) -> None:
 		self.disconnect()
-		self._serial = serial.Serial(port=port, baudrate=baud, timeout=0.1)
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		sock.settimeout(0.1)
+		sock.connect((host, port))
+		self._socket = sock
 		self._running.set()
 		self._thread = threading.Thread(target=self._reader_loop, daemon=True)
 		self._thread.start()
 
 	def disconnect(self) -> None:
 		self._running.clear()
-		if self._serial is not None:
+		if self._socket is not None:
 			try:
-				self._serial.close()
+				self._socket.close()
 			except Exception:
 				pass
 		if self._thread and self._thread.is_alive():
 			self._thread.join(timeout=0.5)
 		self._thread = None
-		self._serial = None
+		self._socket = None
 
 	def is_connected(self) -> bool:
-		return self._serial is not None and self._serial.is_open
+		return self._socket is not None
 
 	def send_command(self, command: str) -> None:
 		if not self.is_connected():
 			raise RuntimeError("Not connected")
 		with self._write_lock:
-			assert self._serial is not None
-			self._serial.write((command + "\r").encode("utf-8"))
+			assert self._socket is not None
+			self._socket.sendall((command + COMMAND_TERMINATOR).encode("utf-8"))
 
 	def execute_and_capture(self, command: str, timeout: float = 3.0, quiet: float = 0.30) -> str:
 		if not self.is_connected():
@@ -183,18 +174,20 @@ class SerialSession:
 	def _reader_loop(self) -> None:
 		while self._running.is_set():
 			try:
-				if self._serial is None:
+				if self._socket is None:
 					break
-				data = self._serial.read(256)
-			except SerialException as exc:
-				self._on_chunk(f"\n[Serial error] {exc}\n")
-				break
-			except Exception as exc:
-				self._on_chunk(f"\n[Reader error] {exc}\n")
+				data = self._socket.recv(256)
+			except socket.timeout:
+				continue
+			except (ConnectionError, OSError) as exc:
+				self._on_chunk(f"\n[Connection error] {exc}\n")
+				self._socket = None
 				break
 
 			if not data:
-				continue
+				self._on_chunk("\n[Server disconnected]\n")
+				self._socket = None
+				break
 
 			chunk = data.decode("utf-8", errors="replace")
 			self._on_chunk(chunk)
@@ -213,8 +206,8 @@ class FileSyncApp(tk.Tk):
 		self.console_queue: queue.Queue[str] = queue.Queue()
 		self.session = SerialSession(on_chunk=self.console_queue.put)
 
-		self.port_var = tk.StringVar()
-		self.baud_var = tk.StringVar(value=str(DEFAULT_BAUD))
+		self.host_var = tk.StringVar(value=DEFAULT_SERVER_HOST)
+		self.tcp_port_var = tk.StringVar(value=str(DEFAULT_SERVER_PORT))
 		self.command_var = tk.StringVar()
 		self.status_var = tk.StringVar(value="Disconnected")
 		self.device_path_var = tk.StringVar(value="(unknown)")
@@ -224,19 +217,10 @@ class FileSyncApp(tk.Tk):
 		self._device_entries_by_iid: dict[str, DeviceEntry] = {}
 
 		self._build_ui()
-		self.refresh_ports()
 		self.refresh_local_tree()
 
 		self.after(50, self._poll_console_queue)
 		self.protocol("WM_DELETE_WINDOW", self._on_close)
-
-		if IMPORT_ERROR is not None:
-			messagebox.showerror(
-				"Missing dependency",
-				"pyserial is required. Install with:\n\n"
-				"  pip install pyserial\n\n"
-				f"Import error: {IMPORT_ERROR}",
-			)
 
 	def _build_ui(self) -> None:
 		root = ttk.Frame(self, padding=8)
@@ -245,13 +229,11 @@ class FileSyncApp(tk.Tk):
 		top = ttk.Frame(root)
 		top.pack(fill=tk.X)
 
-		ttk.Label(top, text="Port:").pack(side=tk.LEFT)
-		self.port_combo = ttk.Combobox(top, textvariable=self.port_var, width=22, state="readonly")
-		self.port_combo.pack(side=tk.LEFT, padx=(4, 6))
-		ttk.Button(top, text="Refresh Ports", command=self.refresh_ports).pack(side=tk.LEFT, padx=(0, 6))
+		ttk.Label(top, text="Host:").pack(side=tk.LEFT)
+		ttk.Entry(top, textvariable=self.host_var, width=20).pack(side=tk.LEFT, padx=(4, 6))
 
-		ttk.Label(top, text="Baud:").pack(side=tk.LEFT)
-		ttk.Entry(top, textvariable=self.baud_var, width=10).pack(side=tk.LEFT, padx=(4, 6))
+		ttk.Label(top, text="Port:").pack(side=tk.LEFT)
+		ttk.Entry(top, textvariable=self.tcp_port_var, width=7).pack(side=tk.LEFT, padx=(4, 6))
 
 		self.connect_btn = ttk.Button(top, text="Connect", command=self.toggle_connection)
 		self.connect_btn.pack(side=tk.LEFT, padx=(0, 12))
@@ -397,15 +379,6 @@ class FileSyncApp(tk.Tk):
 			pass
 		self.after(50, self._poll_console_queue)
 
-	def refresh_ports(self) -> None:
-		if list_ports is None:
-			self.port_combo["values"] = []
-			return
-		ports = [port.device for port in list_ports.comports()]
-		self.port_combo["values"] = ports
-		if ports and not self.port_var.get():
-			self.port_var.set(ports[0])
-
 	def toggle_connection(self) -> None:
 		if self.session.is_connected():
 			self.session.disconnect()
@@ -413,23 +386,23 @@ class FileSyncApp(tk.Tk):
 			self.connect_btn.configure(text="Connect")
 			return
 
-		port = self.port_var.get().strip()
-		if not port:
-			messagebox.showwarning("Missing port", "Please select a serial port.")
+		host = self.host_var.get().strip()
+		if not host:
+			messagebox.showwarning("Missing host", "Please enter a server host.")
 			return
 		try:
-			baud = int(self.baud_var.get())
+			tcp_port = int(self.tcp_port_var.get())
 		except ValueError:
-			messagebox.showwarning("Invalid baud", "Baud must be an integer.")
+			messagebox.showwarning("Invalid port", "Port must be an integer.")
 			return
 
 		try:
-			self.session.connect(port, baud)
+			self.session.connect(host, tcp_port)
 		except Exception as exc:
 			messagebox.showerror("Connection failed", str(exc))
 			return
 
-		self.set_status(f"Connected to {port} @ {baud}")
+		self.set_status(f"Connected to {host}:{tcp_port}")
 		self.connect_btn.configure(text="Disconnect")
 		self.refresh_device_tree()
 

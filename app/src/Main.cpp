@@ -40,6 +40,8 @@
 #include "Commands/SignalCommand.h"
 #include "Commands/SleepCommand.h"
 
+#include "Commands/BeepCommand.h"
+
 #include "BackgroundTasks/StartCommand.h"
 
 #include "VariableStore/VariableStore.h"
@@ -114,6 +116,7 @@ int main() {
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));
   console.registerCommand(std::make_shared<StartCommand>(picoTime));
   console.registerCommand(std::make_shared<LedCommand>(mainloop, console, deviceRepo));
+  console.registerCommand(std::make_shared<BeepCommand>(mainloop, deviceRepo));
 
   variableStore.addVariable("init-script", "startup.sh");
 

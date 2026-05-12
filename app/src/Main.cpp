@@ -116,7 +116,7 @@ int main() {
   console.registerCommand(std::make_shared<TimeCommand>(picoTime));
   console.registerCommand(std::make_shared<StartCommand>(picoTime));
   console.registerCommand(std::make_shared<LedCommand>(mainloop, console, deviceRepo));
-  console.registerCommand(std::make_shared<BeepCommand>(mainloop, deviceRepo));
+  console.registerCommand(std::make_shared<BeepCommand>(mainloop, console, deviceRepo));
 
   variableStore.addVariable("init-script", "startup.sh");
 

@@ -10,16 +10,20 @@ void printHelp(const char* programName) {
     printf("       %s read <signature> [-b64 | -hex] <file>\n", programName);
     printf("       %s create <magic number> <file>\n", programName);
     printf("       %s append <signature> [-b64 | -hex] <data> <file>\n\n", programName);
+    printf("       %s convert <input file> <output file>\n\n", programName);
     printf(" command     description\n");
     printf("  list         List all field signatures in the file\n");
     printf("  read         Read the field data for the given signature (can be a string or a hex value)\n");
     printf("  create       Create a new data file with the given magic number\n");
     printf("  append       Append a new field with the given signature to the file\n\n");
+    printf("  convert      Convert a text file to the binary format (Implemented Filetypes: BEEP)\n\n");
     printf(" arguments\n");
     printf("  <signature>       The field signature to read or append (can be a string of up to 3 characters or a hex value starting with 0x)\n");
     printf("  <magic number>    The magic number to use when creating a new data file (can be a string of up to 4 characters or a hex value starting with 0x)\n");
     printf("  <data>            The data to append to the file (can be a string or base64 or hex encoded)\n");
     printf("  <file>            The data file to read or create\n");
+    printf("  <input file>      The input file for the convert command\n");
+    printf("  <output file>     The output file for the convert command\n");
 }
 
 std::vector<uint8_t> openFile(const char* filename) {
@@ -220,6 +224,88 @@ int main(int argc, const char **argv) {
             printf("Failed to open file %s for writing\n", filename);
             return -1;
         }
+    } else if (strcmp(argv[1], "convert") == 0) {
+      if (argc != 4) {
+          printHelp(argv[0]);
+          return -1;
+      }
+      const char* input_file = argv[2];
+      const char* output_file = argv[3];
+
+      FILE* infile = fopen(input_file, "r");
+      if(infile == nullptr) {
+          printf("Failed to open input file %s\n", input_file);
+          return -1;
+      }
+
+      char line[256];
+      if(fgets(line, sizeof(line), infile) == nullptr) {
+          printf("Failed to read input file %s\n", input_file);
+          fclose(infile);
+          return -1;
+      }
+
+      if(strncmp(line, "BEEP", 4) != 0) {
+          printf("Invalid input file format in file %s, expected first line to be 'BEEP'\n", input_file);
+          fclose(infile);
+          return -1;
+      }
+
+      // read file line by line and store in a vector, every line has 2 numbers: frequency and duration
+      std::vector<uint16_t> fdata;
+      int n = 1;
+      while(fgets(line, sizeof(line), infile)) {
+          size_t len = strlen(line);
+          if(len == 0) continue;
+
+          if(strncmp(line, "//", 2) == 0) continue; // skip comment lines
+
+          char* startptr = line;
+          while(*startptr == ' ' || *startptr == '\t' || *startptr == '\n' || *startptr == '\r') startptr++;
+          if(*startptr == 0) continue; // skip empty lines
+
+          char* endptr;
+          uint16_t frequency = static_cast<uint16_t>(strtoul(startptr, &endptr, 10));
+          if(endptr == startptr) {
+              printf("Invalid frequency value in line %d: \"%s\"\n", n, line);
+              fclose(infile);
+              return -1;
+          }
+          while(*endptr == ' ' || *endptr == '\t') endptr++;
+          if(*endptr == 0) {
+              printf("Missing duration value in line %d: \"%s\"\n", n, line);
+              fclose(infile);
+              return -1;
+          }
+          uint16_t duration = static_cast<uint16_t>(strtoul(endptr, nullptr, 10));
+          fdata.push_back(frequency);
+          fdata.push_back(duration);
+
+          printf("Read line %d: frequency=%u, duration=%u\n", n, frequency, duration);
+
+          n++;
+      }
+      fclose(infile);
+
+      uint8_t buffer[fdata.size() * sizeof(uint16_t) + 128] = {0};
+      dataFileMemoryWriter writer(buffer, sizeof(buffer));
+      if(!writer.setHeader("BEEP")) {
+          printf("Failed to create BEEP file header\n");
+          return -1;
+      }
+      if(!writer.addField(0xA470, fdata.data(), static_cast<uint16_t>(fdata.size()))) {
+          printf("Failed to add beep sequence field to BEEP file\n");
+          return -1;
+      }
+
+      FILE* file = fopen(output_file, "wb");
+      if(file != nullptr) {
+          fwrite(buffer, 1, writer.getFileSize(), file);
+          fclose(file);
+      } else {
+          printf("Failed to open output file %s for writing\n", output_file);
+          return -1;
+      }
     } else {
         printHelp(argv[0]);
         return -1;

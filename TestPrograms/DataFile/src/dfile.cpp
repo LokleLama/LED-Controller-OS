@@ -287,13 +287,15 @@ int main(int argc, const char **argv) {
       }
       fclose(infile);
 
+      printf("Successfully read %zu (%zu values) beep entries from input file %s\n", fdata.size() / 2, fdata.size(), input_file);
+
       uint8_t buffer[fdata.size() * sizeof(uint16_t) + 128] = {0};
       dataFileMemoryWriter writer(buffer, sizeof(buffer));
       if(!writer.setHeader("BEEP")) {
           printf("Failed to create BEEP file header\n");
           return -1;
       }
-      if(!writer.addField(0xA470, fdata.data(), static_cast<uint16_t>(fdata.size()))) {
+      if(!writer.addField(0xA470, fdata.data(), static_cast<uint16_t>(fdata.size() * sizeof(uint16_t)))) {
           printf("Failed to add beep sequence field to BEEP file\n");
           return -1;
       }

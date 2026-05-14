@@ -8,60 +8,32 @@
 #include <iomanip>
 #include <iostream>
 
-class BeepCommandTask : public ITask {
+
+class BeepCommandTaskBase : public ITask {
 public:
-  BeepCommandTask(std::shared_ptr<PWMDevice> device, Mainloop& mainloop)
+  BeepCommandTaskBase(std::shared_ptr<PWMDevice> device, Mainloop& mainloop)
     : _device(device), _mainloop(mainloop) {}
-
-  bool ExecuteTask(TaskPID pid) override {
-    if (isFinished()) {
-      _device->setLevel(0);
-      _mainloop.killTask(pid); // Remove the task from the mainloop when finished
-      return false; // No more beeps to play, task is finished
-    }
-
-    if(_data_ptr) {
-      const uint16_t frequency = _data_ptr[_current_index * 2];
-      const uint16_t duration = _data_ptr[_current_index * 2 + 1];
-      _current_index++;
-      return setBeep(pid, frequency, duration);
-    }
-
-    const auto& [frequency, duration] = _beep_sequence[_current_index];
-    _current_index++;
-
-    return setBeep(pid, frequency, duration);
-  }
 
   const std::string getName() const override {
     return "BeepCommandTask - " + _device->getName();
   }
 
-  void addBeep(uint16_t frequency, uint16_t duration) {
-    _beep_sequence.emplace_back(frequency, duration);
+  void setLooping(bool looping) {
+    _looping = looping;
   }
 
-  void setBeepData(const uint16_t* data, size_t count) {
-    _data_ptr = data;
-    _data_count = count;
+  const std::string getDeviceName() const {
+    return _device->getName();
   }
 
-  bool isFinished() const {
-    if(_data_ptr) {
-      return _current_index >= _data_count;
-    }
-    return _current_index >= _beep_sequence.size();
-  }
+  virtual bool isFinished() const = 0;
 
-private:
+protected:
   std::shared_ptr<PWMDevice> _device;
   Mainloop& _mainloop;
 
-  std::vector<std::pair<uint16_t, uint16_t>> _beep_sequence;
   size_t _current_index = 0;
-
-  const uint16_t* _data_ptr = nullptr;
-  size_t _data_count = 0;
+  bool _looping = false;
 
   bool setBeep(TaskPID pid, uint16_t frequency, uint16_t duration) {
     if (frequency <= 0) {
@@ -77,6 +49,78 @@ private:
   }
 };
 
+class BeepCommandFileTask : public BeepCommandTaskBase {
+public:
+  BeepCommandFileTask(std::shared_ptr<PWMDevice> device, Mainloop& mainloop, const uint16_t* data, size_t count)
+    : BeepCommandTaskBase(device, mainloop), _data_ptr(data), _data_count(count) {}
+
+  bool ExecuteTask(TaskPID pid) override {
+    if (isFinished()) {
+      _device->setLevel(0);
+      _mainloop.killTask(pid); // Remove the task from the mainloop when finished
+      return false; // No more beeps to play, task is finished
+    }
+
+    const uint16_t frequency = _data_ptr[_current_index * 2];
+    const uint16_t duration = _data_ptr[_current_index * 2 + 1];
+
+    _current_index++;
+    if(_looping && _current_index >= _data_count) {
+      _current_index = 0;
+    }
+
+    return setBeep(pid, frequency, duration);
+  }
+
+  bool isFinished() const override {
+    if(_looping) {
+      return false;
+    }
+    return _current_index >= _data_count;
+  }
+
+private:
+  const uint16_t* _data_ptr = nullptr;
+  size_t _data_count = 0;
+};
+
+class BeepCommandTask : public BeepCommandTaskBase {
+public:
+  BeepCommandTask(std::shared_ptr<PWMDevice> device, Mainloop& mainloop)
+    : BeepCommandTaskBase(device, mainloop) {}
+
+  bool ExecuteTask(TaskPID pid) override {
+    if (isFinished()) {
+      _device->setLevel(0);
+      _mainloop.killTask(pid); // Remove the task from the mainloop when finished
+      return false; // No more beeps to play, task is finished
+    }
+    
+    const auto& [frequency, duration] = _beep_sequence[_current_index];
+
+    _current_index++;
+    if(_looping && _current_index >= _beep_sequence.size()) {
+      _current_index = 0;
+    }
+
+    return setBeep(pid, frequency, duration);
+  }
+
+  void addBeep(uint16_t frequency, uint16_t duration) {
+    _beep_sequence.emplace_back(frequency, duration);
+  }
+
+  bool isFinished() const override {
+    if(_looping) {
+      return false;
+    }
+    return _current_index >= _beep_sequence.size();
+  }
+
+private:
+  std::vector<std::pair<uint16_t, uint16_t>> _beep_sequence;
+};
+
 class BeepCommand : public ICommand {
 public:
   // Constructor
@@ -90,7 +134,8 @@ public:
 
   const std::string getHelp() const override {
     return "Usage: beep <deviceName> <frequency> <duration> [<frequency> <duration> ...]\n"
-           "       beep <deviceName> play <fileName>\n"
+           "       beep <deviceName> [play | loop] <fileName>\n"
+           "       beep <deviceName> stop\n"
            "       Generates a beep sound with the specified <frequency> (Hz) and <duration> (ms).\n"
            "       Multiple frequency-duration pairs can be provided to create a sequence of beeps.\n"
            "           <deviceName> is the name of the PWM device to use for the beep\n"
@@ -102,9 +147,9 @@ public:
   // Executes the command
   int execute(const std::vector<std::string> &args) override {
     // remove finished tasks from the active tasks list
-    _activeTasks.erase(std::remove_if(_activeTasks.begin(), _activeTasks.end(), [](const std::shared_ptr<BeepCommandTask>& t) { return t->isFinished(); }), _activeTasks.end());
+    _activeTasks.erase(std::remove_if(_activeTasks.begin(), _activeTasks.end(), [](const std::shared_ptr<BeepCommandTaskBase>& t) { return t->isFinished(); }), _activeTasks.end());
 
-    if (args.size() < 4) {
+    if (args.size() < 3 || (args[2] != "stop" && args.size() < 4)) {
       std::cout << getHelp() << std::endl;
       return -1; // Return -1 to indicate an error
     }
@@ -117,6 +162,15 @@ public:
 
     if(args[2] == "play") {
       return playBeepSequenceFromFile(args[3], device);
+    } else if(args[2] == "loop") {
+      return playBeepSequenceFromFile(args[3], device, true);
+    } else if(args[2] == "stop") {
+      for (auto& task : _activeTasks) {
+        if (task->getDeviceName() == device->getName()) {
+          task->setLooping(false);
+        }
+      }
+      return 0;
     }
 
     auto task = std::make_shared<BeepCommandTask>(device, _mainloop);
@@ -143,9 +197,9 @@ private:
   const Console &_console;
   DeviceRepository &_deviceRepo;
 
-  std::vector<std::shared_ptr<BeepCommandTask>> _activeTasks;
+  std::vector<std::shared_ptr<BeepCommandTaskBase>> _activeTasks;
 
-  int playBeepSequenceFromFile(const std::string& fileName, std::shared_ptr<PWMDevice> device) {
+  int playBeepSequenceFromFile(const std::string& fileName, std::shared_ptr<PWMDevice> device, bool loop = false) {
     std::unique_ptr<dataFileReader> reader = std::make_unique<dataFileReader>(_console.currentDirectory, fileName);
     if (!reader->isExpectedFile("BEEP")) {
       std::cout << "Invalid file header: " << fileName << std::endl;
@@ -166,8 +220,8 @@ private:
       return -1;
     }
 
-    auto task = std::make_shared<BeepCommandTask>(device, _mainloop);
-    task->setBeepData(data, data_size / (2 * sizeof(uint16_t)));
+    auto task = std::make_shared<BeepCommandFileTask>(device, _mainloop, data, data_size / (2 * sizeof(uint16_t)));
+    task->setLooping(loop);
     _activeTasks.push_back(task);
     _mainloop.registerRegularTask(task.get());
 

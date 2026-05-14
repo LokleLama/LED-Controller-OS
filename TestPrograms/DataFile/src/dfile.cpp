@@ -253,6 +253,7 @@ int main(int argc, const char **argv) {
 
       // read file line by line and store in a vector, every line has 2 numbers: frequency and duration
       std::vector<uint16_t> fdata;
+      int total_length = 0;
       int n = 1;
       while(fgets(line, sizeof(line), infile)) {
           size_t len = strlen(line);
@@ -281,11 +282,13 @@ int main(int argc, const char **argv) {
           fdata.push_back(frequency);
           fdata.push_back(duration);
 
+          total_length += duration;
           printf("Read line %d: frequency=%u, duration=%u\n", n, frequency, duration);
 
           n++;
       }
       fclose(infile);
+      printf("Total beep sequence length: %d ms\n", total_length);
 
       printf("Successfully read %zu (%zu values) beep entries from input file %s\n", fdata.size() / 2, fdata.size(), input_file);
 

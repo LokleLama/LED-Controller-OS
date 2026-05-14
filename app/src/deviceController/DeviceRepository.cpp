@@ -9,6 +9,7 @@
 #include "deviceController/HLKFactory.h"
 #include "deviceController/ADCFactory.h"
 #include "deviceController/GPIOFactory.h"
+#include "deviceController/PWMFactory.h"
 
 #include <algorithm>
 
@@ -22,6 +23,7 @@ DeviceRepository::DeviceRepository(const Console& console) {
     _factories.push_back(std::make_shared<CommRouterFactory>(*this));
     _factories.push_back(std::make_shared<HLKFactory>(*this));
     _factories.push_back(std::make_shared<GPIOFactory>(*this));
+    _factories.push_back(std::make_shared<PWMFactory>());
 }
 
 const std::vector<std::string> DeviceRepository::getAvailableDeviceNames(IDeviceFactory::Category category) const{

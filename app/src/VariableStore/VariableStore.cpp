@@ -212,7 +212,7 @@ std::string VariableStore::findAndReplaceVariables(const std::string &input) con
       case '[': {
         size_t endPos = result.find("]", pos);
         if (endPos == std::string::npos) {
-          break; // No closing parenthesis found
+          break; // No closing bracket found
         }
         std::string varName = result.substr(pos + 2, endPos - pos - 2);
         auto var = getVariable(varName);
@@ -221,7 +221,39 @@ std::string VariableStore::findAndReplaceVariables(const std::string &input) con
           result.replace(pos, endPos - pos + 1, varValue);
           pos += varValue.length(); // Move past the replaced value
         }else{
-          pos = endPos + 1; // Move past the closing brace if variable not found
+          pos = endPos + 1; // Move past the closing bracket if variable not found
+        }
+        break;
+      }
+      case '(': {
+        size_t endPos = result.find(")", pos);
+        if (endPos == std::string::npos) {
+          break; // No closing parenthesis found
+        }
+        std::string varName = result.substr(pos + 2, endPos - pos - 2);
+        auto var = getVariable(varName);
+        if(var){
+          std::string varValue = std::to_string(var->asFloat());
+          result.replace(pos, endPos - pos + 1, varValue);
+          pos += varValue.length(); // Move past the replaced value
+        }else{
+          pos = endPos + 1; // Move past the closing parenthesis if variable not found
+        }
+        break;
+      }
+      case '<': {
+        size_t endPos = result.find(">", pos);
+        if (endPos == std::string::npos) {
+          break; // No closing angle bracket found
+        }
+        std::string varName = result.substr(pos + 2, endPos - pos - 2);
+        auto var = getVariable(varName);
+        if(var){
+          const std::string varValue = var->asBool() ? "true" : "false";
+          result.replace(pos, endPos - pos + 1, varValue);
+          pos += varValue.length(); // Move past the replaced value
+        }else{
+          pos = endPos + 1; // Move past the closing angle bracket if variable not found
         }
         break;
       }

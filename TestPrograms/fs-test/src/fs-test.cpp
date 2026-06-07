@@ -14,13 +14,13 @@ struct config_t {
   size_t fs_size;
   size_t sector_size;
   size_t page_size;
-  char* flash_file;
+  std::string flash_file;
 
   uint8_t* flash_data;
 } config = {
     .flash_size = 2 * 1024 * 1024,
     .fs_offset = 4 * 4096,
-    .fs_size = 8 * 1024,
+    .fs_size = 64 * 1024,
     .sector_size = 4096,
     .page_size = 256,
     .flash_file = "flash",
@@ -32,7 +32,7 @@ struct config_t {
 
 static void OpenOrCreateFlashFile() {
   char flash_file_name[256];
-  snprintf(flash_file_name, sizeof(flash_file_name), "%s-in.bin", config.flash_file);
+  snprintf(flash_file_name, sizeof(flash_file_name), "%s-in.bin", config.flash_file.c_str());
   FILE* f = fopen(flash_file_name, "r+b");
   if (f != NULL) {
     //find filesize
@@ -95,7 +95,7 @@ static void OpenOrCreateFlashFile() {
 
 static void SaveFlashStateInFlashFile() {
   char flash_file_name[256];
-  snprintf(flash_file_name, sizeof(flash_file_name), "%s-out.bin", config.flash_file);
+  snprintf(flash_file_name, sizeof(flash_file_name), "%s-out.bin", config.flash_file.c_str());
   FILE* f = fopen(flash_file_name, "w+b");
   if (f == NULL) {
     perror("Failed to open flash file for writing");
@@ -119,7 +119,8 @@ static size_t RoundSizeToSector(size_t size) {
 static std::shared_ptr<SPFS::Directory> CreateSubDirectory(std::shared_ptr<SPFS::Directory> parent, std::string name) {
   auto subdir = parent->createDirectory(name);
   if (subdir == nullptr) {
-    printf("Failed to create subdirectory (%s)\n", name.c_str());
+    printf("ERROR: Failed to create subdirectory (%s)\n", name.c_str());
+    exit(-1);
   } else {
     printf("Created subdirectory  : %s\n", subdir->getName().c_str());
   }
@@ -143,8 +144,8 @@ int main(int argc, char **argv) {
   FlashHAL::setFlashMemoryOffset(config.flash_data);
 
   printf("******************************\n");
-  printf("using flash file %s-in.bin\n", config.flash_file);
-  printf("saving result in %s-out.bin\n", config.flash_file);
+  printf("using flash file %s-in.bin\n", config.flash_file.c_str());
+  printf("saving result in %s-out.bin\n", config.flash_file.c_str());
   printf("using flash offset of %zu\n", config.fs_offset);
   printf("using flash size of %zu\n", config.fs_size);
   printf("using flash sector size of %zu\n", config.sector_size);
@@ -155,7 +156,7 @@ int main(int argc, char **argv) {
   auto root = spfs->searchFileSystem(0);
 
   if(root == nullptr) {
-    printf("No valid filesystem found\n");
+    printf("ERROR: No valid filesystem found\n");
     return -1;
   }
 
@@ -182,12 +183,17 @@ int main(int argc, char **argv) {
 
   printf("Found Subdirectories  : ");
   for (const auto& dir : subdirs) {
-    printf("%s   ", dir->getName().c_str());
+    printf("%s, ", dir->getName().c_str());
     if(dir->getName() == "data") {
       data_dir = dir;
     }
   }
   printf("\n");
+
+  if(data_dir == nullptr) {
+    printf("ERROR: Failed to find 'data' subdirectory\n");
+    return -1;
+  }
 
   printf("******************************\n");
   printf("creating new files in the \"%s\" directory\n", data_dir->getName().c_str());
@@ -197,7 +203,7 @@ int main(int argc, char **argv) {
   auto files = data_dir->getFiles();
   printf("Found Files           : ");
   for (const auto& file : files) {
-    printf("%s   ", file->getName().c_str());
+    printf("%s, ", file->getName().c_str());
   }
   printf("\n");
 
@@ -210,11 +216,15 @@ int main(int argc, char **argv) {
   printf("******************************\n");
   printf("add content to file \"%s\"\n", file1->getName().c_str());
 
-  std::string file_content = "This is a test content for the file.\nIt has multiple lines.\nThis is line 3.\nEnd of file.";
+  std::string file_content = "This is a test content for the file.\n"
+                             "It has multiple lines.\n"
+                             "This is line 3.\n"
+                             "End of file.";
   if (file1->write(file_content)) {
-    printf("Wrote %zu bytes\n", file_content.length());
+    printf("Wrote string of length %zu\n", file_content.length());
   } else {
-    printf("Failed to write to file \"%s\"\n", file1->getName().c_str());
+    printf("ERROR: Failed to write to file \"%s\"\n", file1->getName().c_str());
+    return -1;
   }
 
   printf("******************************\n");
@@ -227,16 +237,17 @@ int main(int argc, char **argv) {
   printf("add content to file \"%s\"\n", file1->getName().c_str());
 
   std::string file_content_300 = "This is a test content for the file with at least 300 bytes of data.\n"
-    "It has multiple lines to ensure the content is long enough.\n"
-    "This is line 3 of the test content.\n"
-    "Line 4: The file system needs to handle larger file contents correctly.\n"
-    "Line 5: Additional padding to ensure we reach the minimum 300 byte threshold.\n"
-    "Line 6: Testing file I/O with a reasonable amount of test data.\n"
-    "End of file content - this string is now over 300 bytes long.";
+                                 "It has multiple lines to ensure the content is long enough.\n"
+                                 "This is line 3 of the test content.\n"
+                                 "Line 4: The file system needs to handle larger file contents correctly.\n"
+                                 "Line 5: Additional padding to ensure we reach the minimum 300 byte threshold.\n"
+                                 "Line 6: Testing file I/O with a reasonable amount of test data.\n"
+                                 "End of file content - this string is now over 300 bytes long.";
   if (file1->write(file_content_300)) {
-    printf("Wrote %zu bytes\n", file_content_300.length());
+    printf("Wrote string of length %zu\n", file_content_300.length());
   } else {
-    printf("Failed to write to file \"%s\"\n", file1->getName().c_str());
+    printf("ERROR: Failed to write to file \"%s\"\n", file1->getName().c_str());
+    return -1;
   }
 
   printf("******************************\n");
@@ -258,7 +269,8 @@ int main(int argc, char **argv) {
     std::string old_content = old_version_file->readAsString();
     printf("Version %zu Content     : \"%s\"\n", old_version_file->getVersion(), old_content.c_str());
   } else {
-    printf("Failed to open old version of file \"%s\"\n", file1->getName().c_str());
+    printf("ERROR: Failed to open old version of file \"%s\"\n", file1->getName().c_str());
+    return -1;
   }
 
   printf("******************************\n");
@@ -272,18 +284,19 @@ int main(int argc, char **argv) {
     std::string hardlink_content = hardlink_file->readAsString();
     printf("Hardlink File Content          : \"%s\"\n", hardlink_content.c_str());
   } else {
-    printf("Failed to create hardlink to file \"%s\"\n", file1->getName().c_str());
+    printf("ERROR: Failed to create hardlink to file \"%s\"\n", file1->getName().c_str());
+    return -1;
   }
 
   printf("******************************\n");
   std::shared_ptr<SPFS> new_fs = std::make_shared<SPFS>();
   if(!new_fs->createNewFileSystem(2*1024*1024 - 256*1024, 256*1024, "NewFS", "new_root")) {
-    printf("Failed to create new filesystem\n");
+    printf("ERROR: Failed to create new filesystem\n");
     return -1;
   }
 
   Console console(new_fs);
-  console.ExecuteTask();
+  console.ExecuteTask(1);
 
   SaveFlashStateInFlashFile();
   free(config.flash_data);

@@ -2,6 +2,8 @@
 
 #include "../ICommand.h"
 #include "../Utils/base64.h"
+#include "../Utils/hexadecimal.h"
+#include "Console.h"
 #include <iostream>
 
 class StoreCommand : public ICommand {

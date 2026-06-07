@@ -19,7 +19,7 @@ public:
   std::vector<std::string> getCommandList() const;
   std::shared_ptr<ICommand> findCommand(const std::string &name) const;
 
-  bool ExecuteTask() override;
+  bool ExecuteTask(TaskPID pid) override;
   const std::string getName() const override {
     return "ConsoleTask";
   }

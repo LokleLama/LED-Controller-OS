@@ -1,12 +1,54 @@
-#include "SPFS.h"
+#include "SPFS.Internal.h"
 #include "flash.h"
 #include <cstring>
+
+namespace {
+constexpr uint16_t kInvalidBlockOffset = 0xFFFF;
+constexpr uint32_t kErasedWord = 0xFFFFFFFFu;
+} // namespace
 
 std::shared_ptr<SPFS::Directory> SPFS::searchFileSystem(int start_offset, int end_offset){
   if(_fs_header == nullptr) {
     return findFileSystemStart(start_offset, end_offset);
   }
   return getRootDirectory();
+}
+
+std::string SPFS::getFileSystemName() const {
+  if(_fs_header == nullptr){
+    return "";
+  }
+  const FileSystemMetadata* fsm = reinterpret_cast<const FileSystemMetadata *>(
+      reinterpret_cast<const uint8_t*>(_fs_header) + _fs_header->meta_offset);
+  const char* name_ptr = reinterpret_cast<const char*>(fsm) + sizeof(FileSystemMetadata);
+  return std::string(name_ptr, fsm->name_size);
+}
+
+std::string SPFS::getFileSystemVersion() const {
+  if(_fs_header == nullptr){
+    return "";
+  }
+  const uint32_t version = _fs_header->version;
+  const uint8_t major = static_cast<uint8_t>((version & VERSION_MAJOR_MASK) >> 24);
+  const uint8_t minor = static_cast<uint8_t>((version & VERSION_MINOR_MASK) >> 16);
+  const uint8_t patch = static_cast<uint8_t>((version & VERSION_PATCH_MASK) >> 8);
+  const uint8_t build = static_cast<uint8_t>(version & VERSION_BUILD_MASK);
+  return std::to_string(major) + "." + std::to_string(minor) + "." +
+         std::to_string(patch) + " (build " + std::to_string(build) + ")";
+}
+
+int SPFS::getFileSystemSize() const {
+  if(_fs_header == nullptr){
+    return -1;
+  }
+  return static_cast<int>(_fs_header->size);
+}
+
+int SPFS::getBlockSize() const {
+  if(_fs_header == nullptr){
+    return -1;
+  }
+  return static_cast<int>(_fs_header->block_and_page_size & 0x0000FFFF);
 }
 
 std::shared_ptr<SPFS::Directory> SPFS::getRootDirectory() {
@@ -51,7 +93,7 @@ std::shared_ptr<SPFS::Directory> SPFS::initializeFileSystem(const void *address)
     return nullptr;
   }
 
-  if(header->checksum == 0xFFFFFFFF) {
+  if(header->checksum == kErasedWord) {
     auto size = header->size;
 
     if(!formatDisk(address, size)) {
@@ -97,7 +139,7 @@ std::shared_ptr<SPFS::FileInternal> SPFS::openFile(const void* address, std::sha
 }
 
 std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name, const FileContentHeader* initial_content) {
-  if(file_name.length() >= 200) {
+  if(file_name.length() >= MAX_ENTRY_NAME_LENGTH) {
     return nullptr; // Name too long
   }
   
@@ -109,10 +151,10 @@ std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const std::shared_ptr<SPFS:
 }
 
 std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const void* address, const std::shared_ptr<SPFS::Directory> parent, const std::string& file_name, const FileContentHeader* initial_content) {
-  uint16_t content_block_offset = 0xFFFF;
+  uint16_t content_block_offset = kInvalidBlockOffset;
   if(initial_content != nullptr) {
     content_block_offset = calculateContentBlockOffset(address, initial_content);
-    if(content_block_offset == 0xFFFF) {
+    if(content_block_offset == kInvalidBlockOffset) {
       return nullptr; // Invalid content block: difference is too big
     }
   }
@@ -127,7 +169,8 @@ std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const void* address, const 
 
   fileheader->block.magic = MAGIC_FILE_NUMBER;
   fileheader->block.size = 1;
-  fileheader->name_size_meta_offset = (uint16_t)(file_name.length() & 0xFF) | ((uint16_t)(((sizeof(FileHeader) + file_name.length() + 1 + 3) & 0xFC) << 8));
+  const uint16_t metadata_offset = static_cast<uint16_t>((sizeof(FileHeader) + file_name.length() + 1 + 3) & 0xFC);
+  fileheader->name_size_meta_offset = static_cast<uint16_t>(file_name.length() & 0xFF) | static_cast<uint16_t>(metadata_offset << 8);
   strncpy(reinterpret_cast<char*>(fileheader) + sizeof(FileHeader), file_name.c_str(), file_name.length() + 1);
 
   FileMetadataHeader *filemeta = reinterpret_cast<FileMetadataHeader *>(byte_buffer + (fileheader->name_size_meta_offset >> 8));
@@ -143,7 +186,7 @@ std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const void* address, const 
 }
 
 uint16_t SPFS::calculateContentBlockOffset(const void* reference_address, const SPFS::FileContentHeader* content_header) const {
-  uint16_t content_block_offset = 0xFFFF;
+  uint16_t content_block_offset = kInvalidBlockOffset;
   if(reinterpret_cast<const uint8_t*>(content_header) > reinterpret_cast<const uint8_t*>(reference_address)){
     content_block_offset = (uint16_t)((reinterpret_cast<const uint8_t*>(content_header) - reinterpret_cast<const uint8_t*>(reference_address)) / FS_BLOCK_SIZE);
   }else{
@@ -154,7 +197,7 @@ uint16_t SPFS::calculateContentBlockOffset(const void* reference_address, const 
 }
 
 const SPFS::FileContentHeader* SPFS::calculateContentHeaderAddress(const void* reference_address, uint16_t content_block_offset) const {
-  if(content_block_offset == 0xFFFF) {
+  if(content_block_offset == kInvalidBlockOffset) {
     return nullptr;
   }
   const uint8_t* content_address = reinterpret_cast<const uint8_t*>(reference_address);
@@ -167,7 +210,7 @@ const SPFS::FileContentHeader* SPFS::calculateContentHeaderAddress(const void* r
 }
 
 std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {
-  if(dir_name.length() >= 200) {
+  if(dir_name.length() >= MAX_ENTRY_NAME_LENGTH) {
     return nullptr; // Name too long
   }
 
@@ -189,7 +232,8 @@ std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const void* addre
 
   dirheader->block.magic = MAGIC_DIR_NUMBER;
   dirheader->block.size = 1;
-  dirheader->name_size_meta_offset = (uint16_t)(dir_name.length() & 0xFF) | ((sizeof(DirectoryHeader) + dir_name.length() + 1 + 3) & 0xFC) << 8;
+  const uint16_t metadata_offset = static_cast<uint16_t>((sizeof(DirectoryHeader) + dir_name.length() + 1 + 3) & 0xFC);
+  dirheader->name_size_meta_offset = static_cast<uint16_t>(dir_name.length() & 0xFF) | static_cast<uint16_t>(metadata_offset << 8);
   strncpy(reinterpret_cast<char*>(dirheader) + sizeof(DirectoryHeader), dir_name.c_str(), dir_name.length() + 1);
 
   DirectoryMetadataHeader *dirmeta = reinterpret_cast<DirectoryMetadataHeader *>(byte_buffer + (dirheader->name_size_meta_offset >> 8));
@@ -207,8 +251,8 @@ std::shared_ptr<SPFS::Directory> SPFS::createNewFileSystem(int offset, size_t si
   if(offset < 0 || 
     size < SPFS::FS_BLOCK_SIZE * 2 || 
     (size_t)offset + size > Flash::MAX_FLASH_SIZE || 
-    fs_name.length() >= 200 || 
-    root_dir_name.length() >= 200 || 
+    fs_name.length() >= MAX_ENTRY_NAME_LENGTH || 
+    root_dir_name.length() >= MAX_ENTRY_NAME_LENGTH || 
     (offset & (SPFS::FS_ALIGNMENT - 1)) != 0) {
     return nullptr;
   }
@@ -224,7 +268,7 @@ std::shared_ptr<SPFS::Directory> SPFS::createNewFileSystem(const void *address, 
     return nullptr;
   }
 
-  if(fs_name.length() >= 200 || root_dir_name.length() >= 200) {
+  if(fs_name.length() >= MAX_ENTRY_NAME_LENGTH || root_dir_name.length() >= MAX_ENTRY_NAME_LENGTH) {
     return nullptr; // Name too long
   }
 
@@ -236,7 +280,7 @@ std::shared_ptr<SPFS::Directory> SPFS::createNewFileSystem(const void *address, 
   FileSystemHeader *newheader = reinterpret_cast<FileSystemHeader *>(byte_buffer);
 
   if(newheader->magic != MAGIC_NUMBER || newheader->version != SPFS_VERSION || newheader->size != size) {
-    if(newheader->magic == 0xFFFFFFFF && newheader->version == 0xFFFFFFFF && newheader->size == 0xFFFFFFFF) {
+    if(newheader->magic == kErasedWord && newheader->version == kErasedWord && newheader->size == kErasedWord) {
       newheader->magic = MAGIC_NUMBER;
       newheader->version = SPFS_VERSION;
       newheader->size = size;
@@ -309,12 +353,12 @@ const void* SPFS::findFreeSpace(const uint8_t* start_search, size_t size){
   while (search + blocks_needed * FS_BLOCK_SIZE <= end_address) {
     bool all_free = false;
 
-    if (reinterpret_cast<const uint32_t*>(search)[0] == 0xFFFFFFFFu) {
+    if (reinterpret_cast<const uint32_t*>(search)[0] == kErasedWord) {
       all_free = true;
       for (size_t b = 1; b < blocks_needed; ++b) {
         const uint8_t* block_addr = search + b * FS_BLOCK_SIZE;
         // Check first word of each block for 0xFFFFFFFF (erased flash)
-        if (reinterpret_cast<const uint32_t*>(block_addr)[0] != 0xFFFFFFFFu) {
+        if (reinterpret_cast<const uint32_t*>(block_addr)[0] != kErasedWord) {
           all_free = false;
           search = block_addr; // Move search to this block
           break;
@@ -342,7 +386,7 @@ const void* SPFS::findFreeSpace(const uint8_t* start_search, size_t size){
 }
 
 uint32_t SPFS::calculateCRC32(const void *address, size_t size) {
-  uint32_t crc = 0xFFFFFFFFu;
+  uint32_t crc = kErasedWord;
   const uint32_t polynomial = 0xEDB88320u;
   const uint8_t *data = static_cast<const uint8_t *>(address);
   for (size_t i = 0; i < size; ++i) {
@@ -354,7 +398,7 @@ uint32_t SPFS::calculateCRC32(const void *address, size_t size) {
         crc >>= 1;
     }
   }
-  return crc ^ 0xFFFFFFFFu;
+  return crc ^ kErasedWord;
 }
 
 uint16_t SPFS::calculateCRC16(const void *address, size_t size) {

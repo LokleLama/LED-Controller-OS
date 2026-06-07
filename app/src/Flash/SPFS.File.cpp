@@ -1,6 +1,10 @@
-#include "SPFS.h"
+#include "SPFS.Internal.h"
 #include "flash.h"
 #include <cstring>
+
+namespace {
+constexpr uint16_t kInvalidBlockOffset = 0xFFFF;
+}
 
 SPFS::File::File(std::shared_ptr<Directory> parent, const std::string& name) : File(nullptr, parent, nullptr) {
   auto file = parent->openFile(name);
@@ -39,7 +43,7 @@ bool SPFS::File::write(const std::vector<uint8_t>& data){
   return write(data.data(), data.size());
 }
 bool SPFS::File::write(const uint8_t* data, size_t size) {
-  if(!allocateContenSize(size)) {
+  if(!allocateContentSize(size)) {
     return false;
   }
 
@@ -53,7 +57,7 @@ bool SPFS::File::write(const uint8_t* data, size_t size) {
   return true;
 }
 
-bool SPFS::File::allocateContenSize(size_t size) {
+bool SPFS::File::allocateContentSize(size_t size) {
   if(_current_content_header != nullptr) {
     return false; // Content already allocated
   }
@@ -64,13 +68,13 @@ bool SPFS::File::allocateContenSize(size_t size) {
     return false;
   }
 
-  uint16_t content_block_offset = 0xFFFF;
+  uint16_t content_block_offset = kInvalidBlockOffset;
   if(_content_header != nullptr) {
     content_block_offset = _fs->calculateContentBlockOffset(_content_header, _current_content_header);
   }else{
     content_block_offset = _fs->calculateContentBlockOffset(_header, _current_content_header);
   }
-  if(content_block_offset == 0xFFFF) {
+  if(content_block_offset == kInvalidBlockOffset) {
     return false; // Invalid content block: difference is too big
   }
 
@@ -87,6 +91,7 @@ bool SPFS::File::allocateContenSize(size_t size) {
     _current_content_header = nullptr;
     return false;
   }
+  _allocated_content_size = size;
   _append_position = (contentheader->data_offset & 0x00FF);
   return true;
 }
@@ -152,13 +157,13 @@ bool SPFS::File::finishContent() {
     return false;
   }
 
-  uint16_t content_block_offset = 0xFFFF;
+  uint16_t content_block_offset = kInvalidBlockOffset;
   if(_content_header != nullptr) {
     content_block_offset = _fs->calculateContentBlockOffset(_content_header, _current_content_header);
   }else{
     content_block_offset = _fs->calculateContentBlockOffset(_header, _current_content_header);
   }
-  if(content_block_offset == 0xFFFF) {
+  if(content_block_offset == kInvalidBlockOffset) {
     return false; // Invalid content block: difference is too big
   }
 
@@ -183,6 +188,7 @@ bool SPFS::File::finishContent() {
   }
   _content_header = _current_content_header;
   _content_version++;
+  _allocated_content_size = 0;
   _current_content_header = nullptr;
   return true;
 }

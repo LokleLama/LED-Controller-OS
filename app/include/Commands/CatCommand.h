@@ -59,7 +59,7 @@ public:
 
     auto open_version = file->getVersion();
     if(version >= 0) {
-      if(version >= open_version) {
+      if(version >= (int)open_version) {
         std::cout << "Requested version " << version << " is greater then or equal to the current version " << open_version << std::endl;
         return -1; // Return -1 to indicate error
       }

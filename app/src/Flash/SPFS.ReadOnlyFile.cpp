@@ -1,6 +1,10 @@
-#include "SPFS.h"
+#include "SPFS.Internal.h"
 #include "flash.h"
 #include <cstring>
+
+namespace {
+constexpr uint16_t kInvalidBlockOffset = 0xFFFF;
+}
 
 const std::string SPFS::ReadOnlyFile::getName() const {
   const char* name_ptr = reinterpret_cast<const char*>(_header) + sizeof(SPFS::FileHeader);
@@ -35,14 +39,14 @@ const uint8_t* SPFS::ReadOnlyFile::getMemoryMappedAddress() const {
 }
 std::string SPFS::ReadOnlyFile::readAsString() const {
   if(_content_header == nullptr) {
-    return "";
+    return {};
   }
   const char * data_ptr = reinterpret_cast<const char*>(getMemoryMappedAddress());
   return std::string(data_ptr, _content_header->size);
 }
 std::vector<uint8_t> SPFS::ReadOnlyFile::readAsVector() const {
   if(_content_header == nullptr) {
-    return std::vector<uint8_t>();
+    return {};
   }
   std::vector<uint8_t> data_vector(_content_header->size);
   const uint8_t * data_ptr = getMemoryMappedAddress();
@@ -51,7 +55,7 @@ std::vector<uint8_t> SPFS::ReadOnlyFile::readAsVector() const {
 }
 std::vector<uint8_t> SPFS::ReadOnlyFile::readBytes(size_t offset, size_t size) const {
   if(_content_header == nullptr || offset >= _content_header->size) {
-    return std::vector<uint8_t>();
+    return {};
   }
   if(size == (size_t)-1 || offset + size > _content_header->size) {
     size = _content_header->size - offset;
@@ -77,7 +81,7 @@ std::shared_ptr<const SPFS::ReadOnlyFile> SPFS::ReadOnlyFile::openVersion(size_t
   size_t current_version = 0;
   uint16_t next_block = getMetadataHeader()->content_block;
   const void* content_address = reinterpret_cast<const void*>(_header);
-  while (next_block != 0xFFFF) {
+  while (next_block != kInvalidBlockOffset) {
     content_header = _fs->calculateContentHeaderAddress(content_address, next_block);
     content_address = content_header;
     current_version++;

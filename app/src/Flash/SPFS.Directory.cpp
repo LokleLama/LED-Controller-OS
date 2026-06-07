@@ -1,6 +1,10 @@
-#include "SPFS.h"
+#include "SPFS.Internal.h"
 #include "flash.h"
 #include <cstring>
+
+namespace {
+constexpr uint16_t kInvalidEntryMarker = 0xFFFF;
+}
 
 SPFS::Directory::Directory(std::shared_ptr<Directory> parent, const std::string& name) : Directory(nullptr, parent, nullptr) {
   auto dir = parent->openSubdirectory(name);
@@ -97,7 +101,7 @@ bool SPFS::Directory::addContent(uint16_t type, uintptr_t content_address){
   uint16_t content_block_offset = (uint16_t)((content_address - (uintptr_t)getHeader()) / FS_BLOCK_SIZE);
 
   int current = 0;
-  while(contentHeaders[current].type != 0xFFFF && current < max_count) {
+  while(current < max_count && contentHeaders[current].type != kInvalidEntryMarker) {
     if(contentHeaders[current].block_offset == content_block_offset) {
       return false; // Content already exists
     }
@@ -132,7 +136,7 @@ bool SPFS::Directory::removeContent(uintptr_t content_address){
 
   int current = 0;
   int16_t target_block = (int16_t)((content_address - (uintptr_t)getHeader()) / FS_BLOCK_SIZE);
-  while(current < max_count && contentHeaders[current].type != 0xFFFF) {
+  while(current < max_count && contentHeaders[current].type != kInvalidEntryMarker) {
     if(contentHeaders[current].block_offset == target_block) {
       contentHeaders[current].type &= 0x0FFF; // Mark as deleted
       if(Flash::write(buffer, getHeader()) < (int)buffer.size()) {
@@ -248,7 +252,7 @@ std::shared_ptr<SPFS::File> SPFS::Directory::createHardlink(std::shared_ptr<SPFS
   if(file == nullptr) {
     return nullptr;
   }
-  if(new_name != "") {
+  if(!new_name.empty()) {
     // Create a new file with the new name that points to the same content
     auto hardlink_file = _fs->createFile(shared_from_this(), new_name, file->getContentHeader());
     if(hardlink_file == nullptr) {

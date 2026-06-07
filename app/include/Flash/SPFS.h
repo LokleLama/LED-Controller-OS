@@ -3,11 +3,13 @@
 #pragma once
 
 #include "flash.h"
+#include <cstdint>
+#include <ios>
+#include <istream>
 #include <memory>
 #include <string>
-#include <vector>
 #include <streambuf>
-#include <istream>
+#include <vector>
 
 //! \brief Simple Pico File System (SPFS) class
 /*!
@@ -19,89 +21,20 @@
  */
 class SPFS : public std::enable_shared_from_this<SPFS> {
 private:
-  struct FileSystemHeader{
-    uint32_t magic;                        //!< Magic number to identify the file system
-    uint32_t version;                      //!< Version number of the file system
-    uint32_t size;                         //!< Size of the file system
-    uint32_t block_and_page_size;          //!< Block size and page size of the file system (upper 16 bits: block size, lower 16 bits: page size)
-                                           //!< the configuration contains the following fields:
-                                           //!< - uint16_t block_size;   //!< Block size of the file system (mask: 0x0000FFFF) (in bytes)
-                                           //!< - uint16_t page_size;    //!< Page size of the file system (mask: 0xFFFF0000) (in bytes)
-    uint32_t meta_offset;                  //!< Offset to the file system metadata (in bytes from start (must be a multiple of sizeof(uint32_t) = 4)))
-    uint32_t checksum;                     //!< Checksum of the file system header
-  };
-
-  struct FileSystemMetadata{
-    uint16_t magic;                        //!< Magic number to identify the file system metadata
-    uint16_t root_directory_block;         //!< Block number of the root directory
-    uint16_t name_size;                    //!< Size of the file system name
-                                           //!< the configuration contains the following fields:
-                                           //!< - uint8_t size;        //!< Size of the file system name (mask: 0x00FF) (max: 180 bytes)
-                                           //!< - uint8_t reserved;    //!< Reserved for future use (mask: 0xFF00) (must be 0xFF)
-    uint16_t checksum;                     //!< Checksum of the file system metadata
-                                           //! the name of the file system will follow after this structure
-  };
-
-  struct SPFSBlockHeader{
-    uint16_t magic;                        //!< Magic number to identify the file system
-    uint16_t size;                         //!< Size of the following (in blocks)
-  };
-
-  struct DirectoryHeader{
-    SPFSBlockHeader block;                 //!< Block description
-    uint16_t name_size_meta_offset;        //!< the configuration contains the following fields:
-                                           //!< - uint8_t size;        //!< Size of the directory name (mask: 0x00FF) (max: 200 bytes)
-                                           //!< - uint8_t offset;      //!< Offset within the content block of the directory (mask: 0xFF00) (max: 200 bytes)
-  };
-
-  struct DirectoryContentHeader{
-    uint16_t type;
-    int16_t block_offset;
-  };
-
-  struct DirectoryMetadataHeader{
-    uint16_t checksum;                     //!< Checksum of the directory header
-    uint16_t next;                         //!< offset of the extension block (in blocks)
-                                           //!< The directory content will follow after the name. any file or directory in the current directory will be listed here as uint16_t block offsets.
-    DirectoryContentHeader content[1];     //!< Content entries in the directory block
-  };
-
-  struct DirectoryExtensionHeader{
-    SPFSBlockHeader block;                 //!< Block description
-    int16_t previous;                      //!< offset of the previous extension block (in blocks)
-    uint16_t checksum;                     //!< Checksum of the directory extension header
-    int16_t next;                          //!< offset of the next extension block (in blocks)
-    DirectoryContentHeader content[1];     //!< Content entries in the extension block
-  };
-
-  struct FileHeader{
-    SPFSBlockHeader block;                 //!< Block description
-    uint16_t name_size_meta_offset;        //!< the configuration contains the following fields:
-                                           //!< - uint8_t size;        //!< Size of the file name (mask: 0x00FF) (max: 200 bytes)
-                                           //!< - uint8_t offset;      //!< Offset within the current block of the file metadata block (mask: 0xFF00) (max: 200 bytes)
-  };
-  struct FileMetadataHeader{
-    uint16_t checksum;                     //!< Checksum of the file header
-    uint16_t file_type_flags;              //!< the configuration contains the following fields:
-                                           //!< - uint8_t file_type;   //!< Type of the file (mask: 0x00FF) (e.g., 0 = binary, 1 = text, etc.)
-                                           //!< - uint8_t flags;       //!< Flags for the file (mask: 0xFF00) (e.g., read-only, hidden, executable, etc.)
-                                           //!< - 0x01: Read-only
-                                           //!< - 0x02: Hidden
-                                           //!< - 0x04: Executable
-    uint16_t content_block;                //!< offset of the file content (in blocks)
-  };
-  struct FileContentHeader{
-    SPFSBlockHeader block;                 //!< Block description
-    uint16_t size;                         //!< Size of the file data (in bytes)
-    uint16_t data_offset;                  //!< Offset within the current block of the file data (in bytes)
-                                           //!< - uint8_t offset;      //!< Offset within the current block of the file data (mask: 0x00FF) (in bytes)
-                                           //!< - uint8_t reserved;    //!< Reserved for future use (mask: 0xFF00) (must be 0xFF)
-    uint16_t checksum;                     //!< Checksum of the file data
-    uint16_t next_partition;               //!< offset of the next file content block (in blocks)
-    uint16_t next_version;                 //!< offset of the next file version content block (in blocks)
-  };
+  struct FileSystemHeader;
+  struct FileSystemMetadata;
+  struct SPFSBlockHeader;
+  struct DirectoryHeader;
+  struct DirectoryContentHeader;
+  struct DirectoryMetadataHeader;
+  struct DirectoryExtensionHeader;
+  struct FileHeader;
+  struct FileMetadataHeader;
+  struct FileContentHeader;
 
 public:
+  static constexpr size_t MAX_ENTRY_NAME_LENGTH = 200;
+
   class Directory;
   
   //! \brief Custom stream buffer for reading from SPFS files
@@ -111,46 +44,14 @@ public:
    */
   class ReadOnlyFileStreamBuf : public std::streambuf {
   public:
-    ReadOnlyFileStreamBuf(const uint8_t* data, size_t size)
-        : _data(data), _size(size), _pos(0) {
-      // Set up the get area to point to the file data
-      char* base = const_cast<char*>(reinterpret_cast<const char*>(_data));
-      setg(base, base, base + _size);
-    }
+    ReadOnlyFileStreamBuf(const uint8_t* data, size_t size);
 
   protected:
-    // Override seekoff for seeking within the stream
-    virtual std::streampos seekoff(std::streamoff off, std::ios_base::seekdir dir,
-                                   std::ios_base::openmode which = std::ios_base::in) override {
-      if (which & std::ios_base::in) {
-        std::streampos new_pos;
-        
-        if (dir == std::ios_base::beg) {
-          new_pos = off;
-        } else if (dir == std::ios_base::cur) {
-          new_pos = (gptr() - eback()) + off;
-        } else if (dir == std::ios_base::end) {
-          new_pos = _size + off;
-        } else {
-          return -1;
-        }
-        
-        if (new_pos < 0 || new_pos > static_cast<std::streampos>(_size)) {
-          return -1;
-        }
-        
-        char* base = const_cast<char*>(reinterpret_cast<const char*>(_data));
-        setg(base, base + new_pos, base + _size);
-        return new_pos;
-      }
-      return -1;
-    }
+    std::streampos seekoff(std::streamoff off, std::ios_base::seekdir dir,
+                           std::ios_base::openmode which = std::ios_base::in) override;
 
-    // Override seekpos for absolute positioning
-    virtual std::streampos seekpos(std::streampos pos,
-                                   std::ios_base::openmode which = std::ios_base::in) override {
-      return seekoff(pos, std::ios_base::beg, which);
-    }
+    std::streampos seekpos(std::streampos pos,
+                           std::ios_base::openmode which = std::ios_base::in) override;
 
   private:
     const uint8_t* _data;
@@ -162,16 +63,12 @@ public:
     friend class Directory;
 
     protected:
-      ReadOnlyFile(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header, const FileContentHeader* content_header, size_t content_version)
-          : _fs(fs), _parent(parent), _header(header), _content_header(content_header), _content_version(content_version) {}
+      ReadOnlyFile(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header,
+                   const FileContentHeader* content_header, size_t content_version);
 
-      const FileHeader* getHeader() const { return _header; }
-      const FileMetadataHeader* getMetadataHeader() const {
-        return reinterpret_cast<const FileMetadataHeader *>(reinterpret_cast<const uint8_t*>(_header) + (_header->name_size_meta_offset >> 8));
-      }
-      const FileContentHeader* getContentHeader() const {
-        return _content_header;
-      }
+      const FileHeader* getHeader() const;
+      const FileMetadataHeader* getMetadataHeader() const;
+      const FileContentHeader* getContentHeader() const;
     public:
       size_t getSize() const;
       size_t getSizeOnDisk() const;
@@ -209,10 +106,7 @@ public:
       File(std::shared_ptr<Directory> parent, const std::string& name);
 
     protected:
-      File(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header)
-          : ReadOnlyFile(fs, parent, header, nullptr, 0) {
-            FindCurrentContentHeader();
-      }
+      File(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header);
       void FindCurrentContentHeader();
 
     public:
@@ -228,7 +122,8 @@ public:
        * \param size Size of the data to write (in bytes)
        * \return true on success, false on failure
        */
-       bool allocateContenSize(size_t size);
+      bool allocateContentSize(size_t size);
+      bool allocateContenSize(size_t size) { return allocateContentSize(size); }
        bool append(const std::string& data);
        bool append(const std::vector<uint8_t>& data);
        bool append(const uint8_t* data, size_t size);
@@ -244,19 +139,12 @@ public:
       Directory(std::shared_ptr<Directory> parent, const std::string& name);
 
     protected:
-      Directory(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
-          : _fs(fs), _parent(parent), _header(header) { }
+      Directory(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header);
 
-      const DirectoryHeader* getHeader() const { return _header; }
-      const DirectoryMetadataHeader* getMetadataHeader() const {
-        return reinterpret_cast<const DirectoryMetadataHeader *>(reinterpret_cast<const uint8_t*>(_header) + (_header->name_size_meta_offset >> 8));
-      }
-      const DirectoryContentHeader* getContentHeaders() const {
-        return getMetadataHeader()->content;
-      }
-      int getMaxContentCount() const {
-        return (int)((FS_BLOCK_SIZE - (_header->name_size_meta_offset >> 8)) / sizeof(DirectoryContentHeader)) + 1;
-      }
+      const DirectoryHeader* getHeader() const;
+      const DirectoryMetadataHeader* getMetadataHeader() const;
+      const DirectoryContentHeader* getContentHeaders() const;
+      int getMaxContentCount() const;
 
       bool addContent(uint16_t type, uintptr_t content_address);
       bool removeContent(uintptr_t content_address);
@@ -294,26 +182,9 @@ public:
   };
 
 private:
-  class DirectoryInternal : public Directory {
-  public:
-    DirectoryInternal(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header)
-        : Directory(fs, parent, header) { }
-
-    // Additional methods specific to internal directory management can be added here
-  };
-
-  class FileInternal : public File {
-  public:
-    FileInternal(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header)
-        : File(fs, parent, header) { }
-
-    // Additional methods specific to internal directory management can be added here
-  };
-  class ReadOnlyFileInternal : public ReadOnlyFile {
-    public:
-      ReadOnlyFileInternal(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header, const FileContentHeader* content_header, size_t content_version)
-          : ReadOnlyFile(fs, parent, header, content_header, content_version) { }
-  };
+  class DirectoryInternal;
+  class FileInternal;
+  class ReadOnlyFileInternal;
 
 public:
   //! \brief Initialize the Flash File System
@@ -326,41 +197,11 @@ public:
   std::shared_ptr<Directory> createNewFileSystem(int offset, size_t size, const std::string& fs_name = "SPFS", const std::string& root_dir_name = "root");
   
   std::shared_ptr<Directory> getRootDirectory();
-  
-  std::string getFileSystemName() const{
-    if(_fs_header == nullptr){
-      return "";
-    }
-    const FileSystemMetadata* fsm = reinterpret_cast<const FileSystemMetadata *>(reinterpret_cast<const uint8_t*>(_fs_header) + _fs_header->meta_offset);
-    const char* name_ptr = reinterpret_cast<const char*>(fsm) + sizeof(FileSystemMetadata);
-    return std::string(name_ptr, fsm->name_size);
-  }
 
-  std::string getFileSystemVersion() const{
-    if(_fs_header == nullptr){
-      return "";
-    }
-    uint32_t version = _fs_header->version;
-    uint8_t major = (version & VERSION_MAJOR_MASK) >> 24;
-    uint8_t minor = (version & VERSION_MINOR_MASK) >> 16;
-    uint8_t patch = (version & VERSION_PATCH_MASK) >> 8;
-    uint8_t build = (version & VERSION_BUILD_MASK);
-    return std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(patch) + " (build " + std::to_string(build) + ")";
-  }
-
-  int getFileSystemSize() const{
-    if(_fs_header == nullptr){
-      return -1;
-    }
-    return _fs_header->size;
-  }
-
-  int getBlockSize() const{
-    if(_fs_header == nullptr){
-      return -1;
-    }
-    return _fs_header->block_and_page_size & 0x0000FFFF;
-  }
+  std::string getFileSystemName() const;
+  std::string getFileSystemVersion() const;
+  int getFileSystemSize() const;
+  int getBlockSize() const;
 
   enum class BlockState {
     FREE,

@@ -30,7 +30,9 @@ private:
   struct DirectoryExtensionHeader;
   struct FileHeader;
   struct FileMetadataHeader;
+  struct FileContentLegacyHeader;
   struct FileContentHeader;
+  struct FileContentTagHeader;
 
 public:
   static constexpr size_t MAX_ENTRY_NAME_LENGTH = 200;
@@ -94,6 +96,12 @@ public:
        */
       std::unique_ptr<std::istream> getInputStream() const;
 
+      bool createTag(const std::string& tag_description);
+      std::string readTag() const;
+      bool deleteTag();
+
+      bool restoreVersion();
+
     protected:
       std::shared_ptr<SPFS> _fs;                //!< Reference to the SPFS instance
       std::shared_ptr<Directory> _parent;       //!< Reference to the parent directory
@@ -124,10 +132,10 @@ public:
        */
       bool allocateContentSize(size_t size);
       bool allocateContenSize(size_t size) { return allocateContentSize(size); }
-       bool append(const std::string& data);
-       bool append(const std::vector<uint8_t>& data);
-       bool append(const uint8_t* data, size_t size);
-       bool finishContent();
+      bool append(const std::string& data);
+      bool append(const std::vector<uint8_t>& data);
+      bool append(const uint8_t* data, size_t size);
+      bool finishContent();
 
     private:
       size_t _allocated_content_size = 0; //!< Allocated size for content
@@ -207,6 +215,7 @@ public:
     FREE,
     USED,
     USED_FILE,
+    RESERVED_FILE,
     USED_DIR,
     BAD
   };
@@ -217,26 +226,29 @@ private:
   const SPFS::FileSystemHeader *_fs_header = nullptr; //!< Start address of the flash memory for the file system
   const uint8_t* _start_search_address = nullptr;
 
-  static constexpr uint32_t MAGIC_NUMBER = 0xA36CA3FA;              //!< Magic number for SPFS (SPFSv1.1)
-  static constexpr uint32_t SPFS_VERSION = 0x01010000;              //!< Version number for SPFS (SPFSv1.1)
-  static constexpr uint32_t VERSION_MAJOR_MASK = 0xFF000000;        //!< Major version mask
-  static constexpr uint32_t VERSION_MINOR_MASK = 0x00FF0000;        //!< Minor version mask
-  static constexpr uint32_t VERSION_PATCH_MASK = 0x0000FF00;        //!< Patch version mask
-  static constexpr uint32_t VERSION_BUILD_MASK = 0x000000FF;        //!< Build version mask
+  static constexpr uint32_t MAGIC_NUMBER = 0xA36CA3FA;                     //!< Magic number for SPFS (SPFSv1)
+  static constexpr uint32_t SPFS_VERSION = 0x01020000;                     //!< Version number for SPFS (SPFSv1.2)
+  static constexpr uint32_t SPFS_COMPATIBLE_VERSION = 0x01010000;          //!< Compatible version for SPFS (SPFSv1.1)
+  static constexpr uint32_t VERSION_MAJOR_MASK = 0xFF000000;               //!< Major version mask
+  static constexpr uint32_t VERSION_MINOR_MASK = 0x00FF0000;               //!< Minor version mask
+  static constexpr uint32_t VERSION_PATCH_MASK = 0x0000FF00;               //!< Patch version mask
+  static constexpr uint32_t VERSION_BUILD_MASK = 0x000000FF;               //!< Build version mask
 
-  static constexpr uint16_t MAGIC_FS_METADATA_NUMBER = 0xB50E;      //!< Magic number for SPFS File System Metadata (fsm)
+  static constexpr uint16_t MAGIC_FS_METADATA_NUMBER = 0xB50E;             //!< Magic number for SPFS File System Metadata (fsm)
 
-  static constexpr uint16_t MAGIC_DIR_NUMBER = 0x9314;              //!< Magic number for SPFS Directory (dir)
-  static constexpr uint16_t MAGIC_DIR_EXTENSION_NUMBER = 0x85E5;    //!< Magic number for SPFS Directory Extension (exd)
-  static constexpr uint16_t MAGIC_SUBDIRMARKER = 0xA498;            //!< Magic number for Directory entries (sdi)
-  static constexpr uint16_t MAGIC_FILEMARKER = 0xB313;              //!< Magic number for File entries (fil)
-  static constexpr uint16_t MAGIC_ENDMARKER = 0xFFFF;               //!< Magic number for End entries
+  static constexpr uint16_t MAGIC_DIR_NUMBER = 0x9314;                     //!< Magic number for SPFS Directory (dir)
+  static constexpr uint16_t MAGIC_DIR_EXTENSION_NUMBER = 0x85E5;           //!< Magic number for SPFS Directory Extension (exd)
+  static constexpr uint16_t MAGIC_SUBDIRMARKER = 0xA498;                   //!< Magic number for Directory entries (sdi)
+  static constexpr uint16_t MAGIC_FILEMARKER = 0xB313;                     //!< Magic number for File entries (fil)
+  static constexpr uint16_t MAGIC_ENDMARKER = 0xFFFF;                      //!< Magic number for End entries
 
-  static constexpr uint16_t MAGIC_FILE_NUMBER = 0xB313;             //!< Magic number for SPFS File (fil)
-  static constexpr uint16_t MAGIC_FILE_CONTENT_NUMBER = 0x70CD;     //!< Magic number for SPFS File Extension (con)
+  static constexpr uint16_t MAGIC_FILE_NUMBER = 0xB313;                    //!< Magic number for SPFS File (fil)
+  static constexpr uint16_t MAGIC_FILE_CONTENT_LEGACY_NUMBER = 0x70CD;     //!< Magic number for SPFS File Extension (con)
+  static constexpr uint16_t MAGIC_FILE_CONTENT_NUMBER = 0x9603;            //!< Magic number for SPFS File Extension (dat)
+  static constexpr uint16_t MAGIC_FILE_TAG_NUMBER = 0x0E16;                //!< Magic number for SPFS File Extension (tag)
 
-  static constexpr int FS_ALIGNMENT = 4096;                         //!< Alignment for SPFS operations
-  static constexpr int FS_BLOCK_SIZE = 256;                         //!< Block size for SPFS operations
+  static constexpr int FS_ALIGNMENT = 4096;                                //!< Alignment for SPFS operations
+  static constexpr int FS_BLOCK_SIZE = 256;                                //!< Block size for SPFS operations
 
   std::shared_ptr<Directory> createNewFileSystem(const void *address, size_t size, const std::string& fs_name, const std::string& root_dir_name);
   std::shared_ptr<Directory> findFileSystemStart(int start_offset, int end_offset);

@@ -89,7 +89,8 @@ std::shared_ptr<SPFS::Directory> SPFS::initializeFileSystem(const void *address)
     return nullptr;
   }
 
-  if((header->version & (VERSION_MAJOR_MASK | VERSION_MINOR_MASK)) != (SPFS_VERSION & (VERSION_MAJOR_MASK | VERSION_MINOR_MASK))){
+  if((header->version & (VERSION_MAJOR_MASK | VERSION_MINOR_MASK)) != (SPFS_VERSION & (VERSION_MAJOR_MASK | VERSION_MINOR_MASK)) &&
+     (header->version & (VERSION_MAJOR_MASK | VERSION_MINOR_MASK)) != (SPFS_COMPATIBLE_VERSION & (VERSION_MAJOR_MASK | VERSION_MINOR_MASK)))  {
     return nullptr;
   }
 
@@ -366,11 +367,24 @@ const void* SPFS::findFreeSpace(const uint8_t* start_search, size_t size){
       }
     }else{
       const SPFSBlockHeader* block_header = reinterpret_cast<const SPFSBlockHeader*>(search);
-      if(block_header->magic == MAGIC_DIR_NUMBER || block_header->magic == MAGIC_FILE_NUMBER ||
-         block_header->magic == MAGIC_DIR_EXTENSION_NUMBER || block_header->magic == MAGIC_FILE_CONTENT_NUMBER) {
-        // Occupied block, skip ahead by its size
-        search += block_header->size * FS_BLOCK_SIZE;
-        continue;
+      switch(block_header->magic) {
+        case MAGIC_DIR_NUMBER:
+        case MAGIC_FILE_NUMBER:
+        case MAGIC_DIR_EXTENSION_NUMBER:
+        case MAGIC_FILE_CONTENT_LEGACY_NUMBER:
+          // Occupied block, skip ahead by its size
+          search += block_header->size * FS_BLOCK_SIZE;
+          continue;
+        case MAGIC_FILE_CONTENT_NUMBER:
+          auto content_header = reinterpret_cast<const FileContentHeader*>(search);
+          if(content_header->reserved_blocks == 0) {
+            // since the reserved clocks are 0 we can assume that the content is valid and skip ahead by its size
+            search += block_header->size * FS_BLOCK_SIZE;
+          }else{
+            // Valid content header, skip ahead by reserved_blocks
+            search += content_header->reserved_blocks * FS_BLOCK_SIZE;
+          }
+          continue;
       }
     }
 
@@ -435,45 +449,59 @@ std::vector<SPFS::BlockState> SPFS::getBlockUsageMap() const {
   for(size_t block_index = 1; block_index < total_blocks && current_address < end_address; ) {
 
     const SPFSBlockHeader* block_header = reinterpret_cast<const SPFSBlockHeader*>(current_address);
-
-    if(block_header->magic == 0xFFFF) {
-      usage_map[block_index] = BlockState::FREE;
-      current_address += FS_BLOCK_SIZE;
-      block_index += 1;
-      continue;
-    }
-
-    size_t block_size = block_header->size;
-    if(block_index + block_size >= total_blocks) {
-      usage_map[block_index] = BlockState::BAD;
-      block_index += 1;
-      current_address += FS_BLOCK_SIZE;;
-      continue;
-    }
-
+    
+    auto block_marking = BlockState::BAD;
     switch(block_header->magic) {
       case MAGIC_DIR_NUMBER:
       case MAGIC_DIR_EXTENSION_NUMBER:
-        // Directory block
-        for(size_t b = 0; b < block_size; ++b) {
-            usage_map[block_index + b] = BlockState::USED_DIR;
-        }
+        block_marking = BlockState::USED_DIR;
         break;
       case MAGIC_FILE_NUMBER:
       case MAGIC_FILE_CONTENT_NUMBER:
-        // File block
-        for(size_t b = 0; b < block_size; ++b) {
-            usage_map[block_index + b] = BlockState::USED_FILE;
-        }
+      case MAGIC_FILE_CONTENT_LEGACY_NUMBER:
+        block_marking = BlockState::USED_FILE;
         break;
+      case 0xFFFF:
+        usage_map[block_index] = BlockState::FREE;
+        current_address += FS_BLOCK_SIZE;
+        block_index += 1;
+        continue;
       default:
-        // Unknown or bad block
-        for(size_t b = 0; b < block_size; ++b) {
-            usage_map[block_index + b] = BlockState::BAD;
-        }
         break;
     }
 
+    if(block_header->magic == MAGIC_FILE_CONTENT_NUMBER) {
+      auto content_header = reinterpret_cast<const FileContentHeader*>(current_address);
+      if(content_header->reserved_blocks == 0) {
+        // since the reserved clocks are 0 we can assume that the content is valid and skip ahead by its size
+        for(size_t b = 0; b < block_header->size; ++b) {
+            usage_map[block_index + b] = BlockState::USED_FILE;
+        }
+        current_address += block_header->size * FS_BLOCK_SIZE;
+        block_index += block_header->size;
+        continue;
+      }else{
+        // Valid content header, skip ahead by reserved_blocks
+        usage_map[block_index] = BlockState::USED_FILE;
+        for(size_t b = 1; b < content_header->reserved_blocks; ++b) {
+            usage_map[block_index + b] = BlockState::RESERVED_FILE;
+        }
+        current_address += content_header->reserved_blocks * FS_BLOCK_SIZE;
+        block_index += content_header->reserved_blocks;
+        continue;
+      }
+    }
+
+    size_t block_size = block_header->size;
+    if(block_size == 0xFFFF || block_index + block_size >= total_blocks) {
+      usage_map[block_index] = BlockState::BAD;
+      block_index += 1;
+      current_address += FS_BLOCK_SIZE;
+      continue;
+    }
+    for(size_t b = 0; b < block_size; ++b) {
+        usage_map[block_index + b] = block_marking;
+    }
     current_address += block_size * FS_BLOCK_SIZE;
     block_index += block_size;
   }

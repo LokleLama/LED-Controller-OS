@@ -1,6 +1,7 @@
 #include "SPFS.Internal.h"
 #include "flash.h"
 #include <cstring>
+#include <iostream>
 
 namespace {
 constexpr uint16_t kInvalidBlockOffset = 0xFFFF;
@@ -87,6 +88,9 @@ bool SPFS::File::allocateContentSize(size_t size) {
   contentheader->next_partition = 0xFFFF; // No next content
   contentheader->next_version = 0xFFFF; // No next content
 
+  contentheader->reserved_blocks = (uint16_t)((size + FS_BLOCK_SIZE - 1) / FS_BLOCK_SIZE);
+  contentheader->tag_metadata_block = 0xFFFF; // No tag
+
   if(Flash::write(buffer, _current_content_header) < (int)buffer.size()) {
     _current_content_header = nullptr;
     return false;
@@ -110,6 +114,14 @@ bool SPFS::File::append(const uint8_t* data, size_t size) {
   std::vector<uint8_t> buffer(FS_BLOCK_SIZE, 0xFF);
 
   auto pointer = reinterpret_cast<const uint8_t*>(_current_content_header) + (_append_position & ~(FS_BLOCK_SIZE - 1));
+
+  auto file_end_pointer = reinterpret_cast<const uint8_t*>(_current_content_header) + (_current_content_header->reserved_blocks * FS_BLOCK_SIZE);
+
+  if(pointer + size > file_end_pointer) {
+    std::cerr << "Not enough reserved space for content. Allocated: " << _current_content_header->reserved_blocks * FS_BLOCK_SIZE
+              << " bytes, required: " << (_append_position + size) << " bytes." << std::endl;
+    return false; // Not enough reserved space for content
+  }
 
   size_t current_pos = 0;
   while(current_pos < size) {
@@ -152,6 +164,7 @@ bool SPFS::File::finishContent() {
   contentheader->block.size = (uint16_t)((_append_position + FS_BLOCK_SIZE - 1) / FS_BLOCK_SIZE);
   contentheader->size = _append_position - (contentheader->data_offset & 0x00FF);
   contentheader->checksum = _fs->calculateCRC16(contentheader, sizeof(FileContentHeader) - sizeof(contentheader->checksum) - sizeof(contentheader->next_partition) - sizeof(contentheader->next_version));
+  contentheader->reserved_blocks = 0; // No more reserved blocks
 
   if(Flash::write(buffer, _current_content_header) < (int)buffer.size()) {
     return false;

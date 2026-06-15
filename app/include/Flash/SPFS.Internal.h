@@ -76,6 +76,17 @@ struct SPFS::FileMetadataHeader{
   uint16_t content_block;                //!< offset of the file content (in blocks)
 };
 
+struct SPFS::FileContentLegacyHeader{
+  SPFSBlockHeader block;                 //!< Block description
+  uint16_t size;                         //!< Size of the file data (in bytes)
+  uint16_t data_offset;                  //!< Offset within the current block of the file data (in bytes)
+                                         //!< - uint8_t offset;      //!< Offset within the current block of the file data (mask: 0x00FF) (in bytes)
+                                         //!< - uint8_t reserved;    //!< Reserved for future use (mask: 0xFF00) (must be 0xFF)
+  uint16_t checksum;                     //!< Checksum of the file data
+  uint16_t next_partition;               //!< offset of the next file content block (in blocks)
+  uint16_t next_version;                 //!< offset of the next file version content block (in blocks)
+};
+
 struct SPFS::FileContentHeader{
   SPFSBlockHeader block;                 //!< Block description
   uint16_t size;                         //!< Size of the file data (in bytes)
@@ -85,6 +96,19 @@ struct SPFS::FileContentHeader{
   uint16_t checksum;                     //!< Checksum of the file data
   uint16_t next_partition;               //!< offset of the next file content block (in blocks)
   uint16_t next_version;                 //!< offset of the next file version content block (in blocks)
+  uint16_t reserved_blocks;              //!< the size that has been reserved for the file content (in blocks)
+                                         //!< if no blocks have been reserved yet, this field will be 0xFFFF
+                                         //!< if the file content has been written to the reserved blocks, this field will be changed to 0
+  uint16_t tag_metadata_block;           //!< the offset in blocks to the tag metadata when this content has been tagged (in blocks) (untagged versions have 0xFFFF in this field)
+};
+
+struct SPFS::FileContentTagHeader{
+  SPFSBlockHeader block;                 //!< Block description
+  uint16_t tag_size;                     //!< Size of the tag data (in bytes)
+  uint16_t data_offset;                  //!< Offset within the current block of the tag data (in bytes)
+                                         //!< - uint8_t offset;      //!< Offset within the current block of the tag data (mask: 0x00FF) (in bytes)
+                                         //!< - uint8_t reserved;    //!< Reserved for future use (mask: 0xFF00) (must be 0xFF)
+  uint16_t checksum;                     //!< Checksum of the tag data
 };
 
 inline SPFS::ReadOnlyFileStreamBuf::ReadOnlyFileStreamBuf(const uint8_t* data, size_t size)

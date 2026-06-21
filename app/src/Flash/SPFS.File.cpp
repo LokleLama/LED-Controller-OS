@@ -12,28 +12,13 @@ SPFS::File::File(std::shared_ptr<Directory> parent, const std::string& name) : F
   if(file != nullptr){
     _fs = file->_fs;
     _header = file->_header;
-    FindCurrentContentHeader();
+    _content_header = FindNewestContentHeader(getMetadataHeader(), _content_version);
   }else{
     file = parent->createFile(name);
     if(file != nullptr){
       _fs = file->_fs;
       _header = file->_header;
     }
-  }
-}
-
-void SPFS::File::FindCurrentContentHeader() {
-  if(_content_header != nullptr) {
-    return;
-  }
-  _content_version = 0;
-  uint16_t next_block = getMetadataHeader()->content_block;
-  const void* content_address = reinterpret_cast<const void*>(_header);
-  while (next_block != 0xFFFF) {
-    _content_version++;
-    _content_header = _fs->calculateContentHeaderAddress(content_address, next_block);
-    content_address = _content_header;
-    next_block = _content_header->next_version;
   }
 }
 

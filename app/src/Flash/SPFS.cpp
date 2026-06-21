@@ -201,7 +201,7 @@ const SPFS::FileContentHeader* SPFS::calculateContentHeaderAddress(const void* r
   if(content_block_offset == kInvalidBlockOffset) {
     return nullptr;
   }
-  const uint8_t* content_address = reinterpret_cast<const uint8_t*>(reference_address);
+  uintptr_t content_address = reinterpret_cast<uintptr_t>(reference_address);
   if((content_block_offset & 0x8000) == 0){
     content_address += (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
   }else{

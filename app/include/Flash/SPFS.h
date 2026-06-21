@@ -108,6 +108,10 @@ public:
       const FileHeader* _header;                //!< Header information for the file
       const FileContentHeader* _content_header; //!< Header information for the file content
       size_t _content_version;                  //!< Version of the file content
+
+      const FileContentHeader* FindNewestContentHeader(const FileMetadataHeader* metadata_header, size_t& version_counter) const;
+      const FileContentHeader* FindNewestContentHeader(const FileContentHeader* content_header) const;
+      const FileContentHeader* FindNewestContentHeader(const FileContentHeader* content_header, size_t& version_counter) const;
   };
   class File : public ReadOnlyFile{
     public:
@@ -115,7 +119,6 @@ public:
 
     protected:
       File(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header);
-      void FindCurrentContentHeader();
 
     public:
       bool write(const std::string& data);

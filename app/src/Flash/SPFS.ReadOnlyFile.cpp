@@ -22,7 +22,7 @@ size_t SPFS::ReadOnlyFile::getSizeOnDisk() const {
   size_t total_size_on_disk = _header->block.size;
   uint16_t next_block = getMetadataHeader()->content_block;
   const void* content_address = reinterpret_cast<const void*>(_header);
-  while (next_block != 0xFFFF) {
+  while (next_block != kInvalidBlockOffset) {
     auto content_header = _fs->calculateContentHeaderAddress(content_address, next_block);
     content_address = content_header;
     total_size_on_disk += content_header->block.size;
@@ -108,4 +108,33 @@ std::unique_ptr<std::istream> SPFS::ReadOnlyFile::getInputStream() const {
   
   // The istream will take ownership of the streambuf and delete it when done
   return stream;
+}
+
+const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const SPFS::FileMetadataHeader* metadata_header, size_t& version_counter) const {
+  version_counter = 0;
+  uint16_t next_block = metadata_header->content_block;
+  if(next_block == kInvalidBlockOffset) {
+    return nullptr; // No content blocks
+  }
+  version_counter++;
+  return FindNewestContentHeader(_fs->calculateContentHeaderAddress(_header, next_block), version_counter);
+}
+
+const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const SPFS::FileContentHeader* content_header) const {
+  size_t version_counter = 0;
+  return FindNewestContentHeader(content_header, version_counter);
+}
+
+const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const SPFS::FileContentHeader* content_header, size_t& version_counter) const {
+  uint16_t next_block = content_header->next_version;
+  while (next_block != kInvalidBlockOffset) {
+    version_counter++;
+    content_header = _fs->calculateContentHeaderAddress(content_header, next_block);
+    next_block = content_header->next_version;
+  }
+  return content_header;
+}
+
+bool SPFS::ReadOnlyFile::restoreVersion(){
+  return false;
 }

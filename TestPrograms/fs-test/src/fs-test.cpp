@@ -289,13 +289,8 @@ int main(int argc, char **argv) {
   }
 
   printf("******************************\n");
-  std::shared_ptr<SPFS> new_fs = std::make_shared<SPFS>();
-  if(!new_fs->createNewFileSystem(2*1024*1024 - 256*1024, 256*1024, "NewFS", "new_root")) {
-    printf("ERROR: Failed to create new filesystem\n");
-    return -1;
-  }
 
-  Console console(new_fs);
+  Console console(spfs);
   console.ExecuteTask(1);
 
   SaveFlashStateInFlashFile();

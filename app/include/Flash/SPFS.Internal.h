@@ -170,7 +170,7 @@ inline const SPFS::FileContentHeader* SPFS::ReadOnlyFile::getContentHeader() con
 
 inline SPFS::File::File(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header)
     : ReadOnlyFile(fs, parent, header, nullptr, 0) {
-  FindCurrentContentHeader();
+  _content_header = FindNewestContentHeader(getMetadataHeader(), _content_version);
 }
 
 inline SPFS::Directory::Directory(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent,

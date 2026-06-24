@@ -66,7 +66,7 @@ std::vector<uint8_t> SPFS::ReadOnlyFile::readBytes(size_t offset, size_t size) c
   return data_vector;
 }
 
-std::shared_ptr<const SPFS::ReadOnlyFile> SPFS::ReadOnlyFile::openVersion(size_t version) const{
+std::shared_ptr<SPFS::ReadOnlyFile> SPFS::ReadOnlyFile::openVersion(size_t version) {
   if(version > _content_version) {
     return nullptr;
   }
@@ -74,7 +74,7 @@ std::shared_ptr<const SPFS::ReadOnlyFile> SPFS::ReadOnlyFile::openVersion(size_t
     return shared_from_this();
   }
   if(version == 0) {
-    return std::make_shared<const SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, nullptr, 0);
+    return std::make_shared<SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, nullptr, 0);
   }
 
   const FileContentHeader* content_header = nullptr;
@@ -90,7 +90,7 @@ std::shared_ptr<const SPFS::ReadOnlyFile> SPFS::ReadOnlyFile::openVersion(size_t
     }
     next_block = content_header->next_version;
   }
-  return std::make_shared<const SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, content_header, version);
+  return std::make_shared<SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, content_header, version);
 }
 
 std::unique_ptr<std::istream> SPFS::ReadOnlyFile::getInputStream() const {
@@ -135,6 +135,83 @@ const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const
   return content_header;
 }
 
-bool SPFS::ReadOnlyFile::restoreVersion(){
-  return false;
+bool SPFS::ReadOnlyFile::createTag(const std::string& tag_description){
+  if(_content_header == nullptr) {
+    return false; // No content to tag
+  }
+
+  if(_content_header->tag_metadata_block != kInvalidBlockOffset) {
+    return false; // Tag already exists
+  }
+  
+  auto tag_header_address = _fs->findFreeSpaceForFileContentTag(tag_description.length());
+  if(tag_header_address == nullptr) {
+    return false; // No space available for tag
+  }
+
+  const uint8_t* data = reinterpret_cast<const uint8_t*>(tag_description.data());
+  size_t current_pos = 0;
+
+  std::vector<uint8_t> buffer(FS_BLOCK_SIZE, 0xFF);
+
+  FileContentTagHeader *tag_header = reinterpret_cast<FileContentTagHeader *>(buffer.data());
+  tag_header->block.magic = MAGIC_FILE_TAG_NUMBER;
+  tag_header->tag_size = tag_description.length();
+  tag_header->data_offset = ((sizeof(FileContentTagHeader) + 3) & 0x00FC) | 0xFF00; // Align to 4 bytes
+
+  size_t data_offset = tag_header->data_offset & 0x00FF;
+
+  tag_header->block.size = (uint16_t)((data_offset + tag_description.length() + FS_BLOCK_SIZE - 1) / FS_BLOCK_SIZE);
+  tag_header->checksum = _fs->calculateCRC16(tag_header, sizeof(FileContentTagHeader) - sizeof(tag_header->checksum));
+
+  size_t to_copy = tag_description.length();
+  if(to_copy > FS_BLOCK_SIZE - data_offset) {
+    to_copy = FS_BLOCK_SIZE - data_offset;
+  }
+  memcpy(buffer.data() + data_offset, data, to_copy);
+  current_pos += to_copy;
+
+  if(Flash::write(buffer, tag_header_address) < (int)buffer.size()) {
+    return false;
+  }
+
+  const uint8_t* pointer = reinterpret_cast<const uint8_t*>(tag_header_address) + FS_BLOCK_SIZE;
+  while(current_pos < tag_description.length()) {
+    size_t to_copy = tag_description.length() - current_pos;
+    if(to_copy > FS_BLOCK_SIZE) {
+      to_copy = FS_BLOCK_SIZE;
+    }else{
+      memset(buffer.data() + to_copy, 0xFF, FS_BLOCK_SIZE - to_copy);
+    }
+    memcpy(buffer.data(), data + current_pos, to_copy);
+    if(Flash::write(buffer, pointer) < (int)buffer.size()) {
+      return false;
+    }
+    current_pos += to_copy;
+    pointer += FS_BLOCK_SIZE;
+  }
+
+  if(Flash::read(buffer, _content_header) != (int)buffer.size()) {
+    return false;
+  }
+  FileContentHeader *contentheader = reinterpret_cast<FileContentHeader *>(buffer.data());
+  contentheader->tag_metadata_block = _fs->calculateContentTagBlockOffset(_content_header, tag_header_address);
+  if(Flash::write(buffer, _content_header) < (int)buffer.size()) {
+    return false;
+  }
+  return true;
+}
+
+std::string SPFS::ReadOnlyFile::readTag() const{
+  if(_content_header == nullptr || _content_header->tag_metadata_block == kInvalidBlockOffset) {
+    return {}; // No content or no tag
+  }
+
+  auto tag_header = _fs->calculateContentTagHeaderAddress(_content_header, _content_header->tag_metadata_block);
+  if(tag_header == nullptr || tag_header->block.magic != MAGIC_FILE_TAG_NUMBER) {
+    return {}; // Invalid tag header
+  }
+
+  const uint8_t* data_ptr = reinterpret_cast<const uint8_t*>(tag_header) + (tag_header->data_offset & 0x00FF);
+  return std::string(reinterpret_cast<const char*>(data_ptr), tag_header->tag_size);
 }

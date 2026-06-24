@@ -11,6 +11,7 @@
 #include "Commands/CatCommand.h"
 #include "Commands/FSInfoCommand.h"
 #include "Commands/StoreCommand.h"
+#include "Commands/TagCommand.h"
 
 Console::Console(std::shared_ptr<SPFS> fs)  : _fs(fs) {
     // You can register default commands here if needed
@@ -24,6 +25,7 @@ Console::Console(std::shared_ptr<SPFS> fs)  : _fs(fs) {
     registerCommand(std::make_shared<CatCommand>(*this));
     registerCommand(std::make_shared<FSInfoCommand>(*this));
     registerCommand(std::make_shared<StoreCommand>(*this));
+    registerCommand(std::make_shared<TagCommand>(*this));
 }
 
 bool Console::registerCommand(std::shared_ptr<ICommand> command) {

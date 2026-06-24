@@ -187,14 +187,20 @@ std::shared_ptr<SPFS::FileInternal> SPFS::createFile(const void* address, const 
 }
 
 uint16_t SPFS::calculateContentBlockOffset(const void* reference_address, const SPFS::FileContentHeader* content_header) const {
-  uint16_t content_block_offset = kInvalidBlockOffset;
-  if(reinterpret_cast<const uint8_t*>(content_header) > reinterpret_cast<const uint8_t*>(reference_address)){
-    content_block_offset = (uint16_t)((reinterpret_cast<const uint8_t*>(content_header) - reinterpret_cast<const uint8_t*>(reference_address)) / FS_BLOCK_SIZE);
-  }else{
-    content_block_offset = (uint16_t)((reinterpret_cast<const uint8_t*>(reference_address) - reinterpret_cast<const uint8_t*>(content_header)) / FS_BLOCK_SIZE);
-    content_block_offset |= 0x8000; // Negative offset
+  return calculateBlockOffset(reinterpret_cast<const uint8_t*>(reference_address), reinterpret_cast<const uint8_t*>(content_header));
+}
+uint16_t SPFS::calculateContentTagBlockOffset(const void* reference_address, const FileContentTagHeader* tag_header) const {
+  return calculateBlockOffset(reinterpret_cast<const uint8_t*>(reference_address), reinterpret_cast<const uint8_t*>(tag_header));
+}
+uint16_t SPFS::calculateBlockOffset(const uint8_t* reference_address, const uint8_t* address) const {
+  if(address == nullptr || reference_address == nullptr) {
+    return kInvalidBlockOffset;
   }
-  return content_block_offset;
+  if(address > reference_address) {
+    return static_cast<uint16_t>((address - reference_address) / FS_BLOCK_SIZE);
+  } else {
+    return static_cast<uint16_t>((reference_address - address) / FS_BLOCK_SIZE) | 0x8000;
+  }
 }
 
 const SPFS::FileContentHeader* SPFS::calculateContentHeaderAddress(const void* reference_address, uint16_t content_block_offset) const {
@@ -208,6 +214,19 @@ const SPFS::FileContentHeader* SPFS::calculateContentHeaderAddress(const void* r
     content_address -= (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
   }
   return reinterpret_cast<const FileContentHeader*>(content_address);
+}
+
+const SPFS::FileContentTagHeader* SPFS::calculateContentTagHeaderAddress(const void* reference_address, uint16_t content_block_offset) const {
+  if(content_block_offset == kInvalidBlockOffset) {
+    return nullptr;
+  }
+  uintptr_t content_address = reinterpret_cast<uintptr_t>(reference_address);
+  if((content_block_offset & 0x8000) == 0){
+    content_address += (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
+  }else{
+    content_address -= (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
+  }
+  return reinterpret_cast<const FileContentTagHeader*>(content_address);
 }
 
 std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {
@@ -332,6 +351,9 @@ const SPFS::FileHeader* SPFS::findFreeSpaceForFile(size_t name_size){
 }
 const SPFS::FileContentHeader* SPFS::findFreeSpaceForFileContent(size_t content_size){
   return reinterpret_cast<const SPFS::FileContentHeader*>(SPFS::findFreeSpace(sizeof(SPFS::FileContentHeader) + content_size));
+}
+const SPFS::FileContentTagHeader* SPFS::findFreeSpaceForFileContentTag(size_t tag_size){
+  return reinterpret_cast<const SPFS::FileContentTagHeader*>(SPFS::findFreeSpace(sizeof(SPFS::FileContentTagHeader) + tag_size));
 }
 const void* SPFS::findFreeSpace(size_t size){
   if(_start_search_address == nullptr){

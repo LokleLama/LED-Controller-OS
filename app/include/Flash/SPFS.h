@@ -80,7 +80,7 @@ public:
       
       size_t getVersion() const { return _content_version; }
 
-      std::shared_ptr<const ReadOnlyFile> openVersion(size_t version) const;
+      std::shared_ptr<ReadOnlyFile> openVersion(size_t version);
 
       std::string readAsString() const;
       std::vector<uint8_t> readAsVector() const;
@@ -99,8 +99,6 @@ public:
       bool createTag(const std::string& tag_description);
       std::string readTag() const;
       bool deleteTag();
-
-      bool restoreVersion();
 
     protected:
       std::shared_ptr<SPFS> _fs;                //!< Reference to the SPFS instance
@@ -270,11 +268,15 @@ private:
   const DirectoryHeader* findFreeSpaceForDirectory(size_t name_size);
   const FileHeader* findFreeSpaceForFile(size_t name_size);
   const FileContentHeader* findFreeSpaceForFileContent(size_t content_size);
+  const FileContentTagHeader* findFreeSpaceForFileContentTag(size_t tag_size);
   const void* findFreeSpace(const uint8_t* start_search, size_t size);
   const void* findFreeSpace(size_t size);
 
   uint16_t calculateContentBlockOffset(const void* reference_address, const FileContentHeader* content_header) const;
+  uint16_t calculateContentTagBlockOffset(const void* reference_address, const FileContentTagHeader* tag_header) const;
+  uint16_t calculateBlockOffset(const uint8_t* reference_address, const uint8_t* address) const;
   const FileContentHeader* calculateContentHeaderAddress(const void* reference_address, uint16_t content_block_offset) const;
+  const FileContentTagHeader* calculateContentTagHeaderAddress(const void* reference_address, uint16_t content_block_offset) const;
 
   uint32_t calculateCRC32(const void *address, size_t size);
   uint16_t calculateCRC16(const void *address, size_t size);

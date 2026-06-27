@@ -15,6 +15,7 @@ struct config_t {
   size_t sector_size;
   size_t page_size;
   std::string flash_file;
+  std::string mount_file;
 
   uint8_t* flash_data;
 } config = {
@@ -24,6 +25,7 @@ struct config_t {
     .sector_size = 4096,
     .page_size = 256,
     .flash_file = "flash",
+    .mount_file = "",
     .flash_data = NULL
 };
 
@@ -128,164 +130,220 @@ static std::shared_ptr<SPFS::Directory> CreateSubDirectory(std::shared_ptr<SPFS:
 }
 
 int main(int argc, char **argv) {
-  printf("Usage: fs-test [filesystem-size]\n");
-  if (argc > 1) {
-    config.fs_size = strtoul(argv[1], NULL, 0);
-    printf("round size argument %zu", config.fs_size);
-    config.fs_size = RoundSizeToSector(config.fs_size);
-    printf(" to %zu\n", config.fs_size);
-  }
+  printf("Usage: fs-test [-s <filesystem-size>] [-m <flash-file>]\n");
 
-  OpenOrCreateFlashFile();
-  if (config.flash_data == NULL) {
-    return -1;
-  }
+  bool mount_mode = false;
 
-  FlashHAL::setFlashMemoryOffset(config.flash_data);
-
-  printf("******************************\n");
-  printf("using flash file %s-in.bin\n", config.flash_file.c_str());
-  printf("saving result in %s-out.bin\n", config.flash_file.c_str());
-  printf("using flash offset of %zu\n", config.fs_offset);
-  printf("using flash size of %zu\n", config.fs_size);
-  printf("using flash sector size of %zu\n", config.sector_size);
-  printf("using flash page size of %zu\n", config.page_size);
-  printf("using flash Size of %zu\n", config.flash_size);
-
-  std::shared_ptr<SPFS> spfs = std::make_shared<SPFS>();
-  auto root = spfs->searchFileSystem(0);
-
-  if(root == nullptr) {
-    printf("ERROR: No valid filesystem found\n");
-    return -1;
-  }
-
-  printf("******************************\n");
-  printf("File System Size      : %i\n", spfs->getFileSystemSize());
-  printf("Directory Name        : %s\n", root->getName().c_str());
-  printf("Directory Disk Space  : %zu bytes\n", root->getSizeOnDisk());
-
-  CreateSubDirectory(root, "config");
-  auto data = CreateSubDirectory(root, "data");
-
-  CreateSubDirectory(data, "files");
-
-  printf("******************************\n");
-  printf("reopening the same filesystem\n");
-  std::shared_ptr<SPFS> reopened_spfs = std::make_shared<SPFS>();
-  auto reopened_root = reopened_spfs->searchFileSystem(0);
-  printf("File System Size      : %i\n", spfs->getFileSystemSize());
-  printf("Root Directory Name   : %s\n", reopened_root->getName().c_str());
-  printf("Directory Disk Space  : %zu bytes\n", reopened_root->getSizeOnDisk());
-
-  auto subdirs = reopened_root->getSubdirectories();
-  std::shared_ptr<SPFS::Directory> data_dir = nullptr;
-
-  printf("Found Subdirectories  : ");
-  for (const auto& dir : subdirs) {
-    printf("%s, ", dir->getName().c_str());
-    if(dir->getName() == "data") {
-      data_dir = dir;
+  for(int i = 1; i < argc; ++i) {
+    if (strcmp(argv[i], "-s") == 0 && i + 1 < argc) {
+      i++;
+      config.fs_size = strtoul(argv[i], NULL, 0);
+      printf("round size argument %zu", config.fs_size);
+      config.fs_size = RoundSizeToSector(config.fs_size);
+      printf(" to %zu\n", config.fs_size);
+    } else if (strcmp(argv[i], "-m") == 0 && i + 1 < argc) {
+      i++;
+      config.mount_file = std::string(argv[i]);
+      mount_mode = true;
+    } else {
+      printf("Unknown argument: %s\n", argv[i]);
     }
   }
-  printf("\n");
 
-  if(data_dir == nullptr) {
-    printf("ERROR: Failed to find 'data' subdirectory\n");
-    return -1;
-  }
+  std::shared_ptr<SPFS> spfs;
+  if(!mount_mode) {
+    OpenOrCreateFlashFile();
+    if (config.flash_data == NULL) {
+      return -1;
+    }
 
-  printf("******************************\n");
-  printf("creating new files in the \"%s\" directory\n", data_dir->getName().c_str());
-  auto file1 = data_dir->createFile("testfile.txt");
-  data_dir->createFile("testfile1.txt");
+    FlashHAL::setFlashMemoryOffset(config.flash_data);
 
-  auto files = data_dir->getFiles();
-  printf("Found Files           : ");
-  for (const auto& file : files) {
-    printf("%s, ", file->getName().c_str());
-  }
-  printf("\n");
+    printf("******************************\n");
+    printf("using flash file %s-in.bin\n", config.flash_file.c_str());
+    printf("saving result in %s-out.bin\n", config.flash_file.c_str());
+    printf("using flash offset of %zu\n", config.fs_offset);
+    printf("using flash size of %zu\n", config.fs_size);
+    printf("using flash sector size of %zu\n", config.sector_size);
+    printf("using flash page size of %zu\n", config.page_size);
+    printf("using flash Size of %zu\n", config.flash_size);
 
-  printf("******************************\n");
-  printf("getting stats of file \"%s\"\n", file1->getName().c_str());
-  printf("File Version          : %zu\n", file1->getVersion());
-  printf("File Size             : %zu bytes\n", file1->getSize());
-  printf("File Size on Disk     : %zu bytes\n", file1->getSizeOnDisk());
+    spfs = std::make_shared<SPFS>();
+    auto root = spfs->searchFileSystem(0);
 
-  printf("******************************\n");
-  printf("add content to file \"%s\"\n", file1->getName().c_str());
+    if(root == nullptr) {
+      printf("ERROR: No valid filesystem found\n");
+      return -1;
+    }
 
-  std::string file_content = "This is a test content for the file.\n"
-                             "It has multiple lines.\n"
-                             "This is line 3.\n"
-                             "End of file.";
-  if (file1->write(file_content)) {
-    printf("Wrote string of length %zu\n", file_content.length());
-  } else {
-    printf("ERROR: Failed to write to file \"%s\"\n", file1->getName().c_str());
-    return -1;
-  }
+    printf("******************************\n");
+    printf("File System Size      : %i\n", spfs->getFileSystemSize());
+    printf("Directory Name        : %s\n", root->getName().c_str());
+    printf("Directory Disk Space  : %zu bytes\n", root->getSizeOnDisk());
 
-  printf("******************************\n");
-  printf("getting stats of file \"%s\"\n", file1->getName().c_str());
-  printf("File Version          : %zu\n", file1->getVersion());
-  printf("File Size             : %zu bytes\n", file1->getSize());
-  printf("File Size on Disk     : %zu bytes\n", file1->getSizeOnDisk());
+    CreateSubDirectory(root, "config");
+    auto data = CreateSubDirectory(root, "data");
 
-  printf("******************************\n");
-  printf("add content to file \"%s\"\n", file1->getName().c_str());
+    CreateSubDirectory(data, "files");
 
-  std::string file_content_300 = "This is a test content for the file with at least 300 bytes of data.\n"
-                                 "It has multiple lines to ensure the content is long enough.\n"
-                                 "This is line 3 of the test content.\n"
-                                 "Line 4: The file system needs to handle larger file contents correctly.\n"
-                                 "Line 5: Additional padding to ensure we reach the minimum 300 byte threshold.\n"
-                                 "Line 6: Testing file I/O with a reasonable amount of test data.\n"
-                                 "End of file content - this string is now over 300 bytes long.";
-  if (file1->write(file_content_300)) {
-    printf("Wrote string of length %zu\n", file_content_300.length());
-  } else {
-    printf("ERROR: Failed to write to file \"%s\"\n", file1->getName().c_str());
-    return -1;
-  }
+    printf("******************************\n");
+    printf("reopening the same filesystem\n");
+    std::shared_ptr<SPFS> reopened_spfs = std::make_shared<SPFS>();
+    auto reopened_root = reopened_spfs->searchFileSystem(0);
+    printf("File System Size      : %i\n", reopened_spfs->getFileSystemSize());
+    printf("Root Directory Name   : %s\n", reopened_root->getName().c_str());
+    printf("Directory Disk Space  : %zu bytes\n", reopened_root->getSizeOnDisk());
 
-  printf("******************************\n");
-  printf("getting stats of file \"%s\"\n", file1->getName().c_str());
-  printf("File Version          : %zu\n", file1->getVersion());
-  printf("File Size             : %zu bytes\n", file1->getSize());
-  printf("File Size on Disk     : %zu bytes\n", file1->getSizeOnDisk());
-  printf("******************************\n");
-  printf("reading current file content of \"%s\"\n", file1->getName().c_str());
-  std::string read_content = file1->readAsString();
-  printf("File Content          : \"%s\"\n", read_content.c_str());
+    auto subdirs = reopened_root->getSubdirectories();
+    std::shared_ptr<SPFS::Directory> data_dir = nullptr;
 
-  printf("******************************\n");
-  printf("opening old version of \"%s\"\n", file1->getName().c_str());
-  auto old_version_file = file1->openVersion(1);
-  if (old_version_file != nullptr) {
-    printf("File Size             : %zu bytes\n", old_version_file->getSize());
-    printf("File Size on Disk     : %zu bytes\n", old_version_file->getSizeOnDisk());
-    std::string old_content = old_version_file->readAsString();
-    printf("Version %zu Content     : \"%s\"\n", old_version_file->getVersion(), old_content.c_str());
-  } else {
-    printf("ERROR: Failed to open old version of file \"%s\"\n", file1->getName().c_str());
-    return -1;
-  }
+    printf("Found Subdirectories  : ");
+    for (const auto& dir : subdirs) {
+      printf("%s, ", dir->getName().c_str());
+      if(dir->getName() == "data") {
+        data_dir = dir;
+      }
+    }
+    printf("\n");
 
-  printf("******************************\n");
-  printf("creating a hardlink with different name to file \"%s\"\n", file1->getName().c_str());
-  auto hardlink_file = data_dir->createHardlink(file1, "hardlink_to_testfile.txt");
-  if (hardlink_file != nullptr) {
-    printf("Created hardlink file          : %s\n", hardlink_file->getName().c_str());
-    printf("Hardlink File Size             : %zu bytes\n", hardlink_file->getSize());
-    printf("Hardlink File Size on Disk     : %zu bytes\n", hardlink_file->getSizeOnDisk());
-    printf("File Version                   : %zu\n", hardlink_file->getVersion());
-    std::string hardlink_content = hardlink_file->readAsString();
-    printf("Hardlink File Content          : \"%s\"\n", hardlink_content.c_str());
-  } else {
-    printf("ERROR: Failed to create hardlink to file \"%s\"\n", file1->getName().c_str());
-    return -1;
+    if(data_dir == nullptr) {
+      printf("ERROR: Failed to find 'data' subdirectory\n");
+      return -1;
+    }
+
+    printf("******************************\n");
+    printf("creating new files in the \"%s\" directory\n", data_dir->getName().c_str());
+    auto file1 = data_dir->createFile("testfile.txt");
+    data_dir->createFile("testfile1.txt");
+
+    auto files = data_dir->getFiles();
+    printf("Found Files           : ");
+    for (const auto& file : files) {
+      printf("%s, ", file->getName().c_str());
+    }
+    printf("\n");
+
+    printf("******************************\n");
+    printf("getting stats of file \"%s\"\n", file1->getName().c_str());
+    printf("File Version          : %zu\n", file1->getVersion());
+    printf("File Size             : %zu bytes\n", file1->getSize());
+    printf("File Size on Disk     : %zu bytes\n", file1->getSizeOnDisk());
+
+    printf("**************************************************************\n");
+    printf("add content to file \"%s\"\n", file1->getName().c_str());
+
+    std::string file_content = "This is a test content for the file.\n"
+                              "It has multiple lines.\n"
+                              "This is line 3.\n"
+                              "End of file.";
+    if (file1->write(file_content)) {
+      printf("Wrote string of length %zu\n", file_content.length());
+    } else {
+      printf("ERROR: Failed to write to file \"%s\"\n", file1->getName().c_str());
+      return -1;
+    }
+
+    printf("******************************\n");
+    printf("getting stats of file \"%s\"\n", file1->getName().c_str());
+    printf("File Version          : %zu\n", file1->getVersion());
+    printf("File Size             : %zu bytes\n", file1->getSize());
+    printf("File Size on Disk     : %zu bytes\n", file1->getSizeOnDisk());
+
+    printf("**************************************************************\n");
+    printf("add content to file \"%s\"\n", file1->getName().c_str());
+
+    std::string file_content_300 = "This is a test content for the file with at least 300 bytes of data.\n"
+                                  "It has multiple lines to ensure the content is long enough.\n"
+                                  "This is line 3 of the test content.\n"
+                                  "Line 4: The file system needs to handle larger file contents correctly.\n"
+                                  "Line 5: Additional padding to ensure we reach the minimum 300 byte threshold.\n"
+                                  "Line 6: Testing file I/O with a reasonable amount of test data.\n"
+                                  "End of file content - this string is now over 300 bytes long.";
+    if (file1->write(file_content_300)) {
+      printf("Wrote string of length %zu\n", file_content_300.length());
+    } else {
+      printf("ERROR: Failed to write to file \"%s\"\n", file1->getName().c_str());
+      return -1;
+    }
+
+    printf("******************************\n");
+    printf("getting stats of file \"%s\"\n", file1->getName().c_str());
+    printf("File Version          : %zu\n", file1->getVersion());
+    printf("File Size             : %zu bytes\n", file1->getSize());
+    printf("File Size on Disk     : %zu bytes\n", file1->getSizeOnDisk());
+    printf("******************************\n");
+    printf("reading current file content of \"%s\"\n", file1->getName().c_str());
+    std::string read_content = file1->readAsString();
+    printf("File Content          : \"%s\"\n", read_content.c_str());
+
+    printf("******************************\n");
+    printf("opening old version of \"%s\"\n", file1->getName().c_str());
+    auto old_version_file = file1->openVersion(1);
+    if (old_version_file != nullptr) {
+      printf("File Size             : %zu bytes\n", old_version_file->getSize());
+      printf("File Size on Disk     : %zu bytes\n", old_version_file->getSizeOnDisk());
+      std::string old_content = old_version_file->readAsString();
+      printf("Version %zu Content     : \"%s\"\n", old_version_file->getVersion(), old_content.c_str());
+    } else {
+      printf("ERROR: Failed to open old version of file \"%s\"\n", file1->getName().c_str());
+      return -1;
+    }
+
+    printf("******************************\n");
+    printf("creating a hardlink with different name to file \"%s\"\n", file1->getName().c_str());
+    auto hardlink_file = data_dir->createHardlink(file1, "hardlink_to_testfile.txt");
+    if (hardlink_file != nullptr) {
+      printf("Created hardlink file          : %s\n", hardlink_file->getName().c_str());
+      printf("Hardlink File Size             : %zu bytes\n", hardlink_file->getSize());
+      printf("Hardlink File Size on Disk     : %zu bytes\n", hardlink_file->getSizeOnDisk());
+      printf("File Version                   : %zu\n", hardlink_file->getVersion());
+      std::string hardlink_content = hardlink_file->readAsString();
+      printf("Hardlink File Content          : \"%s\"\n", hardlink_content.c_str());
+    } else {
+      printf("ERROR: Failed to create hardlink to file \"%s\"\n", file1->getName().c_str());
+      return -1;
+    }
+  }else{
+    printf("******************************\n");
+    printf("mounting filesystem from file %s\n", config.mount_file.c_str());
+
+    FILE* f = fopen(config.mount_file.c_str(), "r+b");
+    if (f == NULL) {
+      printf("Failed to open mount file \"%s\"\n", config.mount_file.c_str());
+      return -1;
+    }
+    //find filesize
+    printf("Opened file \"%s\"\n", config.mount_file.c_str());
+    fseek(f, 0, SEEK_END);
+    config.flash_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    // read it
+    config.flash_data = (uint8_t*)malloc(config.flash_size);
+    if (config.flash_data == NULL) {
+      perror("Failed to allocate flash data");
+      fclose(f);
+      return -1;
+    }
+
+    if (fread(config.flash_data, 1, config.flash_size, f) != config.flash_size) {
+      perror("Failed to read flash data");
+      free(config.flash_data);
+      fclose(f);
+      return -1;
+    }
+
+    fclose(f);
+
+    printf("File System Size      : %zu\n", config.flash_size);
+    FlashHAL::setFlashMemoryOffset(config.flash_data);
+
+    spfs = std::make_shared<SPFS>();
+    auto root = spfs->searchFileSystem(0);
+    if(root == nullptr) {
+      printf("ERROR: No valid filesystem found\n");
+      return -1;
+    }
   }
 
   printf("******************************\n");

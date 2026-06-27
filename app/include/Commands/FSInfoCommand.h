@@ -12,7 +12,7 @@ public:
   const std::string getName() const override { return "fsinfo"; }
 
   const std::string getHelp() const override {
-    return "Usage: fsinfo [--map]\n"
+    return "Usage: fsinfo [--no-map]\n"
            "       Displays information about the file system.";
   }
 
@@ -64,8 +64,8 @@ public:
     std::cout << "        - Used Blocks for Directories: " << used_dir_blocks << std::endl;
     std::cout << "     * Bad Blocks: " << bad_blocks << std::endl;
 
-    if(args.size() > 1 && args[1] == "--map") {
-      std::cout << "Block Usage Map (.=Free, U=Used, F=Used File, R=Reserved File, D=Used Directory, B=Bad):" << std::endl;
+    if(args.size() <= 1 || args[1] != "--no-map") {
+      std::cout << "Block Usage Map (.=Free, U=Used, F=Used by File, R=Reserved for File, D=Used by Directory, B=Bad):" << std::endl;
       for(size_t i = 0; i < usage_map.size(); i++) {
         switch(usage_map[i]) {
           case SPFS::BlockState::FREE:

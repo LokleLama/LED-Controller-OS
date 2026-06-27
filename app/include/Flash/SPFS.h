@@ -141,7 +141,7 @@ public:
     private:
       size_t _allocated_content_size = 0; //!< Allocated size for content
       size_t _append_position = 0; //!< Current position for appending data
-      const FileContentHeader* _current_content_header = nullptr; //!< Current content header for appending data
+      const FileContentHeader* _reserved_content_header = nullptr; //!< Current content header for appending data
   };
   class Directory : public std::enable_shared_from_this<Directory> {
     public:

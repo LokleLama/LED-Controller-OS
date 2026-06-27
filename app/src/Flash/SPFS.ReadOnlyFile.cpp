@@ -116,8 +116,18 @@ const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const
   if(next_block == kInvalidBlockOffset) {
     return nullptr; // No content blocks
   }
+  auto content_header = _fs->calculateContentHeaderAddress(metadata_header, next_block);
+  if(content_header == nullptr) {
+    return nullptr; // Invalid content header
+  }
+  if(content_header->block.magic != MAGIC_FILE_CONTENT_NUMBER) {
+    return nullptr; // Invalid magic number
+  }
+  if(content_header->size == kInvalidBlockOffset) {
+    return nullptr; // Invalid size
+  }
   version_counter++;
-  return FindNewestContentHeader(_fs->calculateContentHeaderAddress(_header, next_block), version_counter);
+  return FindNewestContentHeader(content_header, version_counter);
 }
 
 const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const SPFS::FileContentHeader* content_header) const {
@@ -129,7 +139,17 @@ const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const
   uint16_t next_block = content_header->next_version;
   while (next_block != kInvalidBlockOffset) {
     version_counter++;
-    content_header = _fs->calculateContentHeaderAddress(content_header, next_block);
+    const SPFS::FileContentHeader* next_header = _fs->calculateContentHeaderAddress(content_header, next_block);
+    if(next_header == nullptr) {
+      return content_header; // Invalid next header, return the last valid one
+    }
+    if(next_header->block.magic != MAGIC_FILE_CONTENT_NUMBER) {
+      return content_header; // Invalid magic number, return the last valid one
+    }
+    if(next_header->size == kInvalidBlockOffset) {
+      return content_header; // Invalid size, return the last valid one
+    }
+    content_header = next_header;
     next_block = content_header->next_version;
   }
   return content_header;

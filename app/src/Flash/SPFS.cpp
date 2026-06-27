@@ -400,11 +400,11 @@ const void* SPFS::findFreeSpace(const uint8_t* start_search, size_t size){
         case MAGIC_FILE_CONTENT_NUMBER:
           auto content_header = reinterpret_cast<const FileContentHeader*>(search);
           if(content_header->reserved_blocks == 0) {
-            // since the reserved clocks are 0 we can assume that the content is valid and skip ahead by its size
+            // since the reserved blocks are 0 we can assume that the content is valid and skip ahead by its size
             search += block_header->size * FS_BLOCK_SIZE;
           }else{
             // Valid content header, skip ahead by reserved_blocks
-            search += content_header->reserved_blocks * FS_BLOCK_SIZE;
+            search += (content_header->reserved_blocks + 1) * FS_BLOCK_SIZE;
           }
           continue;
       }
@@ -495,7 +495,7 @@ std::vector<SPFS::BlockState> SPFS::getBlockUsageMap() const {
     if(block_header->magic == MAGIC_FILE_CONTENT_NUMBER) {
       auto content_header = reinterpret_cast<const FileContentHeader*>(current_address);
       if(content_header->reserved_blocks == 0) {
-        // since the reserved clocks are 0 we can assume that the content is valid and skip ahead by its size
+        // since the reserved blocks are 0 we can assume that the content is valid and skip ahead by its size
         for(size_t b = 0; b < block_header->size; ++b) {
             usage_map[block_index + b] = BlockState::USED_FILE;
         }
@@ -505,11 +505,11 @@ std::vector<SPFS::BlockState> SPFS::getBlockUsageMap() const {
       }else{
         // Valid content header, skip ahead by reserved_blocks
         usage_map[block_index] = BlockState::USED_FILE;
-        for(size_t b = 1; b < content_header->reserved_blocks; ++b) {
-            usage_map[block_index + b] = BlockState::RESERVED_FILE;
+        for(size_t b = 0; b < content_header->reserved_blocks; ++b) {
+            usage_map[block_index + b + 1] = BlockState::RESERVED_FILE;
         }
-        current_address += content_header->reserved_blocks * FS_BLOCK_SIZE;
-        block_index += content_header->reserved_blocks;
+        current_address += (content_header->reserved_blocks + 1) * FS_BLOCK_SIZE;
+        block_index += (content_header->reserved_blocks + 1);
         continue;
       }
     }

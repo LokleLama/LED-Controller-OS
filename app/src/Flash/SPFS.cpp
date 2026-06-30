@@ -203,32 +203,6 @@ uint16_t SPFS::calculateBlockOffset(const uint8_t* reference_address, const uint
   }
 }
 
-const SPFS::FileContentHeader* SPFS::calculateContentHeaderAddress(const void* reference_address, uint16_t content_block_offset) const {
-  if(content_block_offset == kInvalidBlockOffset) {
-    return nullptr;
-  }
-  uintptr_t content_address = reinterpret_cast<uintptr_t>(reference_address);
-  if((content_block_offset & 0x8000) == 0){
-    content_address += (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
-  }else{
-    content_address -= (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
-  }
-  return reinterpret_cast<const FileContentHeader*>(content_address);
-}
-
-const SPFS::FileContentTagHeader* SPFS::calculateContentTagHeaderAddress(const void* reference_address, uint16_t content_block_offset) const {
-  if(content_block_offset == kInvalidBlockOffset) {
-    return nullptr;
-  }
-  uintptr_t content_address = reinterpret_cast<uintptr_t>(reference_address);
-  if((content_block_offset & 0x8000) == 0){
-    content_address += (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
-  }else{
-    content_address -= (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
-  }
-  return reinterpret_cast<const FileContentTagHeader*>(content_address);
-}
-
 std::shared_ptr<SPFS::DirectoryInternal> SPFS::createDirectory(const std::shared_ptr<SPFS::Directory> parent, const std::string& dir_name) {
   if(dir_name.length() >= MAX_ENTRY_NAME_LENGTH) {
     return nullptr; // Name too long
@@ -393,6 +367,7 @@ const void* SPFS::findFreeSpace(const uint8_t* start_search, size_t size){
         case MAGIC_DIR_NUMBER:
         case MAGIC_FILE_NUMBER:
         case MAGIC_DIR_EXTENSION_NUMBER:
+        case MAGIC_FILE_TAG_NUMBER:
         case MAGIC_FILE_CONTENT_LEGACY_NUMBER:
           // Occupied block, skip ahead by its size
           search += block_header->size * FS_BLOCK_SIZE;
@@ -482,6 +457,9 @@ std::vector<SPFS::BlockState> SPFS::getBlockUsageMap() const {
       case MAGIC_FILE_CONTENT_NUMBER:
       case MAGIC_FILE_CONTENT_LEGACY_NUMBER:
         block_marking = BlockState::USED_FILE;
+        break;
+      case MAGIC_FILE_TAG_NUMBER:
+        block_marking = BlockState::USED_TAG;
         break;
       case 0xFFFF:
         usage_map[block_index] = BlockState::FREE;

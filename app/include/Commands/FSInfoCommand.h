@@ -32,6 +32,7 @@ public:
     size_t used_file_blocks = 0;
     size_t reserved_file_blocks = 0;
     size_t used_dir_blocks = 0;
+    size_t used_tag_blocks = 0;
     size_t bad_blocks = 0;
     for(const auto& state : usage_map) {
       switch(state) {
@@ -50,6 +51,9 @@ public:
         case SPFS::BlockState::USED_DIR:
           used_dir_blocks++;
           break;
+        case SPFS::BlockState::USED_TAG:
+          used_tag_blocks++;
+          break;
         case SPFS::BlockState::BAD:
           bad_blocks++;
           break;
@@ -58,14 +62,15 @@ public:
     std::cout << "  - Free Space: " << free_blocks * fs->getBlockSize() / 1024 << " kB" << std::endl;
     std::cout << "  - Block Usage:" << std::endl;
     std::cout << "     * Free Blocks: " << free_blocks << std::endl;
-    std::cout << "     * Used Blocks: " << used_blocks + used_file_blocks + used_dir_blocks + reserved_file_blocks << std::endl;
+    std::cout << "     * Used Blocks: " << used_blocks + used_file_blocks + used_dir_blocks + reserved_file_blocks + used_tag_blocks << std::endl;
     std::cout << "        - Used Blocks for Files      : " << used_file_blocks << std::endl;
     std::cout << "        - Reserved Blocks for Files  : " << reserved_file_blocks << std::endl;
     std::cout << "        - Used Blocks for Directories: " << used_dir_blocks << std::endl;
+    std::cout << "        - Used Blocks for Tags       : " << used_tag_blocks << std::endl;
     std::cout << "     * Bad Blocks: " << bad_blocks << std::endl;
 
     if(args.size() <= 1 || args[1] != "--no-map") {
-      std::cout << "Block Usage Map (.=Free, U=Used, F=Used by File, R=Reserved for File, D=Used by Directory, B=Bad):" << std::endl;
+      std::cout << "Block Usage Map (.=Free, U=Used, F=Used by File, R=Reserved for File, D=Used by Directory, T=Used by Tag, B=Bad):" << std::endl;
       for(size_t i = 0; i < usage_map.size(); i++) {
         switch(usage_map[i]) {
           case SPFS::BlockState::FREE:
@@ -82,6 +87,9 @@ public:
             break;
           case SPFS::BlockState::USED_DIR:
             std::cout << "D";
+            break;
+          case SPFS::BlockState::USED_TAG:
+            std::cout << "T";
             break;
           case SPFS::BlockState::BAD:
             std::cout << "B";

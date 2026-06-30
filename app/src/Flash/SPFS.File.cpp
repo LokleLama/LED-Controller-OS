@@ -12,7 +12,7 @@ SPFS::File::File(std::shared_ptr<Directory> parent, const std::string& name) : F
   if(file != nullptr){
     _fs = file->_fs;
     _header = file->_header;
-    _content_header = FindNewestContentHeader(getMetadataHeader(), _content_version);
+    _content_header = FindNewestContentHeader(getHeader(), _content_version);
   }else{
     file = parent->createFile(name);
     if(file != nullptr){

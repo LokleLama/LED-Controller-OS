@@ -159,9 +159,13 @@ inline const SPFS::FileHeader* SPFS::ReadOnlyFile::getHeader() const {
   return _header;
 }
 
-inline const SPFS::FileMetadataHeader* SPFS::ReadOnlyFile::getMetadataHeader() const {
+inline const SPFS::FileMetadataHeader* SPFS::ReadOnlyFile::getMetadataHeader(const SPFS::FileHeader* header) const {
   return reinterpret_cast<const FileMetadataHeader *>(
-      reinterpret_cast<const uint8_t*>(_header) + (_header->name_size_meta_offset >> 8));
+      reinterpret_cast<const uint8_t*>(header) + (header->name_size_meta_offset >> 8));
+}
+
+inline const SPFS::FileMetadataHeader* SPFS::ReadOnlyFile::getMetadataHeader() const {
+  return getMetadataHeader(getHeader());
 }
 
 inline const SPFS::FileContentHeader* SPFS::ReadOnlyFile::getContentHeader() const {
@@ -170,7 +174,7 @@ inline const SPFS::FileContentHeader* SPFS::ReadOnlyFile::getContentHeader() con
 
 inline SPFS::File::File(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header)
     : ReadOnlyFile(fs, parent, header, nullptr, 0) {
-  _content_header = FindNewestContentHeader(getMetadataHeader(), _content_version);
+  _content_header = FindNewestContentHeader(getHeader(), _content_version);
 }
 
 inline SPFS::Directory::Directory(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent,
@@ -181,9 +185,13 @@ inline const SPFS::DirectoryHeader* SPFS::Directory::getHeader() const {
   return _header;
 }
 
-inline const SPFS::DirectoryMetadataHeader* SPFS::Directory::getMetadataHeader() const {
+inline const SPFS::DirectoryMetadataHeader* SPFS::Directory::getMetadataHeader(const SPFS::DirectoryHeader* header) const {
   return reinterpret_cast<const DirectoryMetadataHeader *>(
-      reinterpret_cast<const uint8_t*>(_header) + (_header->name_size_meta_offset >> 8));
+      reinterpret_cast<const uint8_t*>(header) + (header->name_size_meta_offset >> 8));
+}
+
+inline const SPFS::DirectoryMetadataHeader* SPFS::Directory::getMetadataHeader() const {
+  return getMetadataHeader(getHeader());
 }
 
 inline const SPFS::DirectoryContentHeader* SPFS::Directory::getContentHeaders() const {

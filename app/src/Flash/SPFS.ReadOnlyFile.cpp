@@ -21,10 +21,16 @@ size_t SPFS::ReadOnlyFile::getSize() const {
 size_t SPFS::ReadOnlyFile::getSizeOnDisk() const {
   size_t total_size_on_disk = _header->block.size;
   uint16_t next_block = getMetadataHeader()->content_block;
-  const void* content_address = reinterpret_cast<const void*>(_header);
+  if(next_block == kInvalidBlockOffset) {
+    return total_size_on_disk * SPFS::FS_BLOCK_SIZE;
+  }
+
+  auto content_header = calculateContentHeaderAddress(_header, next_block);
+  total_size_on_disk += content_header->block.size;
+  next_block = content_header->next_version;
+  
   while (next_block != kInvalidBlockOffset) {
-    auto content_header = _fs->calculateContentHeaderAddress(content_address, next_block);
-    content_address = content_header;
+    content_header = calculateContentHeaderAddress(content_header, next_block);
     total_size_on_disk += content_header->block.size;
     next_block = content_header->next_version;
   }
@@ -77,18 +83,15 @@ std::shared_ptr<SPFS::ReadOnlyFile> SPFS::ReadOnlyFile::openVersion(size_t versi
     return std::make_shared<SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, nullptr, 0);
   }
 
-  const FileContentHeader* content_header = nullptr;
   size_t current_version = 0;
-  uint16_t next_block = getMetadataHeader()->content_block;
-  const void* content_address = reinterpret_cast<const void*>(_header);
-  while (next_block != kInvalidBlockOffset) {
-    content_header = _fs->calculateContentHeaderAddress(content_address, next_block);
-    content_address = content_header;
-    current_version++;
-    if(current_version == version) {
-      break;
-    }
-    next_block = content_header->next_version;
+  const FileContentHeader* content_header = getContentHeader(_header);
+  if(content_header == nullptr) {
+    return std::make_shared<SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, nullptr, current_version);
+  }
+  current_version++;
+
+  for( ; current_version < version && content_header != nullptr; current_version++) {
+    content_header = getContentHeader(content_header);
   }
   return std::make_shared<SPFS::ReadOnlyFileInternal>(_fs, _parent, _header, content_header, version);
 }
@@ -110,18 +113,15 @@ std::unique_ptr<std::istream> SPFS::ReadOnlyFile::getInputStream() const {
   return stream;
 }
 
-const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const SPFS::FileMetadataHeader* metadata_header, size_t& version_counter) const {
+const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const SPFS::FileHeader* header, size_t& version_counter) const {
   version_counter = 0;
-  uint16_t next_block = metadata_header->content_block;
+  uint16_t next_block = getMetadataHeader(header)->content_block;
   if(next_block == kInvalidBlockOffset) {
     return nullptr; // No content blocks
   }
-  auto content_header = _fs->calculateContentHeaderAddress(metadata_header, next_block);
+  auto content_header = calculateContentHeaderAddress(header, next_block);
   if(content_header == nullptr) {
     return nullptr; // Invalid content header
-  }
-  if(content_header->block.magic != MAGIC_FILE_CONTENT_NUMBER) {
-    return nullptr; // Invalid magic number
   }
   if(content_header->size == kInvalidBlockOffset) {
     return nullptr; // Invalid size
@@ -139,7 +139,7 @@ const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const
   uint16_t next_block = content_header->next_version;
   while (next_block != kInvalidBlockOffset) {
     version_counter++;
-    const SPFS::FileContentHeader* next_header = _fs->calculateContentHeaderAddress(content_header, next_block);
+    const SPFS::FileContentHeader* next_header = calculateContentHeaderAddress(content_header, next_block);
     if(next_header == nullptr) {
       return content_header; // Invalid next header, return the last valid one
     }
@@ -177,10 +177,10 @@ bool SPFS::ReadOnlyFile::createTag(const std::string& tag_description){
   FileContentTagHeader *tag_header = reinterpret_cast<FileContentTagHeader *>(buffer.data());
   tag_header->block.magic = MAGIC_FILE_TAG_NUMBER;
   tag_header->tag_size = tag_description.length();
-  tag_header->data_offset = ((sizeof(FileContentTagHeader) + 3) & 0x00FC) | 0xFF00; // Align to 4 bytes
+  
+  size_t data_offset = (sizeof(FileContentTagHeader) + 3) & 0x00FC; // Align to 4 bytes
 
-  size_t data_offset = tag_header->data_offset & 0x00FF;
-
+  tag_header->data_offset = ((uint16_t)data_offset) | 0xFF00;
   tag_header->block.size = (uint16_t)((data_offset + tag_description.length() + FS_BLOCK_SIZE - 1) / FS_BLOCK_SIZE);
   tag_header->checksum = _fs->calculateCRC16(tag_header, sizeof(FileContentTagHeader) - sizeof(tag_header->checksum));
 
@@ -223,15 +223,96 @@ bool SPFS::ReadOnlyFile::createTag(const std::string& tag_description){
 }
 
 std::string SPFS::ReadOnlyFile::readTag() const{
-  if(_content_header == nullptr || _content_header->tag_metadata_block == kInvalidBlockOffset) {
+  if(_content_header == nullptr || _content_header->tag_metadata_block == kInvalidBlockOffset || _content_header->tag_metadata_block == 0) {
     return {}; // No content or no tag
   }
 
-  auto tag_header = _fs->calculateContentTagHeaderAddress(_content_header, _content_header->tag_metadata_block);
+  auto tag_header = calculateContentTagHeaderAddress(_content_header, _content_header->tag_metadata_block);
   if(tag_header == nullptr || tag_header->block.magic != MAGIC_FILE_TAG_NUMBER) {
     return {}; // Invalid tag header
   }
 
   const uint8_t* data_ptr = reinterpret_cast<const uint8_t*>(tag_header) + (tag_header->data_offset & 0x00FF);
   return std::string(reinterpret_cast<const char*>(data_ptr), tag_header->tag_size);
+}
+
+
+bool SPFS::ReadOnlyFile::deleteTag(){
+  if(_content_header == nullptr || _content_header->tag_metadata_block == kInvalidBlockOffset || _content_header->tag_metadata_block == 0) {
+    return false; // No content or no tag
+  }
+
+  std::vector<uint8_t> buffer(FS_BLOCK_SIZE);
+  if(Flash::read(buffer, _content_header) != (int)buffer.size()) {
+    return false;
+  }
+  FileContentHeader *contentheader = reinterpret_cast<FileContentHeader *>(buffer.data());
+  contentheader->tag_metadata_block = 0;
+  if(Flash::write(buffer, _content_header) < (int)buffer.size()) {
+    return false;
+  }
+  return true;
+}
+
+
+const SPFS::FileContentHeader* SPFS::ReadOnlyFile::getContentHeader(const SPFS::FileHeader* header) const {
+  auto metadata_header = getMetadataHeader(header);
+  if(metadata_header == nullptr) {
+    return nullptr;
+  }
+  uint16_t next_block = metadata_header->content_block;
+  if(next_block == kInvalidBlockOffset) {
+    return nullptr; // No content blocks
+  }
+  return calculateContentHeaderAddress(header, next_block);
+}
+
+const SPFS::FileContentHeader* SPFS::ReadOnlyFile::getContentHeader(const SPFS::FileContentHeader* content_header) const {
+  if(content_header == nullptr) {
+    return nullptr;
+  }
+  uint16_t next_block = content_header->next_version;
+  if(next_block == kInvalidBlockOffset) {
+    return nullptr; // No content blocks
+  }
+  return calculateContentHeaderAddress(content_header, next_block);
+}
+
+const SPFS::FileContentHeader* SPFS::ReadOnlyFile::calculateContentHeaderAddress(const SPFS::FileHeader* reference_address, uint16_t content_block_offset) const {
+  if(content_block_offset == kInvalidBlockOffset) {
+    return nullptr;
+  }
+  uintptr_t content_address = reinterpret_cast<uintptr_t>(reference_address);
+  if((content_block_offset & 0x8000) == 0){
+    content_address += (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
+  }else{
+    content_address -= (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
+  }
+  return reinterpret_cast<const FileContentHeader*>(content_address);
+}
+
+const SPFS::FileContentHeader* SPFS::ReadOnlyFile::calculateContentHeaderAddress(const SPFS::FileContentHeader* reference_address, uint16_t content_block_offset) const {
+  if(content_block_offset == kInvalidBlockOffset) {
+    return nullptr;
+  }
+  uintptr_t content_address = reinterpret_cast<uintptr_t>(reference_address);
+  if((content_block_offset & 0x8000) == 0){
+    content_address += (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
+  }else{
+    content_address -= (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
+  }
+  return reinterpret_cast<const FileContentHeader*>(content_address);
+}
+
+const SPFS::FileContentTagHeader* SPFS::ReadOnlyFile::calculateContentTagHeaderAddress(const SPFS::FileContentHeader* reference_address, uint16_t content_block_offset) const {
+  if(content_block_offset == kInvalidBlockOffset) {
+    return nullptr;
+  }
+  uintptr_t content_address = reinterpret_cast<uintptr_t>(reference_address);
+  if((content_block_offset & 0x8000) == 0){
+    content_address += (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
+  }else{
+    content_address -= (content_block_offset & 0x7FFF) * FS_BLOCK_SIZE;
+  }
+  return reinterpret_cast<const FileContentTagHeader*>(content_address);
 }

@@ -243,6 +243,14 @@ int main(int argc, char **argv) {
       return -1;
     }
 
+    std::string file_tag_1 = "This is a tag for version 1 of the file. the size is approximately 88 bytes.";
+    if (file1->createTag(file_tag_1)) {
+      printf("Created tag for version %zu: \"%s\"\n", file1->getVersion(), file_tag_1.c_str());
+    } else {
+      printf("ERROR: Failed to create tag for version %zu of file \"%s\"\n", file1->getVersion(), file1->getName().c_str());
+      return -1;
+    }
+
     printf("******************************\n");
     printf("getting stats of file \"%s\"\n", file1->getName().c_str());
     printf("File Version          : %zu\n", file1->getVersion());
@@ -263,6 +271,14 @@ int main(int argc, char **argv) {
       printf("Wrote string of length %zu\n", file_content_300.length());
     } else {
       printf("ERROR: Failed to write to file \"%s\"\n", file1->getName().c_str());
+      return -1;
+    }
+
+    std::string file_tag_2 = "This is a tag for version 2 of the file. the size is approximately 440 bytes.";
+    if (file1->createTag(file_tag_2)) {
+      printf("Created tag for version %zu: \"%s\"\n", file1->getVersion(), file_tag_2.c_str());
+    } else {
+      printf("ERROR: Failed to create tag for version %zu of file \"%s\"\n", file1->getVersion(), file1->getName().c_str());
       return -1;
     }
 

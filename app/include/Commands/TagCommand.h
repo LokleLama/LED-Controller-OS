@@ -14,12 +14,14 @@ public:
   const std::string getName() const override { return "tag"; }
 
   const std::string getHelp() const override {
-    return "Usage: tag <file> [-r] [-c <version> <description>]\n"
+    return "Usage: tag <file> [-r] [-c <version> <description>] [-d <version>]\n"
            "\n"
            "       tag <file> -r\n"
            "           Read all tags of the specified file\n"
            "       tag <file> -c <version> <description>\n"
            "           Create a new tag for the specified file with the given version and description\n"
+           "       tag <file> -d <version>\n"
+           "           Delete the tag for the specified version of the file\n"
            "\n";
   }
 
@@ -75,6 +77,26 @@ public:
         }
         if(!version_file->createTag(tag_description)) {
             std::cout << "Error: Unable to create tag for version " << version << " of file '" << filename << "'" << std::endl;
+            return -1;
+        }
+
+        return 0;
+    }
+
+    if (args[2] == "-d") {
+        if (args.size() < 4) {
+            std::cout << "Error: Version must be specified for deleting a tag." << std::endl;
+            return -1;
+        }
+        size_t version = std::strtoul(args[3].c_str(), nullptr, 0);
+
+        auto version_file = file->openVersion(version);
+        if(version_file == nullptr) {
+            std::cout << "Error: Unable to open version " << version << " of file '" << filename << "'" << std::endl;
+            return -1;
+        }
+        if(!version_file->deleteTag()) {
+            std::cout << "Error: Unable to delete tag for version " << version << " of file '" << filename << "'" << std::endl;
             return -1;
         }
 

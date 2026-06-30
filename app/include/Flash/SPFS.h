@@ -70,6 +70,7 @@ public:
 
       const FileHeader* getHeader() const;
       const FileMetadataHeader* getMetadataHeader() const;
+      const FileMetadataHeader* getMetadataHeader(const FileHeader* header) const;
       const FileContentHeader* getContentHeader() const;
     public:
       size_t getSize() const;
@@ -107,9 +108,16 @@ public:
       const FileContentHeader* _content_header; //!< Header information for the file content
       size_t _content_version;                  //!< Version of the file content
 
-      const FileContentHeader* FindNewestContentHeader(const FileMetadataHeader* metadata_header, size_t& version_counter) const;
+      const FileContentHeader* FindNewestContentHeader(const FileHeader* header, size_t& version_counter) const;
       const FileContentHeader* FindNewestContentHeader(const FileContentHeader* content_header) const;
       const FileContentHeader* FindNewestContentHeader(const FileContentHeader* content_header, size_t& version_counter) const;
+
+      const FileContentHeader* getContentHeader(const FileHeader* header) const;
+      const FileContentHeader* getContentHeader(const FileContentHeader* content_header) const;
+
+      const FileContentHeader* calculateContentHeaderAddress(const FileHeader* reference_address, uint16_t content_block_offset) const;
+      const FileContentHeader* calculateContentHeaderAddress(const FileContentHeader* reference_address, uint16_t content_block_offset) const;
+      const FileContentTagHeader* calculateContentTagHeaderAddress(const FileContentHeader* reference_address, uint16_t content_block_offset) const;
   };
   class File : public ReadOnlyFile{
     public:
@@ -152,6 +160,7 @@ public:
 
       const DirectoryHeader* getHeader() const;
       const DirectoryMetadataHeader* getMetadataHeader() const;
+      const DirectoryMetadataHeader* getMetadataHeader(const DirectoryHeader* header) const;
       const DirectoryContentHeader* getContentHeaders() const;
       int getMaxContentCount() const;
 
@@ -218,6 +227,7 @@ public:
     USED_FILE,
     RESERVED_FILE,
     USED_DIR,
+    USED_TAG,
     BAD
   };
 
@@ -275,8 +285,6 @@ private:
   uint16_t calculateContentBlockOffset(const void* reference_address, const FileContentHeader* content_header) const;
   uint16_t calculateContentTagBlockOffset(const void* reference_address, const FileContentTagHeader* tag_header) const;
   uint16_t calculateBlockOffset(const uint8_t* reference_address, const uint8_t* address) const;
-  const FileContentHeader* calculateContentHeaderAddress(const void* reference_address, uint16_t content_block_offset) const;
-  const FileContentTagHeader* calculateContentTagHeaderAddress(const void* reference_address, uint16_t content_block_offset) const;
 
   uint32_t calculateCRC32(const void *address, size_t size);
   uint16_t calculateCRC16(const void *address, size_t size);

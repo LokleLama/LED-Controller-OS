@@ -145,6 +145,8 @@ public:
       bool append(const uint8_t* data, size_t size);
       bool finishContent();
 
+      bool fixUnfinishedContent();
+
     private:
       size_t _allocated_content_size = 0; //!< Allocated size for content
       size_t _append_position = 0; //!< Current position for appending data

@@ -196,3 +196,46 @@ bool SPFS::File::finishContent() {
   _reserved_content_header = nullptr;
   return true;
 }
+
+bool SPFS::File::fixUnfinishedContent() {
+  if(_reserved_content_header != nullptr) {
+    return false; // No allocated content
+  }
+
+  if(_content_header == nullptr) {
+    _reserved_content_header = getContentHeader(_header);
+  } else {
+    _reserved_content_header = getContentHeader(_content_header);
+  }
+  if(_reserved_content_header == nullptr) {
+    return false; // No unfinished content to fix
+  }
+
+  _allocated_content_size = _reserved_content_header->reserved_blocks * FS_BLOCK_SIZE;
+  _append_position = (_reserved_content_header->data_offset & 0x00FF);
+
+  auto minimal_append_position = _append_position;
+
+  const uint32_t* pointer = reinterpret_cast<const uint32_t*>(_reserved_content_header);
+  for(size_t n = _append_position / sizeof(uint32_t); n < _allocated_content_size / sizeof(uint32_t); n++) {
+    if(pointer[n] != 0xFFFFFFFF) {
+      _append_position = (n + 1) * sizeof(uint32_t);
+    }
+  }
+
+  const uint8_t* fine_pointer = reinterpret_cast<const uint8_t*>(_reserved_content_header);
+  auto max_append_position = _append_position;
+
+  auto fine_append_position = _append_position - sizeof(uint32_t);
+  if(fine_append_position < minimal_append_position) {
+    fine_append_position = minimal_append_position;
+  }
+
+  for(size_t n = fine_append_position; n < max_append_position; n++) {
+    if(fine_pointer[n] != 0xFF) {
+      _append_position = n + 1;
+    }
+  }
+
+  return finishContent();
+}

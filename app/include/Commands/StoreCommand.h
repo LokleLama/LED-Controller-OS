@@ -127,7 +127,7 @@ public:
       }
       _currentFile = file;
       size_t size = std::strtoul(args[3].c_str(), nullptr, 0);
-      if (!_currentFile->allocateContenSize(size)) {
+      if (!_currentFile->allocateContentSize(size)) {
         std::cout << "Error: Unable to allocate content size of " << size << " bytes." << std::endl;
         return -1;
       }

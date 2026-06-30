@@ -140,7 +140,6 @@ public:
        * \return true on success, false on failure
        */
       bool allocateContentSize(size_t size);
-      bool allocateContenSize(size_t size) { return allocateContentSize(size); }
       bool append(const std::string& data);
       bool append(const std::vector<uint8_t>& data);
       bool append(const uint8_t* data, size_t size);

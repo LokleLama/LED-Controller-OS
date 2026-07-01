@@ -338,9 +338,9 @@ bool VariableStore::valueChangedCallback(const std::string& key) {
   return true;
 }
 
-const std::unordered_map<std::string, std::string>
+const std::map<std::string, std::string>
 VariableStore::getAllVariables() const {
-  std::unordered_map<std::string, std::string> result;
+  std::map<std::string, std::string> result;
 
   for (const auto &var : _variables) {
     result[var->getName()] = var->asString();

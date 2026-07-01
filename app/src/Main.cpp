@@ -72,8 +72,8 @@ int main() {
       fs = nullptr;
     }
   }
-  variableStore.addVariable("var.fs_offset", SPFS_FLASH_OFFSET)->setSystemVariable();
-  variableStore.addVariable("var.fs_size", SPFS_FLASH_SIZE)->setSystemVariable();
+  variableStore.addVariable("filesystem.offset", SPFS_FLASH_OFFSET)->setSystemVariable();
+  variableStore.addVariable("filesystem.size", SPFS_FLASH_SIZE)->setSystemVariable();
 
   Console console(variableStore, fs);
   DeviceRepository deviceRepo(console);

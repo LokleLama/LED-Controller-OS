@@ -27,6 +27,8 @@
 #include "Commands/ExecCommand.h"
 #include "Commands/FSInfoCommand.h"
 #include "Commands/StoreCommand.h"
+#include "Commands/FixCommand.h"
+#include "Commands/TagCommand.h"
 
 #include "Commands/ReadCommand.h"
 #include "Commands/WriteCommand.h"
@@ -99,7 +101,8 @@ int main() {
   console.registerCommand(std::make_shared<ExecCommand>(console));
   console.registerCommand(std::make_shared<FSInfoCommand>(console));
   console.registerCommand(std::make_shared<StoreCommand>(console));
-
+  console.registerCommand(std::make_shared<TagCommand>(console));
+  console.registerCommand(std::make_shared<FixCommand>(console));
   console.registerCommand(std::make_shared<ReadCommand>());
   console.registerCommand(std::make_shared<WriteCommand>());
 

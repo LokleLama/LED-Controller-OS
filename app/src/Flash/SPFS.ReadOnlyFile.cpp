@@ -99,14 +99,14 @@ std::shared_ptr<SPFS::ReadOnlyFile> SPFS::ReadOnlyFile::openVersion(size_t versi
 std::unique_ptr<std::istream> SPFS::ReadOnlyFile::getInputStream() const {
   if(_content_header == nullptr) {
     // Return an empty stream for empty files
-    return std::make_unique<std::istream>(new SPFS::ReadOnlyFileStreamBuf(nullptr, 0));
+    return std::make_unique<std::istream>(new SPFS::ReadOnlyFileStreamBuf(nullptr, 0));  //Memory Leak: The streambuf is allocated with new but not deleted. Consider using a smart pointer or managing the lifetime of the streambuf to avoid memory leaks.
   }
   
   const uint8_t* data = getMemoryMappedAddress();
   size_t size = _content_header->size;
   
   // Create a custom streambuf and wrap it in an istream
-  auto* buf = new SPFS::ReadOnlyFileStreamBuf(data, size);
+  auto* buf = new SPFS::ReadOnlyFileStreamBuf(data, size); //Memory Leak: The streambuf is allocated with new but not deleted. Consider using a smart pointer or managing the lifetime of the streambuf to avoid memory leaks.
   auto stream = std::make_unique<std::istream>(buf);
   
   // The istream will take ownership of the streambuf and delete it when done

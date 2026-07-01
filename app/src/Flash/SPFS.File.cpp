@@ -85,7 +85,7 @@ bool SPFS::File::allocateContentSize(size_t size) {
   contentheader->reserved_blocks = (uint16_t)((size + FS_BLOCK_SIZE - 1) / FS_BLOCK_SIZE);
   contentheader->tag_metadata_block = 0xFFFF; // No tag
   
-  _allocated_content_size = size;
+  _allocated_content_size = contentheader->reserved_blocks * FS_BLOCK_SIZE;
   _append_position = (contentheader->data_offset & 0x00FF);
 
   if(Flash::write(buffer, _reserved_content_header) < (int)buffer.size()) {

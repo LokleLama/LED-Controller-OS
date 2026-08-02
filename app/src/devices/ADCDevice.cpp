@@ -4,8 +4,8 @@
 
 bool ADCDevice::_adc_initialized[5] = {false, false, false, false, false};
 
-ADCDevice::ADCDevice(const std::string& name, int adc_channel, std::shared_ptr<IVariable> value_variable, int sampling_intervall)
-    : _name(name), _valueVariable(value_variable), _samplingIntervall(sampling_intervall) {
+ADCDevice::ADCDevice(const std::string& name, int adc_channel, std::shared_ptr<IVariable> value_variable, std::shared_ptr<IVariable> percent_variable, int sampling_intervall)
+    : _name(name), _valueVariable(value_variable), _percentVariable(percent_variable), _samplingIntervall(sampling_intervall) {
 
     if(adc_channel < 0 || adc_channel > 4) {
         std::cerr << "Invalid ADC channel: " << adc_channel << ". Must be between 0 and 4." << std::endl;
@@ -56,6 +56,10 @@ uint16_t ADCDevice::readValue() const {
 
 bool ADCDevice::ExecuteTask() {
     uint16_t value = readValue();
+    if(_percentVariable) {
+        float percent = (value / 4095.0f) * 100.0f;
+        _percentVariable->set(percent);
+    }
     if(_valueVariable) {
         _valueVariable->set(value);
         return true;

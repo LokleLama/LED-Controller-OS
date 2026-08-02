@@ -22,11 +22,12 @@ public:
     }
 
     const std::string& getParameterInfo() const override {
-        static std::string info = "<adc_channel> [readout_intervall] [name] [readout_variable_name]\n"
-                                  "  adc_channel:            ADC channel number (0-4)\n"
-                                  "  readout_intervall:      Interval for ADC readout in milliseconds (default: 100)\n"
-                                  "  name:                   Optional custom name for the ADC device (default: 'ADCDevice')\n"
-                                  "  readout_variable_name:  Name of the variable to store ADC readout (default: auto-generated)";
+        static std::string info = "<adc_channel> [readout_intervall] [name] [readout_variable_name] [readout_percentage_variable]\n"
+                                  "  adc_channel:                 ADC channel number (0-4)\n"
+                                  "  readout_intervall:           Interval for ADC readout in milliseconds (default: 100)\n"
+                                  "  name:                        Optional custom name for the ADC device (default: 'ADCDevice')\n"
+                                  "  readout_variable_name:       Name of the variable to store ADC readout (default: auto-generated)\n"
+                                  "  readout_percentage_variable: Name of the variable to store ADC readout as percentage (default: auto-generated)";
         return info;
     }
 
@@ -46,6 +47,11 @@ public:
             device_name = params[2];
         }
 
+        std::string readout_percentage_variable_name = "adc_percent.ch" + std::to_string(adc_channel);
+        if(params.size() >= 5) {
+            readout_percentage_variable_name = params[4];
+        }
+
         std::string readout_variable_name = "adc.ch" + std::to_string(adc_channel);
         if(adc_channel == 4) {
             readout_variable_name = "cpu.temperature";
@@ -63,7 +69,11 @@ public:
         }
         readout_var->setSystemVariable();
 
-        auto adc_device = std::make_shared<ADCDevice>(device_name, adc_channel, readout_var, readout_intervall);
+        std::shared_ptr<IVariable> readout_percentage_var = nullptr;
+        readout_percentage_var = varStore.addVariable(readout_percentage_variable_name, static_cast<float>(0.0f));
+        readout_percentage_var->setSystemVariable();
+
+        auto adc_device = std::make_shared<ADCDevice>(device_name, adc_channel, readout_var, readout_percentage_var, readout_intervall);
         if (adc_device->getStatus() != IDevice::DeviceStatus::Initialized) {
             return nullptr;
         }

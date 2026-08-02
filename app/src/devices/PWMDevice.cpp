@@ -167,9 +167,13 @@ bool PWMDevice::transfer(const uint16_t* data, size_t count) {
 }
 
 const std::string PWMDevice::getDetails() const {
-    std::string details = "PWM" + std::to_string(_slice) + "." + std::to_string(_channel) + " on GPIO" + std::to_string(_gpio_pin) + "\n";
+    return getDetailsInternal("PWM");
+}
+
+const std::string PWMDevice::getDetailsInternal(const std::string& prefix) const {
+    std::string details = prefix + std::to_string(_slice) + "." + std::to_string(_channel) + " on GPIO" + std::to_string(_gpio_pin) + "\n";
     details += "Frequency: " + std::to_string(_frequency_hz) + "HZ";
-    details += _phase_correct ? " (phase-correct)\n" : "\n";
+    details += _phase_correct ? " (phase-corrected)\n" : "\n";
 
     details += "Wrap: " + std::to_string(_wrap) + "\n";
 

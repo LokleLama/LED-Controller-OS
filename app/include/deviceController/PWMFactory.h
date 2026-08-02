@@ -2,6 +2,7 @@
 
 #include "deviceController/DeviceRepository.h"
 #include "devices/PWMDevice.h"
+#include "devices/RCPWMDevice.h"
 
 #include <memory>
 #include <string>
@@ -17,11 +18,12 @@ public:
 
     const Category getCategory() const override { return Category::Communication; }
     const std::vector<std::string> getDeviceNames() const override {
-        static std::vector<std::string> names = {"PWM"};
+        static std::vector<std::string> names = {"PWM", "RCPWM"};
         return names;
     }
     const std::string& getParameterInfo() const override {
-        static std::string info = "<gpio_pin> <frequency_hz> [phase_correct]\n"
+        static std::string info = "PWM <gpio_pin> <frequency_hz> [phase_correct]\n"
+                                  "RCPWM <gpio_pin>\n"
                                   "  gpio_pin:                GPIO used for PWM output\n"
                                   "  frequency_hz:            PWM frequency in Hz (default: 1000)\n"
                                   "  phase_correct:           0/1 to disable/enable phase-correct mode (default: 1)";
@@ -44,6 +46,21 @@ public:
             phase_correct = (std::strtol(params[2].c_str(), nullptr, 0) != 0);
         }
 
+        if (name == "RCPWM") {
+            auto device = std::make_shared<RCPWMDevice>(gpio_pin);
+            if (device->getStatus() != IDevice::DeviceStatus::Initialized) {
+                std::cout << "Failed to initialize RCPWM on GPIO" << static_cast<int>(gpio_pin) << std::endl;
+                return nullptr;
+            }
+
+            if (!setupVariable(device)) {
+                std::cout << "Failed to setup variables for RCPWM on GPIO" << static_cast<int>(gpio_pin) << std::endl;
+                return nullptr;
+            }
+
+            return device;
+        }
+
         auto device = std::make_shared<PWMDevice>(gpio_pin, frequency_hz, phase_correct);
         if (device->getStatus() != IDevice::DeviceStatus::Initialized) {
             std::cout << "Failed to initialize PWM on GPIO" << static_cast<int>(gpio_pin) << std::endl;
@@ -59,6 +76,23 @@ public:
     }
 
 private:
+    bool setupVariable(std::shared_ptr<RCPWMDevice> device) {
+        auto& var_store = VariableStore::getInstance();
+
+        std::string var_duty = device->getName() + ".percent";
+        var_store.addVariable(var_duty, 50.0f)->setSystemVariable();
+        var_store.registerCallback(var_duty, [device](const std::string& key, const std::string& value) {
+            auto fvalue = std::strtof(value.c_str(), nullptr);
+            if (fvalue < 0.0f || fvalue > 100.0f) {
+                return false;
+            }
+            auto success = device->setPercent(fvalue);
+            return success;
+        });
+
+        return true;
+    }
+
     bool setupVariable(std::shared_ptr<PWMDevice> device) {
         auto& var_store = VariableStore::getInstance();
         std::string var_frequency = device->getName() + ".frequency";
@@ -78,7 +112,6 @@ private:
                 return false;
             }
             auto success = device->setLevel(device->getWrap() * (fvalue / 100.0f));
-            std::cout << "PWM Duty changed to " << fvalue << "%" << std::endl;
             return success;
         });
 

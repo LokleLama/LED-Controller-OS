@@ -10,6 +10,11 @@
 #include <cstring>
 #include <iomanip>
 
+bool Mainloop::IdleTaskExecute(TaskPID) {
+  __asm volatile("wfi");
+  return true;
+}
+
 Mainloop& Mainloop::getInstance() {
     static Mainloop instance;
     return instance;
@@ -17,6 +22,7 @@ Mainloop& Mainloop::getInstance() {
 
 Mainloop::Mainloop() : _running(false), _systickCounter(0), _loop_statistic_ptr(0), _max_loop_time(0) {
   memset(_loop_statistic, 0, sizeof(_loop_statistic));
+  _idleTaskPID = registerRegularTask("Mainloop.IdleSleep", [this](TaskPID pid) { return this->IdleTaskExecute(pid); });
 }
 
 // Static callback function for the alarm
@@ -60,6 +66,9 @@ void Mainloop::start() {
     uint32_t currentTime = _systickCounter;
     // Execute regular tasks
     for (auto &task : _regularTasks) {
+      if(task.info.pid == _idleTaskPID) {
+        continue;
+      }
       if(task.sleepUntil > currentTime){
         continue;
       }
@@ -118,6 +127,17 @@ void Mainloop::start() {
     _loop_statistic_ptr++;
     if(_loop_statistic_ptr >= 8){
       _loop_statistic_ptr = 0;
+    }
+
+    total_loop_time = time_us_64() - loop_start;
+    if(total_loop_time < 900){
+      for (auto &task : _regularTasks) {
+        if(task.info.pid == _idleTaskPID) {
+          task.info.startTime = time_us_64();
+          task.info.func(task.info.pid);
+          calculateStatistics(task.info);
+        }
+      }
     }
   }
 

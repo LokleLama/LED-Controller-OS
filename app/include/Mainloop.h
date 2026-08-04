@@ -44,6 +44,8 @@ private:
     SignalFilter filter;
     bool execute;
   };
+  
+  bool IdleTaskExecute(TaskPID pid);
 
 public:
   static Mainloop& getInstance();
@@ -177,6 +179,8 @@ private:
   bool _running;
   uint32_t _systickCounter = 0;
   TaskPID _nextTaskPID = 0;
+
+  TaskPID _idleTaskPID = 0;
 
   Mainloop();
 

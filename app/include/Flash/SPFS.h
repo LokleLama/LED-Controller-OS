@@ -68,10 +68,10 @@ public:
       ReadOnlyFile(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header,
                    const FileContentHeader* content_header, size_t content_version);
 
-      const FileHeader* getHeader() const;
-      const FileMetadataHeader* getMetadataHeader() const;
+      const FileHeader* getHeader() const { return _header; }
+      const FileMetadataHeader* getMetadataHeader() const { return getMetadataHeader(getHeader()); }
       const FileMetadataHeader* getMetadataHeader(const FileHeader* header) const;
-      const FileContentHeader* getContentHeader() const;
+      const FileContentHeader* getContentHeader() const { return _content_header; }
     public:
       size_t getSize() const;
       size_t getSizeOnDisk() const;
@@ -119,6 +119,7 @@ public:
       const FileContentHeader* calculateContentHeaderAddress(const FileContentHeader* reference_address, uint16_t content_block_offset) const;
       const FileContentTagHeader* calculateContentTagHeaderAddress(const FileContentHeader* reference_address, uint16_t content_block_offset) const;
   };
+
   class File : public ReadOnlyFile{
     public:
       File(std::shared_ptr<Directory> parent, const std::string& name);
@@ -152,6 +153,7 @@ public:
       size_t _append_position = 0; //!< Current position for appending data
       const FileContentHeader* _reserved_content_header = nullptr; //!< Current content header for appending data
   };
+
   class Directory : public std::enable_shared_from_this<Directory> {
     public:
       Directory(std::shared_ptr<Directory> parent, const std::string& name);
@@ -159,8 +161,8 @@ public:
     protected:
       Directory(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const DirectoryHeader* header);
 
-      const DirectoryHeader* getHeader() const;
-      const DirectoryMetadataHeader* getMetadataHeader() const;
+      const DirectoryHeader* getHeader() const { return _header; }
+      const DirectoryMetadataHeader* getMetadataHeader() const { return getMetadataHeader(getHeader()); }
       const DirectoryMetadataHeader* getMetadataHeader(const DirectoryHeader* header) const;
       const DirectoryContentHeader* getContentHeaders() const;
       int getMaxContentCount() const;

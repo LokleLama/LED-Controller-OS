@@ -22,6 +22,11 @@ SPFS::File::File(std::shared_ptr<Directory> parent, const std::string& name) : F
   }
 }
 
+SPFS::File::File(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header)
+    : ReadOnlyFile(fs, parent, header, nullptr, 0) {
+  _content_header = FindNewestContentHeader(getHeader(), _content_version);
+}
+
 bool SPFS::File::write(const std::string& data){
   return write(reinterpret_cast<const uint8_t*>(data.data()), data.length() + 1);
 }

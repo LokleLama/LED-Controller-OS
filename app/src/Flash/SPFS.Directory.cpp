@@ -20,6 +20,21 @@ SPFS::Directory::Directory(std::shared_ptr<Directory> parent, const std::string&
   }
 }
 
+SPFS::Directory::Directory(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent,
+                           const DirectoryHeader* header)
+    : _fs(fs), _parent(parent), _header(header) {}
+
+
+
+const SPFS::DirectoryMetadataHeader* SPFS::Directory::getMetadataHeader(const SPFS::DirectoryHeader* header) const {
+  return reinterpret_cast<const DirectoryMetadataHeader *>(
+      reinterpret_cast<const uint8_t*>(header) + (header->name_size_meta_offset >> 8));
+}
+
+const SPFS::DirectoryContentHeader* SPFS::Directory::getContentHeaders() const {
+  return getMetadataHeader()->content;
+}
+
 size_t SPFS::Directory::getSizeOnDisk() const {
   size_t total_size_on_disk = _header->block.size;
   uint16_t next_block = getMetadataHeader()->next;

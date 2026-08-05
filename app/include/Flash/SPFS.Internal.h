@@ -149,55 +149,6 @@ inline std::streampos SPFS::ReadOnlyFileStreamBuf::seekpos(std::streampos pos,
   return seekoff(pos, std::ios_base::beg, which);
 }
 
-inline SPFS::ReadOnlyFile::ReadOnlyFile(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent,
-                                        const FileHeader* header, const FileContentHeader* content_header,
-                                        size_t content_version)
-    : _fs(fs), _parent(parent), _header(header), _content_header(content_header),
-      _content_version(content_version) {}
-
-inline const SPFS::FileHeader* SPFS::ReadOnlyFile::getHeader() const {
-  return _header;
-}
-
-inline const SPFS::FileMetadataHeader* SPFS::ReadOnlyFile::getMetadataHeader(const SPFS::FileHeader* header) const {
-  return reinterpret_cast<const FileMetadataHeader *>(
-      reinterpret_cast<const uint8_t*>(header) + (header->name_size_meta_offset >> 8));
-}
-
-inline const SPFS::FileMetadataHeader* SPFS::ReadOnlyFile::getMetadataHeader() const {
-  return getMetadataHeader(getHeader());
-}
-
-inline const SPFS::FileContentHeader* SPFS::ReadOnlyFile::getContentHeader() const {
-  return _content_header;
-}
-
-inline SPFS::File::File(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header)
-    : ReadOnlyFile(fs, parent, header, nullptr, 0) {
-  _content_header = FindNewestContentHeader(getHeader(), _content_version);
-}
-
-inline SPFS::Directory::Directory(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent,
-                                  const DirectoryHeader* header)
-    : _fs(fs), _parent(parent), _header(header) {}
-
-inline const SPFS::DirectoryHeader* SPFS::Directory::getHeader() const {
-  return _header;
-}
-
-inline const SPFS::DirectoryMetadataHeader* SPFS::Directory::getMetadataHeader(const SPFS::DirectoryHeader* header) const {
-  return reinterpret_cast<const DirectoryMetadataHeader *>(
-      reinterpret_cast<const uint8_t*>(header) + (header->name_size_meta_offset >> 8));
-}
-
-inline const SPFS::DirectoryMetadataHeader* SPFS::Directory::getMetadataHeader() const {
-  return getMetadataHeader(getHeader());
-}
-
-inline const SPFS::DirectoryContentHeader* SPFS::Directory::getContentHeaders() const {
-  return getMetadataHeader()->content;
-}
-
 inline int SPFS::Directory::getMaxContentCount() const {
   return static_cast<int>((FS_BLOCK_SIZE - (_header->name_size_meta_offset >> 8)) /
                           sizeof(DirectoryContentHeader)) + 1;

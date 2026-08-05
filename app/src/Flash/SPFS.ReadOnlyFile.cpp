@@ -6,9 +6,19 @@ namespace {
 constexpr uint16_t kInvalidBlockOffset = 0xFFFF;
 }
 
+SPFS::ReadOnlyFile::ReadOnlyFile(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent,
+                                 const FileHeader* header, const FileContentHeader* content_header,
+                                 size_t content_version)
+    : _fs(fs), _parent(parent), _header(header), _content_header(content_header),
+      _content_version(content_version) {}
+
 const std::string SPFS::ReadOnlyFile::getName() const {
   const char* name_ptr = reinterpret_cast<const char*>(_header) + sizeof(SPFS::FileHeader);
   return std::string(name_ptr, _header->name_size_meta_offset & 0x00FF);
+}
+
+const SPFS::FileMetadataHeader* SPFS::ReadOnlyFile::getMetadataHeader(const FileHeader* header) const {
+  return reinterpret_cast<const FileMetadataHeader *>(reinterpret_cast<const uint8_t*>(header) + (header->name_size_meta_offset >> 8));
 }
 
 size_t SPFS::ReadOnlyFile::getSize() const {

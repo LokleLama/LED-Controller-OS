@@ -40,8 +40,12 @@ public:
 
     uint16_t getWrap() const { return _wrap; }
 
-private:
+protected:
     uint8_t _gpio_pin;
+    uint16_t _wrap;
+    const std::string getDetailsInternal(const std::string& prefix) const;
+
+private:
     uint8_t _slice;
     uint8_t _channel;
     uint8_t _pwm_bits;
@@ -49,7 +53,6 @@ private:
 
     int _frequency_hz;
     bool _phase_correct;
-    uint16_t _wrap;
 
     int _dma_channel;
     

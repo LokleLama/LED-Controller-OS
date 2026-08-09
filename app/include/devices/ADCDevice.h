@@ -7,7 +7,7 @@
 
 class ADCDevice : public ICreateSharedFromThis<ADCDevice>, public IDevice {
 public:
-    ADCDevice(const std::string& name, int adc_channel, std::shared_ptr<IVariable> value_variable, int sampling_intervall = 100);
+    ADCDevice(const std::string& name, int adc_channel, std::shared_ptr<IVariable> value_variable, std::shared_ptr<IVariable> percent_variable = nullptr, int sampling_intervall = 100);
 
     const std::string getName() const override { return _name; }
     const std::string getType() const override { return "ADC"; }
@@ -18,6 +18,7 @@ public:
 private:
     std::string _name;
     std::shared_ptr<IVariable> _valueVariable;
+    std::shared_ptr<IVariable> _percentVariable;
     int _samplingIntervall;
     TaskPID _readoutTask;
 

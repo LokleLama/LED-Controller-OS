@@ -4,6 +4,7 @@
 
 namespace {
 constexpr uint16_t kInvalidBlockOffset = 0xFFFF;
+constexpr uint16_t kInvalidSize = 0xFFFF;
 }
 
 SPFS::ReadOnlyFile::ReadOnlyFile(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent,
@@ -133,7 +134,7 @@ const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const
   if(content_header == nullptr) {
     return nullptr; // Invalid content header
   }
-  if(content_header->size == kInvalidBlockOffset) {
+  if(content_header->size == kInvalidSize) {
     return nullptr; // Invalid size
   }
   version_counter++;
@@ -148,7 +149,6 @@ const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const
 const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const SPFS::FileContentHeader* content_header, size_t& version_counter) const {
   uint16_t next_block = content_header->next_version;
   while (next_block != kInvalidBlockOffset) {
-    version_counter++;
     const SPFS::FileContentHeader* next_header = calculateContentHeaderAddress(content_header, next_block);
     if(next_header == nullptr) {
       return content_header; // Invalid next header, return the last valid one
@@ -156,9 +156,10 @@ const SPFS::FileContentHeader* SPFS::ReadOnlyFile::FindNewestContentHeader(const
     if(next_header->block.magic != MAGIC_FILE_CONTENT_NUMBER) {
       return content_header; // Invalid magic number, return the last valid one
     }
-    if(next_header->size == kInvalidBlockOffset) {
+    if(next_header->size == kInvalidSize) {
       return content_header; // Invalid size, return the last valid one
     }
+    version_counter++;
     content_header = next_header;
     next_block = content_header->next_version;
   }

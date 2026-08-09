@@ -44,14 +44,14 @@ public:
     std::memset(id_out, 0, 8);
   }
 
-  static int calculateSector(int address) {
+  static uint32_t calculateSector(uint32_t address) {
     return address / /*FLASH_SECTOR_SIZE*/4096;
   }
-  static int calculateSectorAddress(int sector) {
+  static uint32_t calculateSectorAddress(uint32_t sector) {
     return sector * /*FLASH_SECTOR_SIZE*/4096;
   }
-  static int calculatePage(int address) { return address / /*FLASH_PAGE_SIZE*/256; }
-  static int calculatePageAddress(int page) { return page * /*FLASH_PAGE_SIZE*/256; }
+  static uint32_t calculatePage(uint32_t address) { return address / /*FLASH_PAGE_SIZE*/256; }
+  static uint32_t calculatePageAddress(uint32_t page) { return page * /*FLASH_PAGE_SIZE*/256; }
 
   static void* getFlashMemoryOffset(){ return flash_memory_pointer; }
 

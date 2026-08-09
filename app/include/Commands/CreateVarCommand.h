@@ -14,9 +14,9 @@ public:
 
   const std::string getHelp() const override {
     return "Usage: create <Name> <Type> <parameter...>\n"
-           "       Type       | parameter...\n"
-           "       -----------|---------------------------------\n"
-           "       linear     | [multiplier] [offset]";
+           "       Type       | parameter...                 | Formula\n"
+           "       -----------|------------------------------|-----------------------------\n"
+           "       linear     | [multiplier] [offset]        | value * multiplier + offset\n";
   }
 
   int execute(const std::vector<std::string> &args) override {

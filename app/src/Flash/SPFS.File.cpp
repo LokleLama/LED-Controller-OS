@@ -1,13 +1,18 @@
-#include "SPFS.h"
+#include "SPFS.Internal.h"
 #include "flash.h"
 #include <cstring>
+#include <iostream>
+
+namespace {
+constexpr uint16_t kInvalidBlockOffset = 0xFFFF;
+}
 
 SPFS::File::File(std::shared_ptr<Directory> parent, const std::string& name) : File(nullptr, parent, nullptr) {
   auto file = parent->openFile(name);
   if(file != nullptr){
     _fs = file->_fs;
     _header = file->_header;
-    FindCurrentContentHeader();
+    _content_header = FindNewestContentHeader(getHeader(), _content_version);
   }else{
     file = parent->createFile(name);
     if(file != nullptr){
@@ -17,19 +22,9 @@ SPFS::File::File(std::shared_ptr<Directory> parent, const std::string& name) : F
   }
 }
 
-void SPFS::File::FindCurrentContentHeader() {
-  if(_content_header != nullptr) {
-    return;
-  }
-  _content_version = 0;
-  uint16_t next_block = getMetadataHeader()->content_block;
-  const void* content_address = reinterpret_cast<const void*>(_header);
-  while (next_block != 0xFFFF) {
-    _content_version++;
-    _content_header = _fs->calculateContentHeaderAddress(content_address, next_block);
-    content_address = _content_header;
-    next_block = _content_header->next_version;
-  }
+SPFS::File::File(std::shared_ptr<SPFS> fs, std::shared_ptr<Directory> parent, const FileHeader* header)
+    : ReadOnlyFile(fs, parent, header, nullptr, 0) {
+  _content_header = FindNewestContentHeader(getHeader(), _content_version);
 }
 
 bool SPFS::File::write(const std::string& data){
@@ -39,7 +34,7 @@ bool SPFS::File::write(const std::vector<uint8_t>& data){
   return write(data.data(), data.size());
 }
 bool SPFS::File::write(const uint8_t* data, size_t size) {
-  if(!allocateContenSize(size)) {
+  if(!allocateContentSize(size)) {
     return false;
   }
 
@@ -53,24 +48,33 @@ bool SPFS::File::write(const uint8_t* data, size_t size) {
   return true;
 }
 
-bool SPFS::File::allocateContenSize(size_t size) {
-  if(_current_content_header != nullptr) {
+bool SPFS::File::allocateContentSize(size_t size) {
+  if(_reserved_content_header != nullptr) {
     return false; // Content already allocated
+  }
+  if(_content_header != nullptr){
+    if(_content_header->next_version != kInvalidBlockOffset) {
+      return false; // There is already a newer version of the content
+    }
+  }else{
+    if(getMetadataHeader()->content_block != kInvalidBlockOffset){
+      return false; // There is already a newer version of the content
+    }
   }
 
   // Find free space for new file content
-  _current_content_header = _fs->findFreeSpaceForFileContent(size);
-  if(_current_content_header == nullptr) {
+  _reserved_content_header = _fs->findFreeSpaceForFileContent(size);
+  if(_reserved_content_header == nullptr) {
     return false;
   }
 
-  uint16_t content_block_offset = 0xFFFF;
+  uint16_t content_block_offset = kInvalidBlockOffset;
   if(_content_header != nullptr) {
-    content_block_offset = _fs->calculateContentBlockOffset(_content_header, _current_content_header);
+    content_block_offset = _fs->calculateContentBlockOffset(_content_header, _reserved_content_header);
   }else{
-    content_block_offset = _fs->calculateContentBlockOffset(_header, _current_content_header);
+    content_block_offset = _fs->calculateContentBlockOffset(_header, _reserved_content_header);
   }
-  if(content_block_offset == 0xFFFF) {
+  if(content_block_offset == kInvalidBlockOffset) {
     return false; // Invalid content block: difference is too big
   }
 
@@ -83,11 +87,37 @@ bool SPFS::File::allocateContenSize(size_t size) {
   contentheader->next_partition = 0xFFFF; // No next content
   contentheader->next_version = 0xFFFF; // No next content
 
-  if(Flash::write(buffer, _current_content_header) < (int)buffer.size()) {
-    _current_content_header = nullptr;
+  contentheader->reserved_blocks = (uint16_t)((size + FS_BLOCK_SIZE - 1) / FS_BLOCK_SIZE);
+  contentheader->tag_metadata_block = 0xFFFF; // No tag
+  
+  _allocated_content_size = contentheader->reserved_blocks * FS_BLOCK_SIZE;
+  _append_position = (contentheader->data_offset & 0x00FF);
+
+  if(Flash::write(buffer, _reserved_content_header) < (int)buffer.size()) {
+    _reserved_content_header = nullptr;
     return false;
   }
-  _append_position = (contentheader->data_offset & 0x00FF);
+
+  if(_content_header != nullptr) {
+    if(Flash::read(buffer, _content_header) < (int)buffer.size()) {
+      return false;
+    }
+    FileContentHeader *prev_contentheader = reinterpret_cast<FileContentHeader *>(buffer.data());
+    prev_contentheader->next_version = content_block_offset;
+    if(Flash::write(buffer, _content_header) < (int)buffer.size()) {
+      return false;
+    }
+  }else{
+    if(Flash::read(buffer, _header) < (int)buffer.size()) {
+      return false;
+    }
+    FileMetadataHeader *filemeta = reinterpret_cast<FileMetadataHeader *>(buffer.data() + (_header->name_size_meta_offset >> 8));
+    filemeta->content_block = content_block_offset;
+    if(Flash::write(buffer, _header) < (int)buffer.size()) {
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -98,13 +128,24 @@ bool SPFS::File::append(const std::vector<uint8_t>& data){
   return append(data.data(), data.size());
 }
 bool SPFS::File::append(const uint8_t* data, size_t size) {
-  if(_current_content_header == nullptr) {
+  if(_reserved_content_header == nullptr) {
     return false; // No allocated content
+  }
+  if(size > _allocated_content_size) {
+    return false; // Not enough allocated space
   }
 
   std::vector<uint8_t> buffer(FS_BLOCK_SIZE, 0xFF);
 
-  auto pointer = reinterpret_cast<const uint8_t*>(_current_content_header) + (_append_position & ~(FS_BLOCK_SIZE - 1));
+  auto pointer = reinterpret_cast<const uint8_t*>(_reserved_content_header) + (_append_position & ~(FS_BLOCK_SIZE - 1));
+
+  auto file_end_pointer = reinterpret_cast<const uint8_t*>(_reserved_content_header) + (_reserved_content_header->reserved_blocks * FS_BLOCK_SIZE);
+
+  if(pointer + size > file_end_pointer) {
+    std::cerr << "Not enough reserved space for content. Allocated: " << _reserved_content_header->reserved_blocks * FS_BLOCK_SIZE
+              << " bytes, required: " << (_append_position + size) << " bytes." << std::endl;
+    return false; // Not enough reserved space for content
+  }
 
   size_t current_pos = 0;
   while(current_pos < size) {
@@ -128,18 +169,19 @@ bool SPFS::File::append(const uint8_t* data, size_t size) {
     }
     current_pos += to_copy;
     _append_position += to_copy;
+    _allocated_content_size -= to_copy;
     pointer = pointer + FS_BLOCK_SIZE;
   }
   return true;
 }
 
 bool SPFS::File::finishContent() {
-  if(_current_content_header == nullptr) {
+  if(_reserved_content_header == nullptr) {
     return false; // No allocated content
   }
 
   std::vector<uint8_t> buffer(FS_BLOCK_SIZE, 0xFF);
-  if(Flash::read(buffer, _current_content_header) < (int)buffer.size()) {
+  if(Flash::read(buffer, _reserved_content_header) < (int)buffer.size()) {
     return false;
   }
 
@@ -147,42 +189,58 @@ bool SPFS::File::finishContent() {
   contentheader->block.size = (uint16_t)((_append_position + FS_BLOCK_SIZE - 1) / FS_BLOCK_SIZE);
   contentheader->size = _append_position - (contentheader->data_offset & 0x00FF);
   contentheader->checksum = _fs->calculateCRC16(contentheader, sizeof(FileContentHeader) - sizeof(contentheader->checksum) - sizeof(contentheader->next_partition) - sizeof(contentheader->next_version));
+  contentheader->reserved_blocks = 0; // No more reserved blocks
 
-  if(Flash::write(buffer, _current_content_header) < (int)buffer.size()) {
+  if(Flash::write(buffer, _reserved_content_header) < (int)buffer.size()) {
     return false;
   }
 
-  uint16_t content_block_offset = 0xFFFF;
-  if(_content_header != nullptr) {
-    content_block_offset = _fs->calculateContentBlockOffset(_content_header, _current_content_header);
-  }else{
-    content_block_offset = _fs->calculateContentBlockOffset(_header, _current_content_header);
-  }
-  if(content_block_offset == 0xFFFF) {
-    return false; // Invalid content block: difference is too big
+  _content_header = _reserved_content_header;
+  _content_version++;
+  _allocated_content_size = 0;
+  _reserved_content_header = nullptr;
+  return true;
+}
+
+bool SPFS::File::fixUnfinishedContent() {
+  if(_reserved_content_header != nullptr) {
+    return false; // No allocated content
   }
 
-  if(_content_header != nullptr) {
-    if(Flash::read(buffer, _content_header) < (int)buffer.size()) {
-      return false;
-    }
-    FileContentHeader *prev_contentheader = reinterpret_cast<FileContentHeader *>(buffer.data());
-    prev_contentheader->next_version = content_block_offset;
-    if(Flash::write(buffer, _content_header) < (int)buffer.size()) {
-      return false;
-    }
-  }else{
-    if(Flash::read(buffer, _header) < (int)buffer.size()) {
-      return false;
-    }
-    FileMetadataHeader *filemeta = reinterpret_cast<FileMetadataHeader *>(buffer.data() + (_header->name_size_meta_offset >> 8));
-    filemeta->content_block = content_block_offset;
-    if(Flash::write(buffer, _header) < (int)buffer.size()) {
-      return false;
+  if(_content_header == nullptr) {
+    _reserved_content_header = getContentHeader(_header);
+  } else {
+    _reserved_content_header = getContentHeader(_content_header);
+  }
+  if(_reserved_content_header == nullptr) {
+    return false; // No unfinished content to fix
+  }
+
+  _allocated_content_size = _reserved_content_header->reserved_blocks * FS_BLOCK_SIZE;
+  _append_position = (_reserved_content_header->data_offset & 0x00FF);
+
+  auto minimal_append_position = _append_position;
+
+  const uint32_t* pointer = reinterpret_cast<const uint32_t*>(_reserved_content_header);
+  for(size_t n = _append_position / sizeof(uint32_t); n < _allocated_content_size / sizeof(uint32_t); n++) {
+    if(pointer[n] != 0xFFFFFFFF) {
+      _append_position = (n + 1) * sizeof(uint32_t);
     }
   }
-  _content_header = _current_content_header;
-  _content_version++;
-  _current_content_header = nullptr;
-  return true;
+
+  const uint8_t* fine_pointer = reinterpret_cast<const uint8_t*>(_reserved_content_header);
+  auto max_append_position = _append_position;
+
+  auto fine_append_position = _append_position - sizeof(uint32_t);
+  if(fine_append_position < minimal_append_position) {
+    fine_append_position = minimal_append_position;
+  }
+
+  for(size_t n = fine_append_position; n < max_append_position; n++) {
+    if(fine_pointer[n] != 0xFF) {
+      _append_position = n + 1;
+    }
+  }
+
+  return finishContent();
 }

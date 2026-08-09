@@ -27,6 +27,8 @@
 #include "Commands/ExecCommand.h"
 #include "Commands/FSInfoCommand.h"
 #include "Commands/StoreCommand.h"
+#include "Commands/FixCommand.h"
+#include "Commands/TagCommand.h"
 
 #include "Commands/ReadCommand.h"
 #include "Commands/WriteCommand.h"
@@ -70,8 +72,8 @@ int main() {
       fs = nullptr;
     }
   }
-  variableStore.addVariable("var.fs_offset", SPFS_FLASH_OFFSET)->setSystemVariable();
-  variableStore.addVariable("var.fs_size", SPFS_FLASH_SIZE)->setSystemVariable();
+  variableStore.addVariable("filesystem.offset", SPFS_FLASH_OFFSET)->setSystemVariable();
+  variableStore.addVariable("filesystem.size", SPFS_FLASH_SIZE)->setSystemVariable();
 
   Console console(variableStore, fs);
   DeviceRepository deviceRepo(console);
@@ -99,7 +101,8 @@ int main() {
   console.registerCommand(std::make_shared<ExecCommand>(console));
   console.registerCommand(std::make_shared<FSInfoCommand>(console));
   console.registerCommand(std::make_shared<StoreCommand>(console));
-
+  console.registerCommand(std::make_shared<TagCommand>(console));
+  console.registerCommand(std::make_shared<FixCommand>(console));
   console.registerCommand(std::make_shared<ReadCommand>());
   console.registerCommand(std::make_shared<WriteCommand>());
 

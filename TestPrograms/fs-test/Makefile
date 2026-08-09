@@ -8,8 +8,8 @@ CXXFLAGS := -Wall -Wextra -g
 
 
 # Find all source files
-SRC_C := $(shell find . -name '*.c')
-SRC_CPP := $(shell find . -name '*.cpp')
+SRC_C := $(shell find -L . -name '*.c')
+SRC_CPP := $(shell find -L . -name '*.cpp')
 # Place all object files in obj/ directory, preserving relative paths
 OBJ := $(patsubst ./%,obj/%.o,$(basename $(SRC_C))) $(patsubst ./%,obj/%.o,$(basename $(SRC_CPP)))
 

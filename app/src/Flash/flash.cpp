@@ -96,7 +96,7 @@ int Flash::write(const void* buffer, size_t size, const void* address) {
   }
 
   int page_count = FlashHAL::calculatePage(size);
-  if (FlashHAL::calculatePageAddress(page_count) != (int)size) {
+  if (FlashHAL::calculatePageAddress(page_count) != size) {
     return -3; // Buffer size not aligned to page size
   }
 
@@ -116,7 +116,7 @@ int Flash::erase(const void* address, int length) {
     return -2; // Address not aligned to sector start
   }
 
-  if (FlashHAL::calculateSectorAddress(sector_count) != length) {
+  if (FlashHAL::calculateSectorAddress(sector_count) != (size_t)length) {
     return -3; // Erase length not aligned to sector size
   }
 

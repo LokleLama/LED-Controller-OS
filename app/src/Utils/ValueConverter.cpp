@@ -43,7 +43,7 @@ std::string ValueConverter::toString(int value, IntegerStringFormat format) {
       case IntegerStringFormat::BINARY: {
         std::string result = "0b";
         int val = value;
-        for (int n = 0; n < sizeof(int); n++) {
+        for (size_t n = 0; n < sizeof(int); n++) {
           for (int i = 0; i < 8; i++) {
             result += (val & (1 << (sizeof(int) * 8 - 1))) ? '1' : '0';
             val <<= 1;

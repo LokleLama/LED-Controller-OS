@@ -4,7 +4,7 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <cstdint>
 
 #include "Flash/SPFS.h"
@@ -52,7 +52,7 @@ public:
   virtual Signal registerSignal(const std::string &key, Signal signal = 0) = 0;
   virtual Signal getSignal(const std::string &key) const = 0;
 
-  virtual const std::unordered_map<std::string, std::string>
+  virtual const std::map<std::string, std::string>
   getAllVariables() const = 0;
   
   virtual bool saveToFile(std::shared_ptr<SPFS::File>& file) const = 0;

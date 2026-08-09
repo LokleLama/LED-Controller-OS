@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <map>
 #include <unordered_map>
 
 #include "IVariable.h"
@@ -46,7 +47,7 @@ public:
   Signal registerSignal(const std::string &key, Signal signal = 0) override;
   Signal getSignal(const std::string &key) const override;
 
-  const std::unordered_map<std::string, std::string>
+  const std::map<std::string, std::string>
   getAllVariables() const override;
 
   bool saveToFile(std::shared_ptr<SPFS::File>& file) const override;

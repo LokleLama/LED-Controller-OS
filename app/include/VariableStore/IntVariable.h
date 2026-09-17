@@ -38,7 +38,7 @@ public:
   int asInt() const override { return value_; };
 
   // Convert to bool
-  bool asBool() const override { return value_ != 0; }
+  bool asBool() const override { return value_ > 0; }
 
   // Set the value
   bool set(const std::string &value) override {

@@ -33,7 +33,7 @@ public:
 
   // Convert to bool
   bool asBool() const override {
-    if (value_ == 0.0f) {
+    if (value_ <= 0.0f) {
       return false;
     }
     return true;
